@@ -1,0 +1,15 @@
+<svg width="720" height="520" viewBox="0 0 720 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="520" rx="36" fill="#FFF7EB"/>
+  <rect y="372" width="720" height="148" fill="#111111"/>
+  <rect x="82" y="214" width="336" height="116" rx="24" fill="#CB5B1A"/>
+  <rect x="418" y="236" width="138" height="94" rx="20" fill="#F38B1F"/>
+  <rect x="454" y="186" width="74" height="62" rx="18" fill="#FFD54F"/>
+  <circle cx="194" cy="366" r="46" fill="#111111"/>
+  <circle cx="194" cy="366" r="21" fill="#FFF7EB"/>
+  <circle cx="472" cy="366" r="46" fill="#111111"/>
+  <circle cx="472" cy="366" r="21" fill="#FFF7EB"/>
+  <rect x="106" y="100" width="256" height="88" rx="24" fill="#111111"/>
+  <text x="132" y="154" fill="#FFF7EB" font-size="34" font-family="Arial, sans-serif" font-weight="800">LOS EUCALIPTOS</text>
+  <text x="106" y="438" fill="#FFF7EB" font-size="28" font-family="Arial, sans-serif" font-weight="700">DESPACHO Y LOGISTICA PARA TU OBRA</text>
+  <text x="106" y="472" fill="#F38B1F" font-size="22" font-family="Arial, sans-serif" font-weight="700">SOLANO Y ZONA SUR</text>
+</svg>

@@ -1,0 +1,11 @@
+<svg width="720" height="520" viewBox="0 0 720 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="520" rx="36" fill="#F0DFCA"/>
+  <rect x="72" y="92" width="188" height="280" rx="26" fill="#CB5B1A"/>
+  <rect x="284" y="122" width="160" height="250" rx="26" fill="#111111"/>
+  <rect x="470" y="154" width="176" height="218" rx="26" fill="#F38B1F"/>
+  <rect x="92" y="112" width="148" height="40" rx="10" fill="#FFD54F"/>
+  <rect x="304" y="146" width="120" height="34" rx="10" fill="#FFF7EB"/>
+  <rect x="492" y="178" width="134" height="34" rx="10" fill="#FFF7EB"/>
+  <text x="84" y="436" fill="#111111" font-size="50" font-family="Arial, sans-serif" font-weight="800">MATERIALES</text>
+  <text x="86" y="474" fill="#63564E" font-size="26" font-family="Arial, sans-serif" font-weight="700">BOLSAS, HIERROS, SANITARIOS Y MAS</text>
+</svg>

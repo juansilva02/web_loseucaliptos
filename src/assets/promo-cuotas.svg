@@ -1,0 +1,15 @@
+<svg width="720" height="520" viewBox="0 0 720 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="520" rx="36" fill="#111111"/>
+  <circle cx="568" cy="122" r="118" fill="#F38B1F"/>
+  <circle cx="126" cy="412" r="146" fill="#CB5B1A"/>
+  <rect x="72" y="76" width="360" height="220" rx="28" fill="#FFF7EB"/>
+  <text x="104" y="150" fill="#111111" font-size="32" font-family="Arial, sans-serif" font-weight="700">PROMO OBRA</text>
+  <text x="100" y="236" fill="#CB5B1A" font-size="112" font-family="Arial, sans-serif" font-weight="800">6</text>
+  <text x="194" y="236" fill="#111111" font-size="58" font-family="Arial, sans-serif" font-weight="800">CUOTAS</text>
+  <text x="103" y="280" fill="#63564E" font-size="26" font-family="Arial, sans-serif" font-weight="600">y tambien 3 cuotas con tarjetas bancarias</text>
+  <rect x="420" y="254" width="212" height="124" rx="26" fill="#FFF7EB"/>
+  <text x="454" y="322" fill="#111111" font-size="34" font-family="Arial, sans-serif" font-weight="800">TODOS</text>
+  <text x="454" y="356" fill="#CB5B1A" font-size="34" font-family="Arial, sans-serif" font-weight="800">LOS BANCOS</text>
+  <rect x="98" y="340" width="432" height="82" rx="22" fill="#FFD54F"/>
+  <text x="136" y="390" fill="#111111" font-size="28" font-family="Arial, sans-serif" font-weight="700">MATERIALES, TERMINACIONES Y ENTREGA COORDINADA</text>
+</svg>

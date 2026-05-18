@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Archivo:wght@700;800&display=swap');
+
+:root {
+  --bg: #f2f3f5;
+  --ink: #121317;
+  --muted: #5f636d;
+  --paper: #ffffff;
+  --accent: #df1919;
+  --display: 'Archivo', sans-serif;
+  --sans: 'Barlow', sans-serif;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  background: linear-gradient(180deg, #f0f1f4 0%, #fafafa 100%);
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+}
