@@ -1,11 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Archivo:wght@700;800&display=swap');
 
 :root {
-  --bg: #f2f3f5;
-  --ink: #121317;
-  --muted: #5f636d;
-  --paper: #ffffff;
-  --accent: #df1919;
+  --bg: #ebe7e0;
+  --bg-deep: #dcd5cb;
+  --ink: #171411;
+  --muted: #655d57;
+  --paper: rgba(255, 252, 247, 0.88);
+  --paper-strong: #fffdf9;
+  --accent: #db3a1e;
+  --accent-strong: #b9240e;
+  --accent-soft: #f3c086;
+  --dark: #161311;
+  --line: rgba(23, 20, 17, 0.1);
+  --shadow-soft: 0 18px 50px rgba(41, 26, 13, 0.08);
+  --shadow-card: 0 14px 34px rgba(31, 20, 12, 0.1);
   --display: 'Archivo', sans-serif;
   --sans: 'Barlow', sans-serif;
   font-family: var(--sans);
@@ -31,13 +39,22 @@ body,
 }
 
 body {
-  background: linear-gradient(180deg, #f0f1f4 0%, #fafafa 100%);
+  background:
+    radial-gradient(circle at top left, rgba(243, 192, 134, 0.2), transparent 28%),
+    radial-gradient(circle at top right, rgba(219, 58, 30, 0.08), transparent 24%),
+    linear-gradient(180deg, var(--bg) 0%, #f6f2ea 48%, var(--bg-deep) 100%);
 }
 
 button,
 input,
 select {
   font-family: inherit;
+}
+
+button,
+a,
+select {
+  touch-action: manipulation;
 }
 
 img {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import cubeIcon from './assets/icono-cubo.png'
 import promoCamion from './assets/promo-camion.svg'
 import promoMateriales from './assets/promo-materiales.svg'
@@ -14,94 +14,183 @@ import {
 import { useCart } from './context/CartContext'
 import './App.css'
 
-const topCategories = [
-  { label: 'Cemento', key: 'aridos-y-obra-gruesa' },
-  { label: 'Cal', key: 'aridos-y-obra-gruesa' },
-  { label: 'Arena', key: 'aridos-y-obra-gruesa' },
-  { label: 'Hierro', key: 'hierros-y-estructura' },
-  { label: 'Ladrillos', key: 'ladrillos-y-bloques' },
-  { label: 'Ferreteria', key: 'electricidad-y-ferreteria' },
-  { label: 'Griferias', key: 'sanitarios-y-plomeria' },
-  { label: 'Envios', key: 'all' },
+const serviceHighlights = [
+  { icon: 'delivery', title: 'Envios rapidos', text: 'En Zona Sur y alrededores' },
+  { icon: 'stock', title: 'Stock permanente', text: 'Los mejores materiales' },
+  { icon: 'support', title: 'Atencion personalizada', text: 'Asesoramiento profesional' },
+  { icon: 'payment', title: 'Medios de pago', text: 'Efectivo, transferencia y mas' },
 ]
 
-const serviceHighlights = [
+const heroSignals = [
+  '3 y 6 cuotas con todos los bancos',
+  'Pedidos por WhatsApp con respuesta directa',
+  'Envios rapidos en Zona Sur y alrededores',
+]
+
+const utilityHighlights = [
   {
-    title: 'Envios rapidos',
-    text: 'En Zona Sur y alrededores',
-  },
-  {
-    title: 'Stock permanente',
-    text: 'Los mejores materiales',
-  },
-  {
-    title: 'Atencion personalizada',
-    text: 'Asesoramiento profesional',
+    title: 'Envios coordinados',
+    text: 'Recibi materiales en obra con entrega programada en Zona Sur.',
+    tone: 'light',
   },
   {
     title: 'Medios de pago',
-    text: 'Efectivo, transferencia y mas',
-  },
-]
-
-const valueBanners = [
-  {
-    title: 'Hacemos tu obra mas simple',
-    text: 'Pedi online y recibi en tu obra rapido y seguro.',
-    tone: 'light',
-  },
-  {
-    title: 'Zona Sur Bs As',
-    text: 'Enviamos a Avellaneda, Lanus, Lomas, Quilmes, Berazategui y mas.',
+    text: 'Efectivo, transferencia, debito y credito con opciones de cuotas.',
     tone: 'dark',
   },
   {
-    title: 'Pedi por WhatsApp',
-    text: 'Consultas, presupuestos y pedidos en el acto.',
+    title: 'Hace tu pedido',
+    text: 'Nombre, CUIL, direccion y forma de pago para preparar la entrega.',
     tone: 'accent',
   },
   {
-    title: 'Venta real',
-    text: 'Productos listos para sumar al pedido y avanzar la compra.',
+    title: 'WhatsApp directo',
+    text: 'Consultas, presupuestos y confirmacion comercial en el acto.',
     tone: 'light',
   },
+]
+
+const priceNotes = [
+  'Los precios estan sujetos a modificacion sin previo aviso.',
+  'Los reclamos por cambio de material se toman dentro de las 24 hs de entregado el pedido.',
+]
+
+const orderRequirements = [
+  'Apellido y nombre',
+  'CUIL',
+  'Direccion, numero y entre calles',
+  'Forma de pago',
+]
+
+const priceHighlights = [
+  'Arena suelta $41.000',
+  'Arena en bolson $49.200 oferta',
+  'Piedra suelta $70.000 super oferta',
+  'Piedra en bolson $78.200 super oferta',
+  'Cemento Loma Negra 25kg $7.200',
+  'Cal Cacique Max 25kg $7.100',
 ]
 
 const curatedProducts = [
   {
-    title: 'Cemento para obra',
-    subtitle: 'Bolsa x 50 kg aprox.',
-    match: 'CEMENT',
-    categoryKey: 'aridos-y-obra-gruesa',
+    title: 'Ladrillo hueco del 12',
+    subtitle: 'Marca Quilmes',
+    match: 'LADRILLO HUECO 12',
+    categoryKey: 'ladrillos-y-bloques',
+    priceOverride: 790,
   },
   {
-    title: 'Cal comun',
-    subtitle: 'Bolsa para mezcla',
-    match: 'CAL CA',
-    categoryKey: 'aridos-y-obra-gruesa',
+    title: 'Ladrillos comunes',
+    subtitle: 'Sin marca',
+    match: 'LADRILLO COMUN',
+    categoryKey: 'ladrillos-y-bloques',
+    priceOverride: 220,
   },
   {
-    title: 'Arena fina',
-    subtitle: 'Venta por bolson o m3',
-    match: 'ARENA',
-    categoryKey: 'aridos-y-obra-gruesa',
+    title: 'Ladrillo hueco del 8',
+    subtitle: 'Marca Quilmes',
+    match: 'LADRILLO HUECO 8',
+    categoryKey: 'ladrillos-y-bloques',
+    priceOverride: 630,
   },
   {
-    title: 'Ladrillo / bloque',
-    subtitle: 'Mamposteria para cerramiento',
-    match: 'BLOQUE',
+    title: 'Cemento Portland 25kg',
+    subtitle: 'Marca Loma Negra',
+    match: 'PORTLAND 25',
+    categoryKey: 'aridos-y-obra-gruesa',
+    priceOverride: 7200,
+  },
+  {
+    title: 'Cal Cacique Max 25kg',
+    subtitle: 'Marca Cacique',
+    match: 'CACIQUE MAX 25',
+    categoryKey: 'aridos-y-obra-gruesa',
+    priceOverride: 7100,
+  },
+  {
+    title: 'Bloque liso de cemento del 13',
+    subtitle: 'Sin marca',
+    match: 'BLOQUE LISO 13',
     categoryKey: 'ladrillos-y-bloques',
   },
   {
-    title: 'Hierro construccion',
-    subtitle: 'Varios diametros',
-    match: 'VARILL',
-    categoryKey: 'hierros-y-estructura',
+    title: 'Bloque liso de cemento del 20',
+    subtitle: 'Sin marca',
+    match: 'BLOQUE LISO 20',
+    categoryKey: 'ladrillos-y-bloques',
   },
   {
-    title: 'Kit ferreteria basico',
-    subtitle: 'Varios articulos',
-    match: 'TIJERA',
+    title: 'Bloque liso de cemento del 10',
+    subtitle: 'Sin marca',
+    match: 'BLOQUE LISO 10',
+    categoryKey: 'ladrillos-y-bloques',
+  },
+  {
+    title: 'Hierro del 6',
+    subtitle: 'Marca Acindar',
+    match: 'HIERRO 6',
+    categoryKey: 'hierros-y-estructura',
+    priceOverride: 6250,
+  },
+  {
+    title: 'Hierro del 8',
+    subtitle: 'Marca Acindar',
+    match: 'HIERRO 8',
+    categoryKey: 'hierros-y-estructura',
+    priceOverride: 10800,
+  },
+  {
+    title: 'Ladrillo Cordoba media vista',
+    subtitle: 'Sin marca',
+    match: 'CORDOBA MEDIA VISTA',
+    categoryKey: 'ladrillos-y-bloques',
+  },
+  {
+    title: 'Arena por metro bolson',
+    subtitle: 'Sin marca',
+    match: 'ARENA BOLSON',
+    categoryKey: 'aridos-y-obra-gruesa',
+    priceOverride: 49200,
+  },
+  {
+    title: 'Hierro del 10',
+    subtitle: 'Marca Acindar',
+    match: 'HIERRO 10',
+    categoryKey: 'hierros-y-estructura',
+    priceOverride: 16900,
+  },
+  {
+    title: 'Hierro del 4,2',
+    subtitle: 'Marca Acindar',
+    match: 'HIERRO 4,2',
+    categoryKey: 'hierros-y-estructura',
+    priceOverride: 2500,
+  },
+  {
+    title: 'Pegamento para ceramica',
+    subtitle: 'Marca Premecol',
+    match: 'PEGAMENTO CERAMICA',
+    categoryKey: 'electricidad-y-ferreteria',
+    priceOverride: 7400,
+  },
+  {
+    title: 'Ladrillo de telgopor 10cm',
+    subtitle: 'Marca Polipol',
+    match: 'TELGOPOR 10',
+    categoryKey: 'ladrillos-y-bloques',
+    priceOverride: 4000,
+  },
+  {
+    title: 'Ladrillo de telgopor 12.5cm',
+    subtitle: 'Marca Polipol',
+    match: 'TELGOPOR 12.5',
+    categoryKey: 'ladrillos-y-bloques',
+    priceOverride: 4800,
+  },
+  {
+    title: 'Cable unipolar 1 x 2.5',
+    subtitle: 'Sin marca',
+    match: 'UNIPOLAR 1 X2.5',
     categoryKey: 'electricidad-y-ferreteria',
   },
 ]
@@ -114,7 +203,7 @@ function getCuratedShowcase() {
     return {
       id: match?.id ?? `showcase-${index}`,
       code: match?.code ?? `SC-${index + 1}`,
-      price: match?.price ?? 0,
+      price: item.priceOverride ?? match?.price ?? 0,
       excelName: item.title,
       subtitle: item.subtitle,
       categoryKey: item.categoryKey,
@@ -125,28 +214,88 @@ function getCuratedShowcase() {
   })
 }
 
+function ServiceIcon({ icon, title }) {
+  if (icon === 'delivery') {
+    return (
+      <div className="service-band-icon-wrap">
+        <img className="service-band-icon" src={cubeIcon} alt={`Icono de ${title.toLowerCase()}`} />
+      </div>
+    )
+  }
+
+  if (icon === 'stock') {
+    return (
+      <div className="service-band-glyph" aria-hidden="true">
+        <span className="glyph glyph-box" />
+      </div>
+    )
+  }
+
+  if (icon === 'support') {
+    return (
+      <div className="service-band-glyph" aria-hidden="true">
+        <span className="glyph glyph-badge" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="service-band-glyph" aria-hidden="true">
+      <span className="glyph glyph-card" />
+    </div>
+  )
+}
+
 function App() {
   const { items, itemCount, subtotal, addItem, removeItem, changeQuantity, clearCart } = useCart()
   const [activeCategory, setActiveCategory] = useState('all')
-  const [search, setSearch] = useState('')
   const [showCart, setShowCart] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [activeSignal, setActiveSignal] = useState(0)
+  const [activeProduct, setActiveProduct] = useState(0)
 
   const featuredProducts = useMemo(() => getCuratedShowcase(), [])
 
   const filteredProducts = useMemo(() => {
-    const normalizedSearch = normalizeText(search.trim())
+    return featuredProducts.filter((product) => activeCategory === 'all' || product.categoryKey === activeCategory)
+  }, [activeCategory, featuredProducts])
 
-    return featuredProducts.filter((product) => {
-      const matchesCategory = activeCategory === 'all' || product.categoryKey === activeCategory
-      const matchesSearch =
-        !normalizedSearch ||
-        normalizeText(product.excelName).includes(normalizedSearch) ||
-        normalizeText(product.subtitle).includes(normalizedSearch) ||
-        normalizeText(product.sourceName).includes(normalizedSearch)
+  const floatingCartItems = items.slice(0, 3)
 
-      return matchesCategory && matchesSearch
-    })
-  }, [activeCategory, featuredProducts, search])
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSignal((current) => (current + 1) % heroSignals.length)
+    }, 2600)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!filteredProducts.length) {
+      setActiveProduct(0)
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveProduct((current) => (current + 1) % filteredProducts.length)
+    }, 2800)
+
+    return () => window.clearInterval(timer)
+  }, [filteredProducts])
+
+  const scrollToProducts = () => {
+    const section = document.getElementById('productos-destacados')
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   return (
     <main className="figma-storefront">
@@ -162,7 +311,7 @@ function App() {
         </div>
       </header>
 
-      <header className="commerce-header">
+      <header className={`commerce-header${isScrolled ? ' commerce-header-scrolled' : ''}`}>
         <div className="brand-lockup">
           <div className="brand-mark">LE</div>
           <div className="brand-copy">
@@ -172,12 +321,6 @@ function App() {
         </div>
 
         <form className="header-search" onSubmit={(event) => event.preventDefault()}>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar productos, marcas o categorias..."
-          />
           <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)}>
             <option value="all">Todas las categorias</option>
             {categoryCards.slice(0, 6).map((category) => (
@@ -186,7 +329,9 @@ function App() {
               </option>
             ))}
           </select>
-          <button type="submit">Buscar</button>
+          <button type="button" onClick={scrollToProducts}>
+            Ver
+          </button>
         </form>
 
         <div className="header-actions">
@@ -196,9 +341,7 @@ function App() {
           </div>
           <button className="cart-box" type="button" onClick={() => setShowCart(true)}>
             <strong>Mi carrito</strong>
-            <span>
-              {itemCount} items · {formatPrice(subtotal)}
-            </span>
+            <span>{itemCount} items | {formatPrice(subtotal)}</span>
           </button>
           <a className="whatsapp-box" href={whatsappBase} target="_blank" rel="noreferrer">
             <strong>11 5974-8316</strong>
@@ -207,23 +350,10 @@ function App() {
         </div>
       </header>
 
-      <nav className="category-bar">
-        <button className="category-bar-main" type="button" onClick={() => setActiveCategory('all')}>
-          Todas las categorias
-        </button>
-        <div className="category-bar-links">
-          {topCategories.map((category) => (
-            <button
-              key={category.label}
-              type="button"
-              className={activeCategory === category.key ? 'category-link-active' : ''}
-              onClick={() => setActiveCategory(category.key)}
-            >
-              {category.label}
-            </button>
-          ))}
-        </div>
-      </nav>
+      <div className="category-bar">
+        <div className="category-bar-item">Todos los productos</div>
+        <div className="category-bar-item">Medios de pago</div>
+      </div>
 
       <section className="hero-section-figma">
         <div className="hero-overlay" />
@@ -235,9 +365,9 @@ function App() {
             <br />
             tus proyectos
           </h1>
-          <p>Stock permanente • Mejores precios • Envios en Zona Sur</p>
+          <p>Stock permanente | Mejores precios | Envios en Zona Sur</p>
           <div className="hero-cta-row">
-            <button className="primary-cta" type="button" onClick={() => window.scrollTo({ top: 700, behavior: 'smooth' })}>
+            <button className="primary-cta" type="button" onClick={scrollToProducts}>
               Compra online
             </button>
             <a className="secondary-cta" href={whatsappBase} target="_blank" rel="noreferrer">
@@ -245,6 +375,13 @@ function App() {
             </a>
           </div>
           <div className="hero-note">Desde 1954 en Zona Sur, Buenos Aires</div>
+          <div className="hero-signals">
+            {heroSignals.map((signal, index) => (
+              <span className={activeSignal === index ? 'hero-signal-active' : ''} key={signal}>
+                {signal}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="hero-media">
           <img src={promoCamion} alt="Camion de Los Eucaliptus Corralon" />
@@ -252,20 +389,18 @@ function App() {
       </section>
 
       <section className="service-band">
-        {serviceHighlights.map((item, index) => (
+        {serviceHighlights.map((item) => (
           <article className="service-band-item" key={item.title}>
-            {index === 0 ? (
-              <div className="service-band-icon-wrap">
-                <img className="service-band-icon" src={cubeIcon} alt="Icono de envios rapidos" />
-              </div>
-            ) : null}
-            <strong>{item.title}</strong>
-            <span>{item.text}</span>
+            <ServiceIcon icon={item.icon} title={item.title} />
+            <div className="service-band-copy">
+              <strong>{item.title}</strong>
+              <span>{item.text}</span>
+            </div>
           </article>
         ))}
       </section>
 
-      <section className="featured-section-figma">
+      <section className="featured-section-figma" id="productos-destacados">
         <div className="section-header">
           <h2>Productos destacados</h2>
           <button className="text-link-button" type="button" onClick={() => setActiveCategory('all')}>
@@ -274,8 +409,12 @@ function App() {
         </div>
 
         <div className="products-grid">
-          {filteredProducts.map((product) => (
-            <article className="product-card" key={product.id}>
+          {filteredProducts.map((product, index) => (
+            <article
+              className={`product-card${activeProduct === index ? ' product-card-active' : ''}`}
+              key={product.id}
+              onMouseEnter={() => setActiveProduct(index)}
+            >
               <div className="product-visual-large" data-category={product.categoryKey}>
                 <span>{product.categoryName}</span>
               </div>
@@ -299,18 +438,57 @@ function App() {
         </div>
       </section>
 
-      <section className="value-banner-grid">
-        {valueBanners.map((banner) => (
-          <article className={`value-banner value-banner-${banner.tone}`} key={banner.title}>
-            <h3>{banner.title}</h3>
-            <p>{banner.text}</p>
-            {banner.title === 'Pedi por WhatsApp' ? (
-              <a href={whatsappBase} target="_blank" rel="noreferrer">
-                11 5974-8316
-              </a>
-            ) : null}
+      <section className="benefits-rail">
+        <div className="benefits-rail-intro">
+          <p className="section-kicker">Compra simple</p>
+          <h3>Todo lo importante para comprar rapido y coordinar tu entrega.</h3>
+        </div>
+        <div className="benefits-rail-grid">
+          {utilityHighlights.map((banner) => (
+            <article className={`benefit-tile benefit-tile-${banner.tone}`} key={banner.title}>
+              <strong>{banner.title}</strong>
+              <p>{banner.text}</p>
+              {banner.title === 'WhatsApp directo' ? (
+                <a href={whatsappBase} target="_blank" rel="noreferrer">
+                  11 5974-8316
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="purchase-brief">
+        <div className="purchase-brief-main">
+          <p className="section-kicker">Informacion comercial</p>
+          <h3>Precios orientativos, datos para tomar el pedido y condiciones de venta.</h3>
+          <div className="purchase-brief-tags">
+            {priceHighlights.slice(0, 4).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        </div>
+        <div className="purchase-brief-side">
+          <article className="purchase-brief-card">
+            <div className="purchase-brief-media" aria-hidden="true">
+              <span>Imagen para pedido</span>
+            </div>
+            <strong>Para pedir</strong>
+            <div className="purchase-brief-list">
+              {orderRequirements.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
           </article>
-        ))}
+          <article className="purchase-brief-card purchase-brief-card-accent">
+            <strong>Condiciones</strong>
+            <div className="purchase-brief-list">
+              {priceNotes.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          </article>
+        </div>
       </section>
 
       <section className="bottom-story-grid">
@@ -353,6 +531,57 @@ function App() {
           </div>
         </article>
       </section>
+
+      <footer className="site-footer">
+        <div className="site-footer-brand">
+          <strong>Los Eucaliptus Corralon</strong>
+          <p>Materiales para la construccion, envios en Zona Sur y atencion comercial directa.</p>
+        </div>
+        <div className="site-footer-block">
+          <strong>Contacto</strong>
+          <span>Av. Monteverde 2766, San Francisco Solano</span>
+          <span>+54 9 11 5974-8316</span>
+          <span>Lun a Vie 8:00 a 12:00 y 14:00 a 19:00</span>
+          <span>Sabados de 08:00 a 14:00</span>
+        </div>
+        <div className="site-footer-block">
+          <strong>Compras</strong>
+          <span>Pedidos por WhatsApp</span>
+          <span>Efectivo, transferencias, credito y debito</span>
+          <span>1 a 3 cuotas 20% | 4 a 6 cuotas 29%</span>
+        </div>
+      </footer>
+
+      <a
+        className={`floating-whatsapp${showCart ? ' floating-whatsapp-shifted' : ''}`}
+        href={whatsappBase}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Contactar por WhatsApp"
+      >
+        <span className="floating-whatsapp-mark">W</span>
+      </a>
+
+      {itemCount ? (
+        <button className="floating-cart" type="button" onClick={() => setShowCart(true)}>
+          <div className="floating-cart-head">
+            <strong>Mi carrito</strong>
+            <span>{itemCount} items</span>
+          </div>
+          <div className="floating-cart-items">
+            {floatingCartItems.map((item) => (
+              <div className="floating-cart-line" key={item.id}>
+                <span>{item.name}</span>
+                <strong>x{item.quantity}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="floating-cart-foot">
+            <strong>{formatPrice(subtotal)}</strong>
+            <span>Ver pedido</span>
+          </div>
+        </button>
+      ) : null}
 
       {showCart ? (
         <aside className="cart-drawer">
