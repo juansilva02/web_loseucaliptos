@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/index.js",
+    "tiendanube:register-carrier": "node server/register-tiendanube-carrier.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

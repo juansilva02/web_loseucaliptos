@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import cubeIcon from './assets/icono-cubo.png'
+import logoHeader from './assets/logo-header-los-eucaliptos.png'
 import promoCamion from './assets/promo-camion.svg'
-import promoMateriales from './assets/promo-materiales.svg'
+import promoMateriales from './assets/promo-cta-corralon.png'
 import {
   categoryCards,
   contactItems,
@@ -246,6 +247,22 @@ function ServiceIcon({ icon, title }) {
   )
 }
 
+function buildWhatsappOrderMessage({ items, subtotal }) {
+  const itemLines = items.map((item) => `- ${item.name} x${item.quantity} | ${formatPrice(item.price * item.quantity)}`)
+
+  return [
+    'Hola, quiero hacer este pedido:',
+    '',
+    ...itemLines,
+    '',
+    `Subtotal: ${formatPrice(subtotal)}`,
+    '',
+    'Aguardo contacto del equipo de ventas para continuar la compra.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 function App() {
   const { items, itemCount, subtotal, addItem, removeItem, changeQuantity, clearCart } = useCart()
   const [activeCategory, setActiveCategory] = useState('all')
@@ -253,6 +270,7 @@ function App() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSignal, setActiveSignal] = useState(0)
   const [activeProduct, setActiveProduct] = useState(0)
+  const [productQuantities, setProductQuantities] = useState({})
 
   const featuredProducts = useMemo(() => getCuratedShowcase(), [])
 
@@ -261,6 +279,7 @@ function App() {
   }, [activeCategory, featuredProducts])
 
   const floatingCartItems = items.slice(0, 3)
+  const cartWhatsappUrl = `${whatsappBase}?text=${encodeURIComponent(buildWhatsappOrderMessage({ items, subtotal }))}`
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 24)
@@ -297,6 +316,20 @@ function App() {
     }
   }
 
+  const changeProductDraftQuantity = (productId, delta) => {
+    setProductQuantities((current) => {
+      const next = Math.max(1, (current[productId] ?? 1) + delta)
+      return { ...current, [productId]: next }
+    })
+  }
+
+  const getProductDraftQuantity = (productId) => productQuantities[productId] ?? 1
+
+  const handleAddToCart = (product) => {
+    addItem(product, getProductDraftQuantity(product.id))
+    setProductQuantities((current) => ({ ...current, [product.id]: 1 }))
+  }
+
   return (
     <main className="figma-storefront">
       <header className="utility-strip">
@@ -313,32 +346,10 @@ function App() {
 
       <header className={`commerce-header${isScrolled ? ' commerce-header-scrolled' : ''}`}>
         <div className="brand-lockup">
-          <div className="brand-mark">LE</div>
-          <div className="brand-copy">
-            <strong>Los Eucaliptus Corralon</strong>
-            <span>Materiales para la construccion</span>
-          </div>
+          <img className="brand-logo-image" src={logoHeader} alt="Los Eucaliptus Corralon" />
         </div>
 
-        <form className="header-search" onSubmit={(event) => event.preventDefault()}>
-          <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)}>
-            <option value="all">Todas las categorias</option>
-            {categoryCards.slice(0, 6).map((category) => (
-              <option key={category.key} value={category.key}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <button type="button" onClick={scrollToProducts}>
-            Ver
-          </button>
-        </form>
-
         <div className="header-actions">
-          <div className="account-box">
-            <strong>Mi cuenta</strong>
-            <span>Ingresar / Registrarme</span>
-          </div>
           <button className="cart-box" type="button" onClick={() => setShowCart(true)}>
             <strong>Mi carrito</strong>
             <span>{itemCount} items | {formatPrice(subtotal)}</span>
@@ -403,9 +414,22 @@ function App() {
       <section className="featured-section-figma" id="productos-destacados">
         <div className="section-header">
           <h2>Productos destacados</h2>
-          <button className="text-link-button" type="button" onClick={() => setActiveCategory('all')}>
-            Ver todos los productos
-          </button>
+          <div className="section-header-actions">
+            <label className="featured-filter">
+              <span>Filtrar</span>
+              <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)}>
+                <option value="all">Todas las categorias</option>
+                {categoryCards.slice(0, 6).map((category) => (
+                  <option key={category.key} value={category.key}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="text-link-button" type="button" onClick={() => setActiveCategory('all')}>
+              Ver todos los productos
+            </button>
+          </div>
         </div>
 
         <div className="products-grid">
@@ -416,7 +440,7 @@ function App() {
               onMouseEnter={() => setActiveProduct(index)}
             >
               <div className="product-visual-large" data-category={product.categoryKey}>
-                <span>{product.categoryName}</span>
+                <span>{product.excelName}</span>
               </div>
               <div className="product-copy">
                 <h3>{product.excelName}</h3>
@@ -425,11 +449,15 @@ function App() {
               </div>
               <div className="product-actions">
                 <div className="mini-quantity">
-                  <button type="button">-</button>
-                  <span>1</span>
-                  <button type="button">+</button>
+                  <button type="button" onClick={() => changeProductDraftQuantity(product.id, -1)}>
+                    -
+                  </button>
+                  <span>{getProductDraftQuantity(product.id)}</span>
+                  <button type="button" onClick={() => changeProductDraftQuantity(product.id, 1)}>
+                    +
+                  </button>
                 </div>
-                <button className="add-cart-button" type="button" onClick={() => addItem(product)}>
+                <button className="add-cart-button" type="button" onClick={() => handleAddToCart(product)}>
                   Agregar al carrito
                 </button>
               </div>
@@ -492,18 +520,7 @@ function App() {
       </section>
 
       <section className="bottom-story-grid">
-        <article className="story-card story-card-dark">
-          <div className="story-card-copy">
-            <h2>
-              Construimos
-              <br />
-              con vos
-            </h2>
-            <p>Calidad, experiencia y compromiso desde 1954.</p>
-            <button className="primary-cta" type="button">
-              Conoce mas sobre nosotros
-            </button>
-          </div>
+        <article className="story-card story-card-dark story-card-image-only">
           <img src={promoMateriales} alt="Materiales para la construccion" />
         </article>
 
@@ -629,8 +646,8 @@ function App() {
             <button className="secondary-cta dark" type="button" onClick={clearCart}>
               Vaciar carrito
             </button>
-            <a className="primary-cta" href={whatsappBase} target="_blank" rel="noreferrer">
-              Finalizar por WhatsApp
+            <a className="primary-cta" href={cartWhatsappUrl} target="_blank" rel="noreferrer">
+              Enviar pedido por WhatsApp
             </a>
           </div>
         </aside>

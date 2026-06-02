@@ -22,7 +22,7 @@ export const financingCards = [
   },
   {
     title: 'Todos los bancos',
-    text: 'Aceptamos pagos con tarjetas bancarias a coordinar con Payway.',
+    text: 'Aceptamos pagos con tarjetas bancarias a coordinar por WhatsApp.',
   },
 ]
 
@@ -324,7 +324,6 @@ export const homeCollections = [
 ]
 
 export const checkoutPaymentOptions = [
-  { value: 'payway', label: 'Link de pago Payway' },
   { value: 'transferencia', label: 'Transferencia bancaria' },
   { value: 'whatsapp', label: 'Coordinar por WhatsApp' },
 ]

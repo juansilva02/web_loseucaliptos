@@ -29,12 +29,13 @@ export function CartProvider({ children }) {
       items,
       itemCount,
       subtotal,
-      addItem(product) {
+      addItem(product, quantity = 1) {
         setItems((current) => {
+          const safeQuantity = Math.max(1, Number(quantity) || 1)
           const existing = current.find((item) => item.id === product.id)
           if (existing) {
             return current.map((item) =>
-              item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
+              item.id === product.id ? { ...item, quantity: item.quantity + safeQuantity } : item,
             )
           }
 
@@ -47,7 +48,7 @@ export function CartProvider({ children }) {
               brandName: product.brandName,
               price: product.price,
               categoryName: product.categoryName,
-              quantity: 1,
+              quantity: safeQuantity,
             },
           ]
         })
@@ -58,9 +59,7 @@ export function CartProvider({ children }) {
       changeQuantity(id, nextQuantity) {
         setItems((current) =>
           current
-            .map((item) =>
-              item.id === id ? { ...item, quantity: Math.max(1, Number(nextQuantity) || 1) } : item,
-            )
+            .map((item) => (item.id === id ? { ...item, quantity: Math.max(0, Number(nextQuantity) || 0) } : item))
             .filter((item) => item.quantity > 0),
         )
       },
