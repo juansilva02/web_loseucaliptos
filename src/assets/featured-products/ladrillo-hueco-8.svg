@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#843725"/>
+      <stop offset="55%" style="stop-color:#bc6231"/>
+      <stop offset="100%" style="stop-color:#ec9b62"/>
+    </linearGradient>
+    <linearGradient id="brickFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d96b2a"/>
+      <stop offset="100%" style="stop-color:#a33f14"/>
+    </linearGradient>
+    <linearGradient id="brickTop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8824a"/>
+      <stop offset="100%" style="stop-color:#c55a20"/>
+    </linearGradient>
+    <linearGradient id="brickSide" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7a2e10"/>
+      <stop offset="100%" style="stop-color:#9e4018"/>
+    </linearGradient>
+    <linearGradient id="holeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3a1508"/>
+      <stop offset="100%" style="stop-color:#5a2010"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="rgba(20,8,2,0.5)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="220" fill="url(#bgGrad)"/>
+  <circle cx="30" cy="30" r="60" fill="rgba(255,255,255,0.03)"/>
+  <circle cx="370" cy="190" r="80" fill="rgba(0,0,0,0.08)"/>
+
+  <!-- 3D Brick — narrower than del 12 (8cm = shorter depth) -->
+  <g filter="url(#shadow)" transform="translate(70, 40)">
+
+    <!-- TOP face — narrower isometric top -->
+    <polygon points="130,0  250,0  265,14  145,14" fill="url(#brickTop)" stroke="#c55a20" stroke-width="0.5"/>
+
+    <!-- FRONT face -->
+    <rect x="130" y="14" width="120" height="88" fill="url(#brickFace)" stroke="#a33f14" stroke-width="0.5"/>
+
+    <!-- RIGHT side face — narrower than del 12 -->
+    <polygon points="250,0  265,14  265,102  250,102" fill="url(#brickSide)" stroke="#7a2e10" stroke-width="0.5"/>
+
+    <!-- Holes on front face — 3 columns × 2 rows (del 8 has fewer holes) -->
+    <!-- Row 1 -->
+    <ellipse cx="150" cy="43" rx="9" ry="12" fill="url(#holeGrad)"/>
+    <ellipse cx="178" cy="43" rx="9" ry="12" fill="url(#holeGrad)"/>
+    <ellipse cx="206" cy="43" rx="9" ry="12" fill="url(#holeGrad)"/>
+    <ellipse cx="234" cy="43" rx="7" ry="12" fill="url(#holeGrad)"/>
+
+    <!-- Row 2 -->
+    <ellipse cx="150" cy="77" rx="9" ry="12" fill="url(#holeGrad)"/>
+    <ellipse cx="178" cy="77" rx="9" ry="12" fill="url(#holeGrad)"/>
+    <ellipse cx="206" cy="77" rx="9" ry="12" fill="url(#holeGrad)"/>
+    <ellipse cx="234" cy="77" rx="7" ry="12" fill="url(#holeGrad)"/>
+
+    <!-- Mortar line -->
+    <line x1="130" y1="60" x2="250" y2="60" stroke="rgba(80,25,5,0.4)" stroke-width="1"/>
+
+    <!-- Bottom shadow -->
+    <line x1="130" y1="102" x2="250" y2="102" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+    <line x1="250" y1="102" x2="265" y2="102" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+  </g>
+
+  <!-- Label badge -->
+  <rect x="20" y="170" width="160" height="34" rx="8" fill="rgba(20,8,2,0.55)"/>
+  <text x="31" y="183" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="10" fill="#f07522" letter-spacing="1">LADRILLO HUECO</text>
+  <text x="31" y="197" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="13" fill="#ffffff" letter-spacing="0.5">DEL 8 — QUILMES</text>
+
+  <!-- Dimension tag -->
+  <rect x="298" y="170" width="86" height="34" rx="8" fill="rgba(240,117,34,0.92)"/>
+  <text x="341" y="183" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="#fff" text-anchor="middle" letter-spacing="0.5">ESPESOR</text>
+  <text x="341" y="197" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="15" fill="#fff" text-anchor="middle">8 cm</text>
+</svg>

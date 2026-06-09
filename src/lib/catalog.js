@@ -1,6 +1,7 @@
 import { productCatalog } from '../data/catalog'
 
 export const whatsappBase = 'https://wa.me/5491159748316'
+export const whatsappBosques = 'https://wa.me/5491130623113'
 
 export const contactItems = [
   'Av. Monteverde 2766, San Francisco Solano, Provincia de Buenos Aires',

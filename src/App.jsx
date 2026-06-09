@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import cubeIcon from './assets/icono-cubo.png'
 import logoHeader from './assets/logo-header-los-eucaliptos.png'
-import promoCamion from './assets/promo-camion.svg'
+import promoCamion from './assets/promo-camion.png'
 import promoMateriales from './assets/promo-cta-corralon.png'
+import imgLadrilloHueco12 from './assets/featured-products/ladrillo-hueco-12.png'
+import imgLadrilloHueco8 from './assets/featured-products/ladrillo-hueco-8.svg'
+import imgLadrilloComun from './assets/featured-products/ladrillo-comun.svg'
 import {
   categoryCards,
   contactItems,
@@ -11,8 +14,11 @@ import {
   storefrontProducts,
   supplierBrands,
   whatsappBase,
+  whatsappBosques,
 } from './lib/catalog'
 import { useCart } from './context/CartContext'
+import CatalogPage from './pages/CatalogPage'
+import featuredCatalog from './data/featured-catalog.json'
 import './App.css'
 
 const serviceHighlights = [
@@ -26,6 +32,34 @@ const heroSignals = [
   '3 y 6 cuotas con todos los bancos',
   'Pedidos por WhatsApp con respuesta directa',
   'Envios rapidos en Zona Sur y alrededores',
+]
+
+const branches = [
+  {
+    name: 'Corralon Los Eucaliptus "Solano"',
+    kicker: 'Sucursal Solano',
+    heading: 'Visitanos en Av. Monteverde 2766',
+    description:
+      'Estamos en San Francisco Solano, Zona Sur. Podes acercarte o escribirnos por WhatsApp para coordinar el pedido y la entrega.',
+    address: 'Av. Monteverde 2766, San Francisco Solano, Buenos Aires',
+    hours: 'Lun a Vie 8:00 a 12:00 y 14:00 a 19:00 | Sab 08:00 a 14:00',
+    mapsEmbedUrl: 'https://www.google.com/maps?q=-34.7904685,-58.3096963&output=embed',
+    mapsDirectionsUrl:
+      'https://www.google.com/maps/place/Corral%C3%B3n+Los+Eucaliptus+%22Solano%22/@-34.7904685,-58.3096963,17z/data=!3m1!4b1!4m6!3m5!1s0x95a32c71520b4479:0x4a3a34f33c1db2be!8m2!3d-34.7904685!4d-58.3096963!16s%2Fg%2F11c6pnxypl?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDYwMS4wIKXMDSoASAFQAw%3D%3D',
+  },
+  {
+    name: 'Corralon Los Eucaliptus "Bosques"',
+    kicker: 'Sucursal Bosques',
+    heading: 'Visitanos en Av. Guillermo Hudson 2855',
+    description:
+      'Encontranos en Bosques, Florencio Varela. Los mismos materiales, la misma atencion y el mismo compromiso de siempre.',
+    address: 'Av. Guillermo Hudson 2855, Bosques, Buenos Aires',
+    phone: '11 3062-3113',
+    hours: 'Lun a Vie 08:00 a 18:00 | Sab 08:00 a 15:00',
+    mapsEmbedUrl: 'https://www.google.com/maps?q=-34.8315412,-58.2423633&output=embed',
+    mapsDirectionsUrl:
+      'https://www.google.com/maps/place/Corralon+Los+Eucaliptus+%22Bosques%22/@-34.8315412,-58.2449382,17z/data=!3m1!4b1!4m6!3m5!1s0x95a329fb5902748d:0xc9956ec6f35647e6!8m2!3d-34.8315412!4d-58.2423633!16s%2Fg%2F11l2fcpsk1?entry=tts',
+  },
 ]
 
 const utilityHighlights = [
@@ -51,153 +85,14 @@ const utilityHighlights = [
   },
 ]
 
-const priceNotes = [
-  'Los precios estan sujetos a modificacion sin previo aviso.',
-  'Los reclamos por cambio de material se toman dentro de las 24 hs de entregado el pedido.',
-]
-
-const orderRequirements = [
-  'Apellido y nombre',
-  'CUIL',
-  'Direccion, numero y entre calles',
-  'Forma de pago',
-]
-
-const priceHighlights = [
-  'Arena suelta $41.000',
-  'Arena en bolson $49.200 oferta',
-  'Piedra suelta $70.000 super oferta',
-  'Piedra en bolson $78.200 super oferta',
-  'Cemento Loma Negra 25kg $7.200',
-  'Cal Cacique Max 25kg $7.100',
-]
-
-const curatedProducts = [
-  {
-    title: 'Ladrillo hueco del 12',
-    subtitle: 'Marca Quilmes',
-    match: 'LADRILLO HUECO 12',
-    categoryKey: 'ladrillos-y-bloques',
-    priceOverride: 790,
-  },
-  {
-    title: 'Ladrillos comunes',
-    subtitle: 'Sin marca',
-    match: 'LADRILLO COMUN',
-    categoryKey: 'ladrillos-y-bloques',
-    priceOverride: 220,
-  },
-  {
-    title: 'Ladrillo hueco del 8',
-    subtitle: 'Marca Quilmes',
-    match: 'LADRILLO HUECO 8',
-    categoryKey: 'ladrillos-y-bloques',
-    priceOverride: 630,
-  },
-  {
-    title: 'Cemento Portland 25kg',
-    subtitle: 'Marca Loma Negra',
-    match: 'PORTLAND 25',
-    categoryKey: 'aridos-y-obra-gruesa',
-    priceOverride: 7200,
-  },
-  {
-    title: 'Cal Cacique Max 25kg',
-    subtitle: 'Marca Cacique',
-    match: 'CACIQUE MAX 25',
-    categoryKey: 'aridos-y-obra-gruesa',
-    priceOverride: 7100,
-  },
-  {
-    title: 'Bloque liso de cemento del 13',
-    subtitle: 'Sin marca',
-    match: 'BLOQUE LISO 13',
-    categoryKey: 'ladrillos-y-bloques',
-  },
-  {
-    title: 'Bloque liso de cemento del 20',
-    subtitle: 'Sin marca',
-    match: 'BLOQUE LISO 20',
-    categoryKey: 'ladrillos-y-bloques',
-  },
-  {
-    title: 'Bloque liso de cemento del 10',
-    subtitle: 'Sin marca',
-    match: 'BLOQUE LISO 10',
-    categoryKey: 'ladrillos-y-bloques',
-  },
-  {
-    title: 'Hierro del 6',
-    subtitle: 'Marca Acindar',
-    match: 'HIERRO 6',
-    categoryKey: 'hierros-y-estructura',
-    priceOverride: 6250,
-  },
-  {
-    title: 'Hierro del 8',
-    subtitle: 'Marca Acindar',
-    match: 'HIERRO 8',
-    categoryKey: 'hierros-y-estructura',
-    priceOverride: 10800,
-  },
-  {
-    title: 'Ladrillo Cordoba media vista',
-    subtitle: 'Sin marca',
-    match: 'CORDOBA MEDIA VISTA',
-    categoryKey: 'ladrillos-y-bloques',
-  },
-  {
-    title: 'Arena por metro bolson',
-    subtitle: 'Sin marca',
-    match: 'ARENA BOLSON',
-    categoryKey: 'aridos-y-obra-gruesa',
-    priceOverride: 49200,
-  },
-  {
-    title: 'Hierro del 10',
-    subtitle: 'Marca Acindar',
-    match: 'HIERRO 10',
-    categoryKey: 'hierros-y-estructura',
-    priceOverride: 16900,
-  },
-  {
-    title: 'Hierro del 4,2',
-    subtitle: 'Marca Acindar',
-    match: 'HIERRO 4,2',
-    categoryKey: 'hierros-y-estructura',
-    priceOverride: 2500,
-  },
-  {
-    title: 'Pegamento para ceramica',
-    subtitle: 'Marca Premecol',
-    match: 'PEGAMENTO CERAMICA',
-    categoryKey: 'electricidad-y-ferreteria',
-    priceOverride: 7400,
-  },
-  {
-    title: 'Ladrillo de telgopor 10cm',
-    subtitle: 'Marca Polipol',
-    match: 'TELGOPOR 10',
-    categoryKey: 'ladrillos-y-bloques',
-    priceOverride: 4000,
-  },
-  {
-    title: 'Ladrillo de telgopor 12.5cm',
-    subtitle: 'Marca Polipol',
-    match: 'TELGOPOR 12.5',
-    categoryKey: 'ladrillos-y-bloques',
-    priceOverride: 4800,
-  },
-  {
-    title: 'Cable unipolar 1 x 2.5',
-    subtitle: 'Sin marca',
-    match: 'UNIPOLAR 1 X2.5',
-    categoryKey: 'electricidad-y-ferreteria',
-  },
-]
+const productImages = {
+  'LADRILLO HUECO 12': imgLadrilloHueco12,
+  'LADRILLO HUECO 8': imgLadrilloHueco8,
+  'LADRILLO COMUN': imgLadrilloComun,
+}
 
 function getCuratedShowcase() {
-  return curatedProducts.map((item, index) => {
+  return featuredCatalog.featured.map((item, index) => {
     const match = storefrontProducts.find((product) => normalizeText(product.rawName).includes(item.match))
     const category = categoryCards.find((entry) => entry.key === item.categoryKey)
 
@@ -211,6 +106,7 @@ function getCuratedShowcase() {
       categoryName: category?.name ?? 'Materiales',
       brandName: match?.brandName ?? '',
       sourceName: match?.excelName ?? item.title,
+      image: productImages[item.match] ?? null,
     }
   })
 }
@@ -271,6 +167,8 @@ function App() {
   const [activeSignal, setActiveSignal] = useState(0)
   const [activeProduct, setActiveProduct] = useState(0)
   const [productQuantities, setProductQuantities] = useState({})
+  const [activeLocation, setActiveLocation] = useState(0)
+  const [currentPage, setCurrentPage] = useState('home')
 
   const featuredProducts = useMemo(() => getCuratedShowcase(), [])
 
@@ -279,7 +177,9 @@ function App() {
   }, [activeCategory, featuredProducts])
 
   const floatingCartItems = items.slice(0, 3)
-  const cartWhatsappUrl = `${whatsappBase}?text=${encodeURIComponent(buildWhatsappOrderMessage({ items, subtotal }))}`
+  const cartMsg = encodeURIComponent(buildWhatsappOrderMessage({ items, subtotal }))
+  const cartWhatsappUrl = `${whatsappBase}?text=${cartMsg}`
+  const cartWhatsappBosques = `${whatsappBosques}?text=${cartMsg}`
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 24)
@@ -330,8 +230,15 @@ function App() {
     setProductQuantities((current) => ({ ...current, [product.id]: 1 }))
   }
 
+  const prevBranch = () => setActiveLocation((current) => (current - 1 + branches.length) % branches.length)
+  const nextBranch = () => setActiveLocation((current) => (current + 1) % branches.length)
+
   return (
     <main className="figma-storefront">
+      {currentPage === 'catalog' ? (
+        <CatalogPage onBack={() => setCurrentPage('home')} onOpenCart={() => setShowCart(true)} />
+      ) : (
+        <>
       <header className="utility-strip">
         <div className="utility-cluster">
           <span>Zona Sur, Buenos Aires</span>
@@ -354,10 +261,16 @@ function App() {
             <strong>Mi carrito</strong>
             <span>{itemCount} items | {formatPrice(subtotal)}</span>
           </button>
-          <a className="whatsapp-box" href={whatsappBase} target="_blank" rel="noreferrer">
-            <strong>11 5974-8316</strong>
-            <span>Escribinos por WhatsApp</span>
-          </a>
+          <div className="whatsapp-group">
+            <a className="whatsapp-box-branch" href={whatsappBase} target="_blank" rel="noreferrer">
+              <strong>Solano</strong>
+              <span>11 5974-8316</span>
+            </a>
+            <a className="whatsapp-box-branch" href={whatsappBosques} target="_blank" rel="noreferrer">
+              <strong>Bosques</strong>
+              <span>11 3062-3113</span>
+            </a>
+          </div>
         </div>
       </header>
 
@@ -374,16 +287,21 @@ function App() {
             <br />
             que construyen
             <br />
-            tus proyectos
+            tu hogar
           </h1>
           <p>Stock permanente | Mejores precios | Envios en Zona Sur</p>
           <div className="hero-cta-row">
             <button className="primary-cta" type="button" onClick={scrollToProducts}>
               Compra online
             </button>
-            <a className="secondary-cta" href={whatsappBase} target="_blank" rel="noreferrer">
-              Pedi por WhatsApp
-            </a>
+            <div className="hero-wa-group">
+              <a className="secondary-cta hero-wa-btn" href={whatsappBase} target="_blank" rel="noreferrer">
+                WhatsApp Solano
+              </a>
+              <a className="secondary-cta hero-wa-btn" href={whatsappBosques} target="_blank" rel="noreferrer">
+                WhatsApp Bosques
+              </a>
+            </div>
           </div>
           <div className="hero-note">Desde 1954 en Zona Sur, Buenos Aires</div>
           <div className="hero-signals">
@@ -426,7 +344,7 @@ function App() {
                 ))}
               </select>
             </label>
-            <button className="text-link-button" type="button" onClick={() => setActiveCategory('all')}>
+            <button className="text-link-button" type="button" onClick={() => setCurrentPage('catalog')}>
               Ver todos los productos
             </button>
           </div>
@@ -439,9 +357,15 @@ function App() {
               key={product.id}
               onMouseEnter={() => setActiveProduct(index)}
             >
-              <div className="product-visual-large" data-category={product.categoryKey}>
-                <span>{product.excelName}</span>
-              </div>
+              {product.image ? (
+                <div className="product-visual-large product-visual-image-frame">
+                  <img className="product-visual-image" src={product.image} alt={product.excelName} />
+                </div>
+              ) : (
+                <div className="product-visual-large" data-category={product.categoryKey}>
+                  <span>{product.excelName}</span>
+                </div>
+              )}
               <div className="product-copy">
                 <h3>{product.excelName}</h3>
                 <p>{product.subtitle}</p>
@@ -477,45 +401,82 @@ function App() {
               <strong>{banner.title}</strong>
               <p>{banner.text}</p>
               {banner.title === 'WhatsApp directo' ? (
-                <a href={whatsappBase} target="_blank" rel="noreferrer">
-                  11 5974-8316
-                </a>
+                <div className="benefit-wa-links">
+                  <a href={whatsappBase} target="_blank" rel="noreferrer">
+                    Solano: 11 5974-8316
+                  </a>
+                  <a href={whatsappBosques} target="_blank" rel="noreferrer">
+                    Bosques: 11 3062-3113
+                  </a>
+                </div>
               ) : null}
             </article>
           ))}
         </div>
       </section>
 
-      <section className="purchase-brief">
-        <div className="purchase-brief-main">
-          <p className="section-kicker">Informacion comercial</p>
-          <h3>Precios orientativos, datos para tomar el pedido y condiciones de venta.</h3>
-          <div className="purchase-brief-tags">
-            {priceHighlights.slice(0, 4).map((item) => (
-              <span key={item}>{item}</span>
+      <section className="location-section">
+        <div className="location-carousel">
+          <div className="location-carousel-viewport">
+            {branches.map((branch, i) => (
+              <article
+                key={branch.name}
+                className={`location-card${activeLocation === i ? ' location-card-visible' : ''}`}
+              >
+                <div className="location-copy">
+                  <p className="section-kicker">{branch.kicker}</p>
+                  <h3>{branch.heading}</h3>
+                  <p>{branch.description}</p>
+                  <div className="location-meta">
+                    <span>{branch.address}</span>
+                    {branch.phone ? <span>Tel: {branch.phone}</span> : null}
+                    <span>{branch.hours}</span>
+                  </div>
+                  <a className="primary-cta" href={branch.mapsDirectionsUrl} target="_blank" rel="noreferrer">
+                    Abrir en Google Maps
+                  </a>
+                </div>
+                <div className="location-map-frame">
+                  <iframe
+                    title={`Mapa de ${branch.name}`}
+                    src={branch.mapsEmbedUrl}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              </article>
             ))}
           </div>
-        </div>
-        <div className="purchase-brief-side">
-          <article className="purchase-brief-card">
-            <div className="purchase-brief-media" aria-hidden="true">
-              <span>Imagen para pedido</span>
-            </div>
-            <strong>Para pedir</strong>
-            <div className="purchase-brief-list">
-              {orderRequirements.map((item) => (
-                <span key={item}>{item}</span>
+
+          <div className="location-carousel-controls">
+            <button
+              className="location-carousel-btn"
+              type="button"
+              onClick={prevBranch}
+              aria-label="Sucursal anterior"
+            >
+              ←
+            </button>
+            <div className="location-carousel-dots">
+              {branches.map((branch, i) => (
+                <button
+                  key={branch.name}
+                  className={`location-dot${activeLocation === i ? ' location-dot-active' : ''}`}
+                  type="button"
+                  onClick={() => setActiveLocation(i)}
+                  aria-label={`Ver ${branch.name}`}
+                />
               ))}
             </div>
-          </article>
-          <article className="purchase-brief-card purchase-brief-card-accent">
-            <strong>Condiciones</strong>
-            <div className="purchase-brief-list">
-              {priceNotes.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-          </article>
+            <button
+              className="location-carousel-btn"
+              type="button"
+              onClick={nextBranch}
+              aria-label="Siguiente sucursal"
+            >
+              →
+            </button>
+          </div>
         </div>
       </section>
 
@@ -568,6 +529,8 @@ function App() {
           <span>1 a 3 cuotas 20% | 4 a 6 cuotas 29%</span>
         </div>
       </footer>
+        </>
+      )}
 
       <a
         className={`floating-whatsapp${showCart ? ' floating-whatsapp-shifted' : ''}`}
@@ -576,7 +539,10 @@ function App() {
         rel="noreferrer"
         aria-label="Contactar por WhatsApp"
       >
-        <span className="floating-whatsapp-mark">W</span>
+        <svg className="floating-whatsapp-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M16 3C8.82 3 3 8.82 3 16c0 2.28.6 4.52 1.73 6.48L3 29l6.72-1.7A13 13 0 0016 29c7.18 0 13-5.82 13-13S23.18 3 16 3z" fill="white"/>
+          <path d="M23.14 20.08c-.31-.16-1.83-.9-2.11-.99-.28-.1-.49-.16-.69.15-.2.31-.78.99-.95 1.19-.17.2-.35.22-.66.07-.31-.16-1.3-.48-2.48-1.52-.92-.82-1.54-1.83-1.72-2.14-.18-.31-.02-.47.13-.63.14-.14.31-.37.47-.56.16-.19.2-.31.31-.52.1-.2.05-.38-.02-.54-.08-.16-.69-1.66-.94-2.27-.25-.6-.5-.52-.69-.53H12.3c-.2 0-.52.07-.79.38-.28.31-1.06 1.04-1.06 2.53 0 1.5 1.09 2.94 1.24 3.14.15.2 2.15 3.28 5.21 4.6.73.31 1.3.5 1.74.64.73.23 1.4.2 1.92.12.59-.09 1.83-.75 2.08-1.47.26-.72.26-1.34.18-1.47-.07-.13-.28-.2-.59-.36z" fill="#22c55e"/>
+        </svg>
       </a>
 
       {itemCount ? (
@@ -646,9 +612,14 @@ function App() {
             <button className="secondary-cta dark" type="button" onClick={clearCart}>
               Vaciar carrito
             </button>
-            <a className="primary-cta" href={cartWhatsappUrl} target="_blank" rel="noreferrer">
-              Enviar pedido por WhatsApp
-            </a>
+            <div className="cart-send-group">
+              <a className="primary-cta" href={cartWhatsappUrl} target="_blank" rel="noreferrer">
+                Enviar — Solano
+              </a>
+              <a className="primary-cta" href={cartWhatsappBosques} target="_blank" rel="noreferrer">
+                Enviar — Bosques
+              </a>
+            </div>
           </div>
         </aside>
       ) : null}
