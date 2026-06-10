@@ -1253,17 +1253,18 @@
 
 @media (max-width: 1280px) {
   .commerce-header {
-    grid-template-columns: 1fr;
-    gap: 18px;
-    padding: 18px 22px;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    padding: 14px 22px;
   }
 
   .brand-lockup {
-    min-height: 76px;
+    min-height: 68px;
   }
 
   .header-actions {
-    width: 100%;
+    justify-content: flex-end;
+    width: auto;
   }
 
   .products-grid {
@@ -1305,44 +1306,56 @@
   }
 
   .commerce-header {
-    position: relative;
-    top: 0;
-    gap: 14px;
-    padding: 16px 18px;
+    gap: 12px;
+    padding: 12px 18px;
   }
 
   .brand-lockup {
-    min-height: 68px;
-    justify-content: center;
+    min-height: 54px;
+    justify-content: flex-start;
     padding: 0;
   }
 
   .brand-logo-image {
-    max-width: min(100%, 460px);
-    max-height: 64px;
-    object-position: center;
+    max-width: min(260px, 42vw);
+    max-height: 48px;
+    object-position: left center;
   }
 
-  .header-actions,
+  .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+  }
+
   .hero-cta-row {
     display: grid;
     grid-template-columns: 1fr;
     width: 100%;
   }
 
-  .cart-box,
-  .whatsapp-box {
-    width: 100%;
+  .cart-box {
+    width: auto;
+    padding: 8px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(23, 20, 17, 0.08);
+    box-shadow: var(--shadow-soft);
     justify-items: start;
   }
 
   .whatsapp-group {
-    width: 100%;
+    gap: 6px;
+    width: auto;
   }
 
   .whatsapp-box-branch {
-    flex: 1;
-    justify-items: start;
+    flex: none;
+    padding: 8px 12px;
   }
 
   .cart-box {
@@ -1509,7 +1522,6 @@
     font-size: 0.8rem;
   }
 
-  .commerce-header,
   .featured-section-figma,
   .bottom-story-grid {
     padding-left: 12px;
@@ -1517,24 +1529,44 @@
   }
 
   .commerce-header {
-    padding-top: 14px;
-    padding-bottom: 14px;
+    position: relative;
+    grid-template-columns: 1fr;
+    padding: 12px 14px;
     border-radius: 0 0 20px 20px;
+  }
+
+  .brand-lockup {
+    min-height: 48px;
+    justify-content: center;
   }
 
   .brand-logo-image {
     max-width: 100%;
-    max-height: 58px;
+    max-height: 52px;
+    object-position: center;
   }
 
   .header-actions {
-    gap: 10px;
+    flex-direction: column;
+    justify-content: stretch;
+    width: 100%;
+    gap: 8px;
   }
 
-  .cart-box,
-  .whatsapp-box {
-    padding-left: 14px;
-    padding-right: 14px;
+  .cart-box {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .whatsapp-group {
+    width: 100%;
+  }
+
+  .whatsapp-box-branch {
+    flex: 1;
+    justify-items: start;
+    padding: 10px 14px;
   }
 
   .category-bar {
