@@ -5,7 +5,7 @@ import promoCamion from './assets/promo-camion.png'
 import promoMateriales from './assets/promo-cta-corralon.png'
 import imgLadrilloHueco12 from './assets/featured-products/ladrillo-hueco-12.png'
 import imgLadrilloHueco8 from './assets/featured-products/ladrillo-hueco-8.png'
-import imgLadrilloComun from './assets/featured-products/ladrillo-comun.svg'
+import imgLadrilloComun from './assets/featured-products/ladrillo-comun.png'
 import imgPortland25 from './assets/featured-products/portland-25kg.png'
 import imgCalCacique from './assets/featured-products/cal-cacique-25kg.png'
 import imgBloqueLiso13 from './assets/featured-products/bloque-liso-13.png'
@@ -192,6 +192,7 @@ function buildWhatsappOrderMessage({ items, subtotal }) {
 function App() {
   const { items, itemCount, subtotal, addItem, removeItem, changeQuantity, clearCart } = useCart()
   const [activeCategory, setActiveCategory] = useState('all')
+  const [featuredSearch, setFeaturedSearch] = useState('')
   const [showCart, setShowCart] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSignal, setActiveSignal] = useState(0)
@@ -203,8 +204,16 @@ function App() {
   const featuredProducts = useMemo(() => getCuratedShowcase(), [])
 
   const filteredProducts = useMemo(() => {
-    return featuredProducts.filter((product) => activeCategory === 'all' || product.categoryKey === activeCategory)
-  }, [activeCategory, featuredProducts])
+    const term = normalizeText(featuredSearch.trim())
+    return featuredProducts.filter((product) => {
+      const matchesCategory = activeCategory === 'all' || product.categoryKey === activeCategory
+      const matchesSearch = !term ||
+        normalizeText(product.excelName).includes(term) ||
+        normalizeText(product.categoryName).includes(term) ||
+        normalizeText(product.brandName).includes(term)
+      return matchesCategory && matchesSearch
+    })
+  }, [activeCategory, featuredSearch, featuredProducts])
 
   const floatingCartItems = items.slice(0, 3)
   const cartMsg = encodeURIComponent(buildWhatsappOrderMessage({ items, subtotal }))
@@ -363,6 +372,19 @@ function App() {
         <div className="section-header">
           <h2>Productos destacados</h2>
           <div className="section-header-actions">
+            <div className="featured-search-wrap">
+              <input
+                className="featured-search-input"
+                type="search"
+                placeholder="Buscar producto..."
+                value={featuredSearch}
+                onChange={(e) => setFeaturedSearch(e.target.value)}
+                autoComplete="off"
+              />
+              {featuredSearch && (
+                <button className="featured-search-clear" type="button" onClick={() => setFeaturedSearch('')} aria-label="Limpiar">×</button>
+              )}
+            </div>
             <label className="featured-filter">
               <span>Filtrar</span>
               <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)}>

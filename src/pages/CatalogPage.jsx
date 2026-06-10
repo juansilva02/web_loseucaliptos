@@ -4,6 +4,55 @@ import { formatPrice, whatsappBase } from '../lib/catalog'
 import { useCart } from '../context/CartContext'
 import './CatalogPage.css'
 
+import imgLadrilloHueco12 from '../assets/featured-products/ladrillo-hueco-12.png'
+import imgLadrilloHueco8 from '../assets/featured-products/ladrillo-hueco-8.png'
+import imgLadrilloComun from '../assets/featured-products/ladrillo-comun.png'
+import imgLadrilloCordoba from '../assets/featured-products/ladrillo-cordoba-media-vista.png'
+import imgBloqueLiso10 from '../assets/featured-products/bloque-liso-10.png'
+import imgBloqueLiso13 from '../assets/featured-products/bloque-liso-13.png'
+import imgBloqueLiso20 from '../assets/featured-products/bloque-liso-20.png'
+import imgTelgopor10 from '../assets/featured-products/telgopor-10.png'
+import imgTelgopor125 from '../assets/featured-products/telgopor-12-5.png'
+import imgPortland25 from '../assets/featured-products/portland-25kg.png'
+import imgCalCacique from '../assets/featured-products/cal-cacique-25kg.png'
+import imgArenaBolson from '../assets/featured-products/arena-bolson.png'
+import imgArenaSupelta from '../assets/featured-products/arena-suelta.png'
+import imgCascoteBolson from '../assets/featured-products/cascote-bolson.png'
+import imgPiedraBolson from '../assets/featured-products/piedra-bolson.png'
+import imgHierro42 from '../assets/featured-products/hierro-4-2.png'
+import imgHierro6 from '../assets/featured-products/hierro-6.png'
+import imgHierro8 from '../assets/featured-products/hierro-8.png'
+import imgHierro10 from '../assets/featured-products/hierro-10.png'
+import imgHierro12 from '../assets/featured-products/hierro-12.png'
+import imgPegamentoCeramica from '../assets/featured-products/pegamento-ceramica.png'
+import imgCableUnipolar from '../assets/featured-products/cable-unipolar-2-5.png'
+
+const productImageMap = {
+  'ladrillo-hueco-12':    imgLadrilloHueco12,
+  'ladrillo-hueco-8':     imgLadrilloHueco8,
+  'ladrillo-comun':       imgLadrilloComun,
+  'ladrillo-cordoba-mv':  imgLadrilloCordoba,
+  'bloque-cemento-10':    imgBloqueLiso10,
+  'bloque-cemento-13':    imgBloqueLiso13,
+  'bloque-cemento-20':    imgBloqueLiso20,
+  'telgopor-10':          imgTelgopor10,
+  'telgopor-12-5':        imgTelgopor125,
+  'portland-25kg':        imgPortland25,
+  'cal-25kg':             imgCalCacique,
+  'arena-bolson':         imgArenaBolson,
+  'arena-fina-bolsa':     imgArenaSupelta,
+  'arena-gruesa-bolsa':   imgArenaSupelta,
+  'cascote-bolson':       imgCascoteBolson,
+  'piedra-partida':       imgPiedraBolson,
+  'hierro-4-2':           imgHierro42,
+  'hierro-6':             imgHierro6,
+  'hierro-8':             imgHierro8,
+  'hierro-10':            imgHierro10,
+  'hierro-12':            imgHierro12,
+  'pegamento-ceramica':   imgPegamentoCeramica,
+  'cable-unipolar-2-5':   imgCableUnipolar,
+}
+
 const normalize = (str) =>
   String(str)
     .toLowerCase()
@@ -148,7 +197,13 @@ export default function CatalogPage({ onBack, onOpenCart }) {
 
             return (
               <article className="catalog-card" key={product.id} data-category={product.category}>
-                <div className="catalog-card-visual" />
+                {productImageMap[product.id] ? (
+                  <div className="catalog-card-visual catalog-card-visual-image">
+                    <img src={productImageMap[product.id]} alt={product.name} className="catalog-card-img" />
+                  </div>
+                ) : (
+                  <div className="catalog-card-visual" />
+                )}
                 <div className="catalog-card-top">
                   <span className="catalog-badge">{catName}</span>
                 </div>

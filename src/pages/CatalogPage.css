@@ -234,6 +234,21 @@
   background: linear-gradient(135deg, #8d4d23, #cf7a2b 58%, #f0be73);
 }
 
+.catalog-card-visual-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6efe5;
+  overflow: hidden;
+}
+
+.catalog-card-img {
+  width: 100%;
+  height: 108px;
+  object-fit: contain;
+  padding: 6px;
+}
+
 .catalog-card[data-category='aridos-y-obra-gruesa'] .catalog-card-visual {
   background: linear-gradient(135deg, #8d4d23, #cf7a2b 58%, #f0be73);
 }
