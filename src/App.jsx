@@ -426,11 +426,11 @@ function App() {
               </div>
               <div className="product-actions">
                 <div className="mini-quantity">
-                  <button type="button" onClick={() => changeProductDraftQuantity(product.id, -1)}>
+                  <button type="button" aria-label="Disminuir cantidad" onClick={() => changeProductDraftQuantity(product.id, -1)}>
                     -
                   </button>
                   <span>{getProductDraftQuantity(product.id)}</span>
-                  <button type="button" onClick={() => changeProductDraftQuantity(product.id, 1)}>
+                  <button type="button" aria-label="Aumentar cantidad" onClick={() => changeProductDraftQuantity(product.id, 1)}>
                     +
                   </button>
                 </div>
@@ -619,14 +619,18 @@ function App() {
         </button>
       ) : null}
 
+      {showCart && (
+        <div className="cart-backdrop" onClick={() => setShowCart(false)} aria-hidden="true" />
+      )}
+
       {showCart ? (
-        <aside className="cart-drawer">
+        <aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Mi carrito">
           <div className="cart-drawer-header">
             <div>
               <p>Mi carrito</p>
               <strong>{formatPrice(subtotal)}</strong>
             </div>
-            <button type="button" onClick={() => setShowCart(false)}>
+            <button type="button" aria-label="Cerrar carrito" onClick={() => setShowCart(false)}>
               Cerrar
             </button>
           </div>
@@ -640,11 +644,11 @@ function App() {
                     <p>{item.brandName || item.categoryName}</p>
                   </div>
                   <div className="cart-drawer-controls">
-                    <button type="button" onClick={() => changeQuantity(item.id, item.quantity - 1)}>
+                    <button type="button" aria-label="Disminuir cantidad" onClick={() => changeQuantity(item.id, item.quantity - 1)}>
                       -
                     </button>
                     <span>{item.quantity}</span>
-                    <button type="button" onClick={() => changeQuantity(item.id, item.quantity + 1)}>
+                    <button type="button" aria-label="Aumentar cantidad" onClick={() => changeQuantity(item.id, item.quantity + 1)}>
                       +
                     </button>
                     <strong>{formatPrice(item.price * item.quantity)}</strong>

@@ -215,11 +215,11 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                 <strong className="catalog-price">{formatPrice(product.price)}</strong>
                 <div className="catalog-card-actions">
                   <div className="mini-quantity">
-                    <button type="button" onClick={() => changeQty(product.id, -1)}>
+                    <button type="button" aria-label="Disminuir cantidad" onClick={() => changeQty(product.id, -1)}>
                       -
                     </button>
                     <span>{qty}</span>
-                    <button type="button" onClick={() => changeQty(product.id, 1)}>
+                    <button type="button" aria-label="Aumentar cantidad" onClick={() => changeQty(product.id, 1)}>
                       +
                     </button>
                   </div>

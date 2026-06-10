@@ -525,17 +525,25 @@
 
 .featured-search-clear {
   position: absolute;
-  right: 8px;
-  background: none;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border: none;
+  border-radius: 999px;
+  background: rgba(23, 20, 17, 0.07);
   cursor: pointer;
   font-size: 1rem;
-  color: rgba(23, 20, 17, 0.45);
   line-height: 1;
-  padding: 0;
+  color: rgba(23, 20, 17, 0.55);
+  transition: background 120ms, color 120ms;
 }
 
 .featured-search-clear:hover {
+  background: rgba(23, 20, 17, 0.12);
   color: var(--accent-strong);
 }
 
@@ -916,6 +924,7 @@
 }
 
 .location-dot {
+  position: relative;
   width: 10px;
   height: 10px;
   padding: 0;
@@ -926,6 +935,12 @@
   transition:
     background 180ms ease,
     transform 180ms ease;
+}
+
+.location-dot::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
 }
 
 .location-dot-active {
@@ -1142,6 +1157,20 @@
 
 .floating-cart-line strong {
   color: var(--accent-soft);
+}
+
+.cart-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(0, 0, 0, 0.44);
+  backdrop-filter: blur(2px);
+  animation: backdrop-in 180ms ease-out forwards;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .cart-drawer {
@@ -1669,5 +1698,22 @@
   .cart-drawer-controls .mini-quantity {
     flex: 1 1 0;
     min-width: 108px;
+  }
+}
+
+/* ── Touch & interaction ── */
+button,
+a,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
