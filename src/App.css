@@ -498,24 +498,25 @@
   position: relative;
   display: flex;
   align-items: center;
+  margin-bottom: 20px;
 }
 
 .featured-search-input {
-  height: 36px;
-  padding: 0 32px 0 12px;
+  height: 42px;
+  padding: 0 36px 0 14px;
   border: 1px solid rgba(23, 20, 17, 0.18);
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   color: var(--ink);
   outline: none;
-  width: 200px;
-  transition: border-color 120ms, width 200ms;
+  width: 100%;
+  max-width: 480px;
+  transition: border-color 120ms;
 }
 
 .featured-search-input:focus {
   border-color: var(--accent-strong);
-  width: 240px;
 }
 
 .featured-search-input::placeholder {

@@ -372,19 +372,6 @@ function App() {
         <div className="section-header">
           <h2>Productos destacados</h2>
           <div className="section-header-actions">
-            <div className="featured-search-wrap">
-              <input
-                className="featured-search-input"
-                type="search"
-                placeholder="Buscar producto..."
-                value={featuredSearch}
-                onChange={(e) => setFeaturedSearch(e.target.value)}
-                autoComplete="off"
-              />
-              {featuredSearch && (
-                <button className="featured-search-clear" type="button" onClick={() => setFeaturedSearch('')} aria-label="Limpiar">×</button>
-              )}
-            </div>
             <label className="featured-filter">
               <span>Filtrar</span>
               <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)}>
@@ -400,6 +387,20 @@ function App() {
               Ver todos los productos
             </button>
           </div>
+        </div>
+
+        <div className="featured-search-wrap">
+          <input
+            className="featured-search-input"
+            type="search"
+            placeholder="Buscar producto..."
+            value={featuredSearch}
+            onChange={(e) => setFeaturedSearch(e.target.value)}
+            autoComplete="off"
+          />
+          {featuredSearch && (
+            <button className="featured-search-clear" type="button" onClick={() => setFeaturedSearch('')} aria-label="Limpiar">×</button>
+          )}
         </div>
 
         <div className="products-grid">
