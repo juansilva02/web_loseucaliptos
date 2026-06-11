@@ -194,6 +194,15 @@ export function formatPrice(value) {
   return value > 0 ? priceFormatter.format(value) : 'Consultar'
 }
 
+// Resuelve la ruta de una imagen administrada (guardada en el JSON como
+// "product-images/archivo.png" dentro de /public) respetando el base de Vite.
+// Acepta tambien URLs absolutas o rutas que ya empiezan con "/".
+export function resolveImage(path) {
+  if (!path) return null
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('/')) return path
+  return `${import.meta.env.BASE_URL}${path}`
+}
+
 export const storefrontProducts = productCatalog
   .map((product) => {
     const category = getCategory(product.name)

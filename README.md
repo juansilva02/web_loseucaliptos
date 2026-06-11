@@ -43,6 +43,19 @@ Landing + catálogo comercial para **Corralon Los Eucaliptus**, con sucursales e
 - Construcción automática del mensaje de pedido para WhatsApp (ítems, cantidades, subtotal)
 - Envío diferenciado por sucursal (Solano / Bosques)
 
+### Panel de administración (`/#admin`)
+
+Sección privada para que el administrador gestione el catálogo **sin tocar código**. Se accede agregando `#admin` a la URL (no aparece en la navegación del sitio).
+
+- Acceso protegido con **usuario + contraseña** (validación en el navegador; credenciales configurables por variables de entorno `VITE_ADMIN_USER` y `VITE_ADMIN_PASS_HASH`)
+- **Destacados (home):** editar título, subtítulo/marca, categoría, precio e imagen
+- **Catálogo completo:** editar precio, marca, categoría y unidad; **ocultar/mostrar** un producto (sin borrarlo) o **eliminarlo**; agregar productos nuevos
+- **Categorías:** renombrar las categorías del catálogo
+- **Imágenes:** subir PNG/JPG/WEBP/SVG por producto con vista previa instantánea
+- Borrador guardado en el navegador (sobrevive recargas)
+- **Publicación (modelo export / commit):** el botón "Exportar cambios" descarga un `featured-catalog.json` actualizado y las imágenes nuevas; se reemplaza el JSON en `src/data/`, se copian las imágenes a `public/product-images/`, se commitea y Vercel redeploya
+- Guía detallada de uso en [`ADMIN.md`](./ADMIN.md)
+
 ## Sucursales
 
 | Sucursal | Dirección | Teléfono | Horario |
@@ -58,6 +71,12 @@ src/
 ├── App.css                         — estilos del storefront
 ├── index.css                       — tokens globales, tipografía, fondo base
 ├── main.jsx                        — entrada de la app
+├── Root.jsx                        — enrutado por hash: storefront vs panel /#admin
+├── admin/
+│   ├── AdminPage.jsx               — panel de administración (login + editor)
+│   ├── AdminPage.css               — estilos del panel
+│   ├── adminConfig.js              — credenciales/hash y validación de acceso
+│   └── catalogStore.js             — borrador, lectura del catálogo y exportación
 ├── assets/
 │   ├── logo-header-los-eucaliptos.png
 │   ├── promo-camion.png
@@ -75,6 +94,11 @@ src/
 └── pages/
     ├── CatalogPage.jsx             — página de catálogo con búsqueda y filtros
     └── CatalogPage.css
+
+public/
+└── product-images/                 — imágenes de producto administradas desde el panel /#admin
+
+ADMIN.md                            — guía de uso del panel de administración
 ```
 
 ## Datos cargados
@@ -114,8 +138,9 @@ npm run dev
 
 ## Próximos pasos recomendados
 
-- Completar precios en `featured-catalog.json`: 51 de 64 productos del CatalogPage tienen `price: 0` (hoy caen en "Consultar precio")
+- Cambiar las credenciales por defecto del panel antes de producción (ver [`ADMIN.md`](./ADMIN.md))
+- Completar precios en `featured-catalog.json`: varios productos del CatalogPage tienen `price: 0` (hoy caen en "Consultar precio") — ahora editables desde el panel `/#admin`
 - Cubrir más SKUs del catálogo raw en el CatalogPage
-- Sumar imágenes reales a más productos del CatalogPage
-- Revisar optimización de imágenes pesadas del home
+- Sumar imágenes reales a más productos del CatalogPage (desde el panel `/#admin`)
+- Imágenes del home optimizadas (peso reducido ~50%); revisar al sumar nuevas
 - Agregar número de teléfono de Solano en la sección de sucursales (actualmente sin `phone` explícito en el objeto de la sucursal)

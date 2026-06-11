@@ -26,6 +26,7 @@ import {
   categoryCards,
   formatPrice,
   normalizeText,
+  resolveImage,
   storefrontProducts,
   whatsappBase,
   whatsappBosques,
@@ -140,7 +141,8 @@ function getCuratedShowcase() {
       categoryName: category?.name ?? 'Materiales',
       brandName: match?.brandName ?? '',
       sourceName: match?.excelName ?? item.title,
-      image: productImages[item.match] ?? null,
+      // Prioriza la imagen administrada (subida desde el panel) y cae al mapa estatico.
+      image: resolveImage(item.image) ?? productImages[item.match] ?? null,
     }
   })
 }

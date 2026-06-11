@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import catalogData from '../data/featured-catalog.json'
-import { formatPrice, whatsappBase } from '../lib/catalog'
+import { formatPrice, resolveImage, whatsappBase } from '../lib/catalog'
 import { useCart } from '../context/CartContext'
 import './CatalogPage.css'
 
@@ -72,8 +72,9 @@ export default function CatalogPage({ onBack, onOpenCart }) {
   }, [])
 
   const categoryCounts = useMemo(() => {
-    const counts = { all: catalogData.products.length }
-    for (const p of catalogData.products) {
+    const visible = catalogData.products.filter((p) => !p.hidden)
+    const counts = { all: visible.length }
+    for (const p of visible) {
       counts[p.category] = (counts[p.category] || 0) + 1
     }
     return counts
@@ -82,6 +83,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
   const filtered = useMemo(() => {
     const term = normalize(search.trim())
     return catalogData.products.filter((p) => {
+      if (p.hidden) return false
       const matchesSearch =
         !term ||
         normalize(p.name).includes(term) ||
@@ -196,16 +198,17 @@ export default function CatalogPage({ onBack, onOpenCart }) {
           {filtered.map((product) => {
             const catName = categoryMap[product.category]
             const qty = getQty(product.id)
+            const imgSrc = resolveImage(product.image) ?? productImageMap[product.id]
             const consultHref = `${whatsappBase}?text=${encodeURIComponent(
               `Hola, consulto precio de: ${product.name}`,
             )}`
 
             return (
               <article className="catalog-card" key={product.id} data-category={product.category}>
-                {productImageMap[product.id] ? (
+                {imgSrc ? (
                   <div className="catalog-card-visual catalog-card-visual-image">
                     <img
-                      src={productImageMap[product.id]}
+                      src={imgSrc}
                       alt={product.name}
                       className="catalog-card-img"
                       loading="lazy"
