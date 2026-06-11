@@ -1,30 +1,139 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Los Eucaliptus Corralón | Materiales de Construcción — Zona Sur</title>
 
+    <!-- ACTUALIZAR el dominio en canonical, og:url, og:image y twitter:image si cambia (también en public/robots.txt y public/sitemap.xml) -->
+    <link rel="canonical" href="https://web-loseucaliptus.vercel.app/" />
+
     <meta name="description" content="Corralón Los Eucaliptus. Ladrillos, cemento, hierro, arena y más con stock permanente. Envíos en Zona Sur y pedidos por WhatsApp. Sucursales en Solano y Bosques, Buenos Aires." />
-    <meta name="keywords" content="corralon, materiales construccion, zona sur, san francisco solano, bosques, ladrillos, cemento, hierro, arena, buenos aires" />
+    <meta name="keywords" content="corralon, materiales construccion, zona sur, san francisco solano, bosques, florencio varela, ladrillos, cemento, hierro, arena, buenos aires" />
     <meta name="author" content="Los Eucaliptus Corralón" />
+    <meta name="theme-color" content="#14532d" />
+
+    <!-- Geo local -->
+    <meta name="geo.region" content="AR-B" />
+    <meta name="geo.placename" content="San Francisco Solano, Buenos Aires" />
 
     <!-- Open Graph / Facebook / WhatsApp -->
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://web-loseucaliptus.vercel.app/" />
+    <meta property="og:site_name" content="Los Eucaliptus Corralón" />
     <meta property="og:title" content="Los Eucaliptus Corralón | Materiales de Construcción" />
     <meta property="og:description" content="Stock permanente de ladrillos, cemento, hierro y más. Envíos en Zona Sur. Pedidos por WhatsApp al instante. Sucursales en Solano y Bosques." />
-    <meta property="og:image" content="/og-preview.png" />
+    <meta property="og:image" content="https://web-loseucaliptus.vercel.app/og-preview.png" />
     <meta property="og:locale" content="es_AR" />
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Los Eucaliptus Corralón | Materiales de Construcción" />
     <meta name="twitter:description" content="Stock permanente. Envíos en Zona Sur. Pedidos por WhatsApp." />
-    <meta name="twitter:image" content="/og-preview.png" />
+    <meta name="twitter:image" content="https://web-loseucaliptus.vercel.app/og-preview.png" />
+
+    <!-- Datos estructurados: sucursales para Google Business / búsqueda local -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "HardwareStore",
+          "@id": "https://web-loseucaliptus.vercel.app/#solano",
+          "name": "Corralón Los Eucaliptus \"Solano\"",
+          "description": "Corralón de materiales para la construcción: ladrillos, cemento, hierro, arena y más. Envíos en Zona Sur y pedidos por WhatsApp.",
+          "url": "https://web-loseucaliptus.vercel.app/",
+          "telephone": "+54 9 11 5974-8316",
+          "currenciesAccepted": "ARS",
+          "paymentAccepted": "Efectivo, Transferencia, Tarjeta de débito, Tarjeta de crédito",
+          "priceRange": "$$",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Av. Monteverde 2766",
+            "addressLocality": "San Francisco Solano",
+            "addressRegion": "Buenos Aires",
+            "addressCountry": "AR"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -34.7904685,
+            "longitude": -58.3096963
+          },
+          "openingHoursSpecification": [
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+              "opens": "08:00",
+              "closes": "12:00"
+            },
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+              "opens": "14:00",
+              "closes": "19:00"
+            },
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": "Saturday",
+              "opens": "08:00",
+              "closes": "14:00"
+            }
+          ],
+          "hasMap": "https://www.google.com/maps?q=-34.7904685,-58.3096963",
+          "areaServed": "Zona Sur, Gran Buenos Aires"
+        },
+        {
+          "@type": "HardwareStore",
+          "@id": "https://web-loseucaliptus.vercel.app/#bosques",
+          "name": "Corralón Los Eucaliptus \"Bosques\"",
+          "description": "Corralón de materiales para la construcción: ladrillos, cemento, hierro, arena y más. Envíos en Zona Sur y pedidos por WhatsApp.",
+          "url": "https://web-loseucaliptus.vercel.app/",
+          "telephone": "+54 9 11 3062-3113",
+          "currenciesAccepted": "ARS",
+          "paymentAccepted": "Efectivo, Transferencia, Tarjeta de débito, Tarjeta de crédito",
+          "priceRange": "$$",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Av. Guillermo Hudson 2855",
+            "addressLocality": "Bosques, Florencio Varela",
+            "addressRegion": "Buenos Aires",
+            "addressCountry": "AR"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -34.8315412,
+            "longitude": -58.2423633
+          },
+          "openingHoursSpecification": [
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+              "opens": "08:00",
+              "closes": "18:00"
+            },
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": "Saturday",
+              "opens": "08:00",
+              "closes": "15:00"
+            }
+          ],
+          "hasMap": "https://www.google.com/maps?q=-34.8315412,-58.2423633",
+          "areaServed": "Zona Sur, Gran Buenos Aires"
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>Los Eucaliptus Corralón — Materiales de Construcción en Zona Sur</h1>
+      <p>Sucursal Solano: Av. Monteverde 2766, San Francisco Solano — WhatsApp 11 5974-8316.</p>
+      <p>Sucursal Bosques: Av. Guillermo Hudson 2855, Bosques, Florencio Varela — WhatsApp 11 3062-3113.</p>
+      <p>Esta página necesita JavaScript para mostrar el catálogo y el carrito.</p>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

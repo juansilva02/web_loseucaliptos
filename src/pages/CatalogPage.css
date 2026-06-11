@@ -1,8 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@700;800&display=swap');
+
 .catalog-page {
   padding: 0 0 80px;
+  font-family: 'Barlow', sans-serif;
+  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(23, 20, 17, 0.08);
+  border-radius: 28px;
+  box-shadow: var(--shadow-soft);
+  overflow: clip;
 }
 
-/* ── Header ── */
+/* ── Header ─────────────────────────────────────────────── */
 
 .catalog-header {
   position: sticky;
@@ -10,86 +18,93 @@
   z-index: 30;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
-  padding: 14px 28px;
-  background: rgba(255, 252, 247, 0.94);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(18px);
+  padding: 16px 22px 14px;
+  background: rgba(255, 252, 247, 0.92);
+  border-bottom: 1px solid rgba(23, 20, 17, 0.08);
+  backdrop-filter: blur(20px);
 }
 
 .catalog-back-btn {
   display: inline-flex;
   align-items: center;
-  height: 44px;
-  padding: 0 16px;
-  border: 1px solid rgba(23, 20, 17, 0.1);
-  border-radius: 12px;
+  gap: 6px;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid rgba(23, 20, 17, 0.12);
+  border-radius: 8px;
   background: transparent;
-  color: var(--ink);
+  color: #1a1410;
   font: inherit;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition: background 150ms ease;
 }
 
 .catalog-back-btn:hover {
-  background: rgba(23, 20, 17, 0.04);
+  background: rgba(23, 20, 17, 0.05);
 }
 
 .catalog-header-title {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .catalog-header-title h1 {
   margin: 0;
-  font-family: var(--display);
-  font-size: 2rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
   line-height: 1;
-  letter-spacing: -0.06em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
-  color: var(--ink);
+  color: #1a1410;
 }
 
 .catalog-header-title span {
-  font-size: 0.78rem;
-  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgba(23, 20, 17, 0.38);
+  letter-spacing: 0.02em;
 }
 
 .catalog-cart-btn {
-  display: grid;
-  gap: 2px;
-  text-align: right;
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border: 1px solid rgba(23, 20, 17, 0.12);
+  border-radius: 8px;
   background: transparent;
-  color: var(--ink);
+  color: #1a1410;
   cursor: pointer;
   font: inherit;
-  padding: 8px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(23, 20, 17, 0.08);
+  white-space: nowrap;
   transition: background 150ms ease;
 }
 
 .catalog-cart-btn:hover {
-  background: rgba(23, 20, 17, 0.04);
+  background: rgba(23, 20, 17, 0.05);
 }
 
 .catalog-cart-btn strong {
-  font-size: 0.92rem;
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .catalog-cart-btn span {
-  font-size: 0.8rem;
-  color: var(--muted);
+  font-size: 0.76rem;
+  color: rgba(23, 20, 17, 0.45);
 }
 
-/* ── Search ── */
+/* ── Search ─────────────────────────────────────────────── */
 
 .catalog-search-wrap {
-  padding: 18px 28px 0;
+  padding: 14px 22px 0;
 }
 
 .catalog-search-field {
@@ -98,23 +113,21 @@
 
 .catalog-search-input {
   width: 100%;
-  min-height: 54px;
-  padding: 0 46px 0 20px;
-  border: 1.5px solid rgba(23, 20, 17, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--ink);
+  min-height: 48px;
+  padding: 0 44px 0 16px;
+  border: 1.5px solid rgba(23, 20, 17, 0.11);
+  border-radius: 10px;
+  background: #fff;
+  color: #1a1410;
   font: inherit;
-  font-size: 1.05rem;
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease;
+  font-size: 0.94rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .catalog-search-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(219, 58, 30, 0.1);
+  box-shadow: 0 0 0 3px rgba(219, 58, 30, 0.09);
 }
 
 .catalog-search-input::-webkit-search-cancel-button {
@@ -123,17 +136,17 @@
 
 .catalog-search-clear {
   position: absolute;
-  right: 14px;
+  right: 11px;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: 0;
   border-radius: 999px;
   background: rgba(23, 20, 17, 0.08);
-  color: var(--ink);
+  color: #1a1410;
   font: inherit;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
@@ -141,10 +154,10 @@
   justify-content: center;
 }
 
-/* ── Category tabs ── */
+/* ── Category tabs ──────────────────────────────────────── */
 
 .catalog-cats-wrap {
-  padding: 14px 28px 0;
+  padding: 11px 22px 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -155,333 +168,435 @@
 
 .catalog-cats {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   padding-bottom: 2px;
 }
 
 .catalog-cat-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 38px;
-  padding: 0 14px;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 11px;
   border: 1.5px solid rgba(23, 20, 17, 0.1);
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
-  color: var(--ink);
+  color: #1a1410;
   font: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    background 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .catalog-cat-btn em {
   font-style: normal;
-  color: var(--muted);
-  font-size: 0.82rem;
+  color: rgba(23, 20, 17, 0.38);
+  font-size: 0.76rem;
 }
 
 .catalog-cat-btn-active {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: #1a1410;
+  background: #1a1410;
   color: #fff7ef;
 }
 
 .catalog-cat-btn-active em {
-  color: rgba(255, 247, 239, 0.75);
+  color: rgba(255, 247, 239, 0.45);
 }
 
-/* ── Product grid ── */
+/* ── Product grid ───────────────────────────────────────── */
 
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Máximo 5 columnas en PC; baja a menos columnas en pantallas chicas */
+  grid-template-columns: repeat(auto-fill, minmax(max(180px, (100% - 48px) / 5), 1fr));
   gap: 14px;
-  padding: 18px 28px 0;
+  padding: 14px 22px 0;
 }
 
-/* ── Product card ── */
+/* ── Product card (mismo lenguaje visual que productos destacados) ── */
 
 .catalog-card {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  padding: 14px;
+  padding: 10px;
   border: 1px solid rgba(23, 20, 17, 0.08);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.84);
   box-shadow: var(--shadow-card);
-  transition:
-    transform 150ms ease,
-    box-shadow 150ms ease,
-    border-color 150ms ease;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .catalog-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(38, 23, 12, 0.1);
-  border-color: rgba(23, 20, 17, 0.14);
+  transform: translateY(-4px);
+  border-color: rgba(219, 58, 30, 0.28);
+  box-shadow: 0 20px 36px rgba(38, 23, 12, 0.14);
 }
 
+/* ── Image ──────────────────────────────────────────────── */
+
 .catalog-card-visual {
-  min-height: 108px;
-  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  height: 150px;
+  flex-shrink: 0;
+  border-radius: 18px;
+  padding: 12px;
+  overflow: hidden;
+  color: #fff7ef;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-align: center;
   background: linear-gradient(135deg, #8d4d23, #cf7a2b 58%, #f0be73);
 }
 
-.catalog-card-visual-image {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f6efe5;
+.catalog-card-visual span {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.catalog-card-visual-image {
+  padding: 0;
+  background: #f6efe5;
+  border: 1px solid rgba(23, 20, 17, 0.06);
 }
 
 .catalog-card-img {
   width: 100%;
-  height: 108px;
+  height: 100%;
   object-fit: contain;
-  padding: 6px;
+  display: block;
+  padding: 8px;
 }
 
+/* Per-category gradient fills (no-image state) */
 .catalog-card[data-category='aridos-y-obra-gruesa'] .catalog-card-visual {
   background: linear-gradient(135deg, #8d4d23, #cf7a2b 58%, #f0be73);
 }
-
 .catalog-card[data-category='hierros-y-estructura'] .catalog-card-visual {
   background: linear-gradient(135deg, #1d2125, #555d66 58%, #aeb7c0);
 }
-
 .catalog-card[data-category='ladrillos-y-bloques'] .catalog-card-visual {
   background: linear-gradient(135deg, #843725, #bc6231 58%, #ec9b62);
 }
-
 .catalog-card[data-category='construccion-en-seco'] .catalog-card-visual {
   background: linear-gradient(135deg, #2c2618, #7a6940 58%, #d4c28a);
 }
-
 .catalog-card[data-category='sanitarios-y-plomeria'] .catalog-card-visual {
   background: linear-gradient(135deg, #0d2a3f, #1a6088 58%, #62afd0);
 }
-
 .catalog-card[data-category='ferreteria-y-herramientas'] .catalog-card-visual {
   background: linear-gradient(135deg, #1c1814, #5c4f38 58%, #b8a070);
 }
 
-.catalog-card-top {
+/* ── Card info ──────────────────────────────────────────── */
+
+.catalog-card-info {
   display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 6px;
+  padding: 0 4px 2px;
+  min-height: 0;
+}
+
+/* Meta row: category badge */
+.catalog-card-meta {
+  display: flex;
+  align-items: center;
 }
 
 .catalog-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
+/* Per-category badge tints */
 .catalog-card[data-category='aridos-y-obra-gruesa'] .catalog-badge {
-  background: rgba(141, 77, 35, 0.12);
-  color: #5a2e0f;
+  background: rgba(141, 77, 35, 0.1);
+  color: #6b3510;
 }
-
 .catalog-card[data-category='hierros-y-estructura'] .catalog-badge {
-  background: rgba(29, 33, 37, 0.1);
+  background: rgba(29, 33, 37, 0.09);
   color: #2c3035;
 }
-
 .catalog-card[data-category='ladrillos-y-bloques'] .catalog-badge {
   background: rgba(188, 98, 49, 0.12);
   color: #6b2d12;
 }
-
 .catalog-card[data-category='construccion-en-seco'] .catalog-badge {
-  background: rgba(180, 150, 80, 0.14);
+  background: rgba(180, 150, 80, 0.13);
   color: #6b4e10;
 }
-
 .catalog-card[data-category='sanitarios-y-plomeria'] .catalog-badge {
   background: rgba(30, 90, 160, 0.1);
   color: #1a4a80;
 }
-
 .catalog-card[data-category='ferreteria-y-herramientas'] .catalog-badge {
-  background: rgba(40, 120, 50, 0.1);
+  background: rgba(40, 80, 40, 0.1);
   color: #1e5c27;
 }
 
+/* Card body: name + brand */
 .catalog-card-body {
-  display: grid;
-  gap: 4px;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
 }
 
 .catalog-card-body h3 {
   margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.22;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .catalog-brand {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--muted);
   font-weight: 600;
 }
 
-.catalog-unit {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--muted);
+/* Price block */
+.catalog-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
 }
 
 .catalog-price {
   font-family: var(--display);
-  font-size: 1.55rem;
+  font-size: 1.7rem;
+  font-weight: 800;
   line-height: 1;
   color: var(--accent-strong);
+  letter-spacing: -0.01em;
 }
+
+.catalog-price-consult {
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.catalog-unit {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(23, 20, 17, 0.42);
+}
+
+.catalog-installments {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #15803d;
+}
+
+/* ── Actions ────────────────────────────────────────────── */
 
 .catalog-card-actions {
   display: grid;
-  grid-template-columns: 88px 1fr;
+  grid-template-columns: 84px 1fr;
   gap: 8px;
+  margin-top: auto;
+}
+
+/* Override App.css global sizes for catalog card context */
+.catalog-card-actions .mini-quantity {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.catalog-card-actions .add-cart-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  width: 100%;
 }
 
 .catalog-consult-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
   padding: 0 10px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #22c55e, #159947);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #22c55e, #15994a);
   color: #fff;
   font: inherit;
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
   text-align: center;
+  width: 100%;
 }
 
-/* ── Empty state ── */
+/* ── Empty state ────────────────────────────────────────── */
 
 .catalog-empty {
   padding: 64px 28px;
   text-align: center;
-  color: var(--muted);
+  color: rgba(23, 20, 17, 0.45);
 }
 
 .catalog-empty p {
   margin: 0 0 16px;
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .catalog-empty button {
   padding: 12px 28px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--accent);
   color: #fff7ef;
   font: inherit;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 
-/* ── Footer note ── */
+/* ── Footer note ────────────────────────────────────────── */
 
 .catalog-footer-note {
-  padding: 18px 28px 0;
+  padding: 14px 22px 0;
   margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: rgba(23, 20, 17, 0.35);
+  font-size: 0.73rem;
 }
 
-/* ── Responsive ── */
-
-@media (max-width: 1280px) {
-  .catalog-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
+/* ── Responsive: ≤900px ─────────────────────────────────── */
 
 @media (max-width: 900px) {
   .catalog-header {
     grid-template-columns: auto 1fr;
-    gap: 12px;
-    padding: 12px 18px;
+    gap: 10px;
+    padding: 10px 16px;
   }
 
   .catalog-cart-btn {
     grid-column: 1 / -1;
-    text-align: left;
-  }
-
-  .catalog-search-wrap,
-  .catalog-cats-wrap {
-    padding-left: 18px;
-    padding-right: 18px;
-  }
-
-  .catalog-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-left: 18px;
-    padding-right: 18px;
-  }
-}
-
-@media (max-width: 640px) {
-  .catalog-header {
-    grid-template-columns: 1fr;
-    padding: 12px 14px;
-  }
-
-  .catalog-cart-btn {
-    grid-column: 1;
+    justify-content: flex-start;
   }
 
   .catalog-search-wrap,
   .catalog-cats-wrap,
   .catalog-footer-note {
-    padding-left: 14px;
-    padding-right: 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .catalog-grid {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ── Responsive: ≤640px ─────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .catalog-header {
+    grid-template-columns: auto 1fr;
+    padding: 9px 12px;
+    gap: 8px;
+  }
+
+  .catalog-cart-btn {
+    grid-column: 1 / -1;
+    padding: 7px 12px;
+  }
+
+  .catalog-header-title h1 {
+    font-size: 1.25rem;
+  }
+
+  .catalog-search-wrap,
+  .catalog-cats-wrap,
+  .catalog-footer-note {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
   .catalog-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-left: 14px;
-    padding-right: 14px;
+    padding-left: 12px;
+    padding-right: 12px;
     gap: 10px;
   }
 
-  .catalog-card {
-    padding: 12px;
-    border-radius: 18px;
+  .catalog-card-visual {
+    height: 128px;
+  }
+
+  .catalog-price {
+    font-size: 1.5rem;
   }
 
   .catalog-card-actions {
-    grid-template-columns: 78px 1fr;
+    grid-template-columns: 1fr;
     gap: 6px;
   }
 }
 
-/* ── Touch & reduced motion ── */
+/* ── Touch ──────────────────────────────────────────────── */
 button,
 a,
 [role='button'] {
   touch-action: manipulation;
 }
+
+/* ── Quantity input ─────────────────────────────────────── */
+
+.mini-quantity-input {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1a1410;
+  -moz-appearance: textfield;
+}
+
+.mini-quantity-input::-webkit-outer-spin-button,
+.mini-quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.mini-quantity-input:focus {
+  outline: none;
+}
+
+/* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

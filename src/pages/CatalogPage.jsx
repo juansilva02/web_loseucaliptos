@@ -97,6 +97,11 @@ export default function CatalogPage({ onBack, onOpenCart }) {
   const changeQty = (id, delta) =>
     setQuantities((prev) => ({ ...prev, [id]: Math.max(1, (prev[id] ?? 1) + delta) }))
 
+  const setQty = (id, value) => {
+    const parsed = parseInt(value, 10)
+    setQuantities((prev) => ({ ...prev, [id]: parsed > 0 ? parsed : 1 }))
+  }
+
   const handleAdd = (product) => {
     addItem(
       {
@@ -199,39 +204,69 @@ export default function CatalogPage({ onBack, onOpenCart }) {
               <article className="catalog-card" key={product.id} data-category={product.category}>
                 {productImageMap[product.id] ? (
                   <div className="catalog-card-visual catalog-card-visual-image">
-                    <img src={productImageMap[product.id]} alt={product.name} className="catalog-card-img" />
+                    <img
+                      src={productImageMap[product.id]}
+                      alt={product.name}
+                      className="catalog-card-img"
+                      loading="lazy"
+                    />
                   </div>
                 ) : (
-                  <div className="catalog-card-visual" />
-                )}
-                <div className="catalog-card-top">
-                  <span className="catalog-badge">{catName}</span>
-                </div>
-                <div className="catalog-card-body">
-                  <h3>{product.name}</h3>
-                  {product.brand && <p className="catalog-brand">{product.brand}</p>}
-                  <p className="catalog-unit">Por {product.unit}</p>
-                </div>
-                <strong className="catalog-price">{formatPrice(product.price)}</strong>
-                <div className="catalog-card-actions">
-                  <div className="mini-quantity">
-                    <button type="button" aria-label="Disminuir cantidad" onClick={() => changeQty(product.id, -1)}>
-                      -
-                    </button>
-                    <span>{qty}</span>
-                    <button type="button" aria-label="Aumentar cantidad" onClick={() => changeQty(product.id, 1)}>
-                      +
-                    </button>
+                  <div className="catalog-card-visual">
+                    <span>{product.name}</span>
                   </div>
-                  {product.price > 0 ? (
-                    <button className="add-cart-button" type="button" onClick={() => handleAdd(product)}>
-                      Agregar
-                    </button>
-                  ) : (
-                    <a className="catalog-consult-btn" href={consultHref} target="_blank" rel="noreferrer">
-                      Consultar precio
-                    </a>
-                  )}
+                )}
+                <div className="catalog-card-info">
+                  <div className="catalog-card-meta">
+                    <span className="catalog-badge">{catName}</span>
+                  </div>
+                  <div className="catalog-card-body">
+                    <h3>{product.name}</h3>
+                    <p className="catalog-brand">{product.brand || 'Sin marca'}</p>
+                  </div>
+                  <div className="catalog-price-block">
+                    {product.price > 0 ? (
+                      <>
+                        <strong className="catalog-price">{formatPrice(product.price)}</strong>
+                        <span className="catalog-unit">Por {product.unit}</span>
+                        <span className="catalog-installments">💳 3 y 6 cuotas sin interés</span>
+                      </>
+                    ) : (
+                      <>
+                        <strong className="catalog-price catalog-price-consult">A consultar</strong>
+                        <span className="catalog-unit">Por {product.unit} · respuesta por WhatsApp</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="catalog-card-actions">
+                    <div className="mini-quantity">
+                      <button type="button" aria-label="Disminuir cantidad" onClick={() => changeQty(product.id, -1)}>
+                        −
+                      </button>
+                      <input
+                        className="mini-quantity-input"
+                        type="number"
+                        min="1"
+                        value={qty}
+                        onChange={(e) => setQty(product.id, e.target.value)}
+                        onBlur={(e) => setQty(product.id, e.target.value)}
+                        aria-label="Cantidad"
+                      />
+                      <button type="button" aria-label="Aumentar cantidad" onClick={() => changeQty(product.id, 1)}>
+                        +
+                      </button>
+                    </div>
+                    {product.price > 0 ? (
+                      <button className="add-cart-button" type="button" onClick={() => handleAdd(product)}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                        Agregar
+                      </button>
+                    ) : (
+                      <a className="catalog-consult-btn" href={consultHref} target="_blank" rel="noreferrer">
+                        Consultar precio
+                      </a>
+                    )}
+                  </div>
                 </div>
               </article>
             )

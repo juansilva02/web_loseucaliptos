@@ -3,43 +3,7 @@ import { productCatalog } from '../data/catalog'
 export const whatsappBase = 'https://wa.me/5491159748316'
 export const whatsappBosques = 'https://wa.me/5491130623113'
 
-export const contactItems = [
-  'Av. Monteverde 2766, San Francisco Solano, Provincia de Buenos Aires',
-  'Lunes a viernes de 8:00 a 12:00 y de 14:00 a 19:00',
-  'Sabados de 08:00 a 14:00',
-  '+54 9 11 5974-8316',
-]
-
-export const supplierBrands = ['Loma Negra', 'Weber', 'Klaukol', 'Tuyango', 'Sipar Gerdau', 'Fanelli']
-
-export const financingCards = [
-  {
-    title: '3 cuotas',
-    text: 'Promocion comercial para cerrar compras de obra con mas facilidad.',
-  },
-  {
-    title: '6 cuotas',
-    text: 'Ideal para pedidos mas grandes de materiales y terminaciones.',
-  },
-  {
-    title: 'Todos los bancos',
-    text: 'Aceptamos pagos con tarjetas bancarias a coordinar por WhatsApp.',
-  },
-]
-
-export const promoSteps = [
-  'Elegis materiales o armamos el pedido por rubro.',
-  'Coordinamos pago, link y condiciones comerciales.',
-  'Revisamos comprobante, preparamos y despachamos la logistica.',
-]
-
-export const heroPromises = [
-  'Entrega y coordinacion comercial en Solano y alrededores.',
-  'Atencion por WhatsApp para presupuestos y pedidos.',
-  'Materiales de obra, seco, sanitarios, hierros y ferreteria.',
-]
-
-export const categoryDefinitions = [
+const categoryDefinitions = [
   {
     key: 'aridos-y-obra-gruesa',
     name: 'Aridos y Obra Gruesa',
@@ -148,7 +112,7 @@ const brandDictionary = {
   WEBER: 'Weber',
 }
 
-export const priceFormatter = new Intl.NumberFormat('es-AR', {
+const priceFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',
   maximumFractionDigits: 0,
@@ -230,20 +194,6 @@ export function formatPrice(value) {
   return value > 0 ? priceFormatter.format(value) : 'Consultar'
 }
 
-export function getWhatsAppHref(product) {
-  const message = [
-    'Hola, quiero consultar este producto de Corralon Los Eucaliptos Solano:',
-    `Producto: ${product.excelName}`,
-    product.brandName ? `Marca: ${product.brandName}` : null,
-    `Codigo: ${product.code}`,
-    `Precio: ${formatPrice(product.price)}`,
-  ]
-    .filter(Boolean)
-    .join('\n')
-
-  return `${whatsappBase}?text=${encodeURIComponent(message)}`
-}
-
 export const storefrontProducts = productCatalog
   .map((product) => {
     const category = getCategory(product.name)
@@ -295,42 +245,3 @@ export const categoryCards = Object.values(
   }, {}),
 ).sort((a, b) => b.total - a.total)
 
-export const featuredProducts = storefrontProducts.filter((product) =>
-  ['WEBER', 'VARILL', 'VIGA', 'MALLA', 'BLOQUE', 'BICAPA', 'CANILL', 'BACHA'].some((term) =>
-    normalizeText(product.rawName).includes(term),
-  ),
-).slice(0, 12)
-
-export const homeCollections = [
-  {
-    title: 'Obra gruesa',
-    text: 'Arena, cascote, cemento y cal para arrancar la obra sin vueltas.',
-    href: '/productos?categoria=aridos-y-obra-gruesa',
-  },
-  {
-    title: 'Hierros y estructura',
-    text: 'Varillas, mallas y vigas para pedidos de armado y techo.',
-    href: '/productos?categoria=hierros-y-estructura',
-  },
-  {
-    title: 'Sanitarios y plomeria',
-    text: 'Canillas, bachas, vanitorys y accesorios para instalaciones.',
-    href: '/productos?categoria=sanitarios-y-plomeria',
-  },
-  {
-    title: 'Seco y terminaciones',
-    text: 'Placas, yesos, membranas y productos Weber para cerrar mejor.',
-    href: '/productos?categoria=construccion-en-seco',
-  },
-]
-
-export const checkoutPaymentOptions = [
-  { value: 'transferencia', label: 'Transferencia bancaria' },
-  { value: 'whatsapp', label: 'Coordinar por WhatsApp' },
-]
-
-export const checkoutInstallmentOptions = [
-  { value: '3-cuotas', label: '3 cuotas' },
-  { value: '6-cuotas', label: '6 cuotas' },
-  { value: 'contado', label: 'Contado / transferencia' },
-]

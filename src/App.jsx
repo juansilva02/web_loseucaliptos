@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import cubeIcon from './assets/icono-cubo.png'
+import CoverageMap from './components/CoverageMap'
+import CoverageChecker from './components/CoverageChecker'
 import logoHeader from './assets/logo-header-los-eucaliptos.png'
 import promoCamion from './assets/promo-camion.png'
 import promoMateriales from './assets/promo-cta-corralon.png'
@@ -23,11 +24,9 @@ import imgTelgopor125 from './assets/featured-products/telgopor-12-5.png'
 import imgCableUnipolar from './assets/featured-products/cable-unipolar-2-5.png'
 import {
   categoryCards,
-  contactItems,
   formatPrice,
   normalizeText,
   storefrontProducts,
-  supplierBrands,
   whatsappBase,
   whatsappBosques,
 } from './lib/catalog'
@@ -36,12 +35,10 @@ import CatalogPage from './pages/CatalogPage'
 import featuredCatalog from './data/featured-catalog.json'
 import './App.css'
 
-const serviceHighlights = [
-  { icon: 'delivery', title: 'Envios rapidos', text: 'En Zona Sur y alrededores' },
-  { icon: 'stock', title: 'Stock permanente', text: 'Los mejores materiales' },
-  { icon: 'support', title: 'Atencion personalizada', text: 'Asesoramiento profesional' },
-  { icon: 'payment', title: 'Medios de pago', text: 'Efectivo, transferencia y mas' },
+const promoImages = [
+  { src: promoMateriales, alt: 'Materiales para la construccion en Corralon Los Eucaliptus' },
 ]
+
 
 const heroSignals = [
   '3 y 6 cuotas con todos los bancos',
@@ -58,6 +55,9 @@ const branches = [
       'Estamos en San Francisco Solano, Zona Sur. Podes acercarte o escribirnos por WhatsApp para coordinar el pedido y la entrega.',
     address: 'Av. Monteverde 2766, San Francisco Solano, Buenos Aires',
     hours: 'Lun a Vie 8:00 a 12:00 y 14:00 a 19:00 | Sab 08:00 a 14:00',
+    lat: -34.7904685,
+    lng: -58.3096963,
+    coverageRadius: 5000, // metros (5 km)
     mapsEmbedUrl: 'https://www.google.com/maps?q=-34.7904685,-58.3096963&output=embed',
     mapsDirectionsUrl:
       'https://www.google.com/maps/place/Corral%C3%B3n+Los+Eucaliptus+%22Solano%22/@-34.7904685,-58.3096963,17z/data=!3m1!4b1!4m6!3m5!1s0x95a32c71520b4479:0x4a3a34f33c1db2be!8m2!3d-34.7904685!4d-58.3096963!16s%2Fg%2F11c6pnxypl?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDYwMS4wIKXMDSoASAFQAw%3D%3D',
@@ -71,31 +71,35 @@ const branches = [
     address: 'Av. Guillermo Hudson 2855, Bosques, Buenos Aires',
     phone: '11 3062-3113',
     hours: 'Lun a Vie 08:00 a 18:00 | Sab 08:00 a 15:00',
+    lat: -34.8315412,
+    lng: -58.2423633,
+    coverageRadius: 5000, // metros (5 km)
     mapsEmbedUrl: 'https://www.google.com/maps?q=-34.8315412,-58.2423633&output=embed',
     mapsDirectionsUrl:
       'https://www.google.com/maps/place/Corralon+Los+Eucaliptus+%22Bosques%22/@-34.8315412,-58.2449382,17z/data=!3m1!4b1!4m6!3m5!1s0x95a329fb5902748d:0xc9956ec6f35647e6!8m2!3d-34.8315412!4d-58.2423633!16s%2Fg%2F11l2fcpsk1?entry=tts',
   },
 ]
 
-const utilityHighlights = [
+const purchaseSteps = [
   {
-    title: 'Envios coordinados',
-    text: 'Recibi materiales en obra con entrega programada en Zona Sur.',
+    title: 'Arma tu carrito',
+    text: 'Suma ladrillos, cemento, hierros y todo lo que pida tu obra.',
     tone: 'light',
   },
   {
-    title: 'Medios de pago',
-    text: 'Efectivo, transferencia, debito y credito con opciones de cuotas.',
+    title: 'Envialo por WhatsApp',
+    text: 'El pedido llega directo a Solano o Bosques y te respondemos en el dia.',
     tone: 'dark',
+    showWhatsapp: true,
   },
   {
-    title: 'Hace tu pedido',
-    text: 'Nombre, CUIL, direccion y forma de pago para preparar la entrega.',
+    title: 'Elegi como pagar',
+    text: 'Efectivo, transferencia, debito o credito en 3 y 6 cuotas.',
     tone: 'accent',
   },
   {
-    title: 'WhatsApp directo',
-    text: 'Consultas, presupuestos y confirmacion comercial en el acto.',
+    title: 'Recibilo en obra',
+    text: 'Coordinamos el envio en Zona Sur o lo retiras por la sucursal.',
     tone: 'light',
   },
 ]
@@ -141,37 +145,6 @@ function getCuratedShowcase() {
   })
 }
 
-function ServiceIcon({ icon, title }) {
-  if (icon === 'delivery') {
-    return (
-      <div className="service-band-icon-wrap">
-        <img className="service-band-icon" src={cubeIcon} alt={`Icono de ${title.toLowerCase()}`} />
-      </div>
-    )
-  }
-
-  if (icon === 'stock') {
-    return (
-      <div className="service-band-glyph" aria-hidden="true">
-        <span className="glyph glyph-box" />
-      </div>
-    )
-  }
-
-  if (icon === 'support') {
-    return (
-      <div className="service-band-glyph" aria-hidden="true">
-        <span className="glyph glyph-badge" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="service-band-glyph" aria-hidden="true">
-      <span className="glyph glyph-card" />
-    </div>
-  )
-}
 
 function buildWhatsappOrderMessage({ items, subtotal }) {
   const itemLines = items.map((item) => `- ${item.name} x${item.quantity} | ${formatPrice(item.price * item.quantity)}`)
@@ -199,7 +172,27 @@ function App() {
   const [activeProduct, setActiveProduct] = useState(0)
   const [productQuantities, setProductQuantities] = useState({})
   const [activeLocation, setActiveLocation] = useState(0)
+  const [activePromo, setActivePromo] = useState(0)
   const [currentPage, setCurrentPage] = useState('home')
+  const [activeStep, setActiveStep] = useState(0)
+  const [stepsPaused, setStepsPaused] = useState(false)
+  const [showCoverage, setShowCoverage] = useState(false)
+  const [deliveryLocation, setDeliveryLocation] = useState(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('eucaliptus-delivery-location')) ?? null
+    } catch {
+      return null
+    }
+  })
+
+  const handleCoverageResult = (location) => {
+    setDeliveryLocation(location)
+    try {
+      window.localStorage.setItem('eucaliptus-delivery-location', JSON.stringify(location))
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }
 
   const featuredProducts = useMemo(() => getCuratedShowcase(), [])
 
@@ -236,6 +229,16 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (stepsPaused) return undefined
+
+    const timer = window.setInterval(() => {
+      setActiveStep((current) => (current + 1) % purchaseSteps.length)
+    }, 3400)
+
+    return () => window.clearInterval(timer)
+  }, [stepsPaused])
+
+  useEffect(() => {
     if (!filteredProducts.length) {
       setActiveProduct(0)
       return
@@ -262,6 +265,11 @@ function App() {
     })
   }
 
+  const setProductDraftQuantity = (productId, value) => {
+    const parsed = parseInt(value, 10)
+    setProductQuantities((current) => ({ ...current, [productId]: parsed > 0 ? parsed : 1 }))
+  }
+
   const getProductDraftQuantity = (productId) => productQuantities[productId] ?? 1
 
   const handleAddToCart = (product) => {
@@ -272,23 +280,31 @@ function App() {
   const prevBranch = () => setActiveLocation((current) => (current - 1 + branches.length) % branches.length)
   const nextBranch = () => setActiveLocation((current) => (current + 1) % branches.length)
 
+  const prevPromo = () => setActivePromo((c) => (c - 1 + promoImages.length) % promoImages.length)
+  const nextPromo = () => setActivePromo((c) => (c + 1) % promoImages.length)
+
   return (
     <main className="figma-storefront">
       {currentPage === 'catalog' ? (
         <CatalogPage onBack={() => setCurrentPage('home')} onOpenCart={() => setShowCart(true)} />
       ) : (
         <>
-      <header className="utility-strip">
-        <div className="utility-cluster">
-          <span>Zona Sur, Buenos Aires</span>
-          <span>Lun a Vie 7:30 - 17:30</span>
-          <span>Sab 7:30 - 13:00</span>
+      <div className="benefits-bar" aria-label="Beneficios">
+        <div className="benefits-bar-track">
+          <div className="benefits-bar-item">💳 Hasta <strong>16% OFF</strong> en efectivo</div>
+          <div className="benefits-bar-item">🏦 <strong>3 y 6 cuotas</strong> sin interés</div>
+          <div className="benefits-bar-item">🚚 Envíos propios <strong>Zona Sur</strong></div>
+          <div className="benefits-bar-item">📍 Retirá en <strong>Solano</strong> y <strong>Bosques</strong></div>
+          <div className="benefits-bar-item">🔨 Stock <strong>permanente</strong></div>
+          <div className="benefits-bar-item">⚡ Atención <strong>mayorista y minorista</strong></div>
+          <div className="benefits-bar-item" aria-hidden="true">💳 Hasta <strong>16% OFF</strong> en efectivo</div>
+          <div className="benefits-bar-item" aria-hidden="true">🏦 <strong>3 y 6 cuotas</strong> sin interés</div>
+          <div className="benefits-bar-item" aria-hidden="true">🚚 Envíos propios <strong>Zona Sur</strong></div>
+          <div className="benefits-bar-item" aria-hidden="true">📍 Retirá en <strong>Solano</strong> y <strong>Bosques</strong></div>
+          <div className="benefits-bar-item" aria-hidden="true">🔨 Stock <strong>permanente</strong></div>
+          <div className="benefits-bar-item" aria-hidden="true">⚡ Atención <strong>mayorista y minorista</strong></div>
         </div>
-        <div className="utility-cluster utility-cluster-right">
-          <span>Atencion mayorista y minorista</span>
-          <span>Envios a domicilio</span>
-        </div>
-      </header>
+      </div>
 
       <header className={`commerce-header${isScrolled ? ' commerce-header-scrolled' : ''}`}>
         <div className="brand-lockup">
@@ -296,6 +312,19 @@ function App() {
         </div>
 
         <div className="header-actions">
+          <button className="coverage-box" type="button" onClick={() => setShowCoverage(true)}>
+            <svg className="header-location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span className="header-location-text">
+              <span className="header-location-label">Enviar a</span>
+              <span className="header-location-val">
+                {deliveryLocation ? deliveryLocation.label : 'Seleccionar ubicacion'}
+                {deliveryLocation?.zone === 'in' ? ' ✓' : ''}
+              </span>
+            </span>
+          </button>
           <button className="cart-box" type="button" onClick={() => setShowCart(true)}>
             <strong>Mi carrito</strong>
             <span>{itemCount} items | {formatPrice(subtotal)}</span>
@@ -313,14 +342,12 @@ function App() {
         </div>
       </header>
 
-      <div className="category-bar">
-        <div className="category-bar-item">Todos los productos</div>
-        <div className="category-bar-item">Medios de pago</div>
-      </div>
-
-      <section className="hero-section-figma">
-        <div className="hero-overlay" />
-        <div className="hero-copy">
+      <section className="hero-section">
+        <div className="hero-bg">
+          <img src={promoCamion} alt="Camion de Los Eucaliptus Corralon" />
+        </div>
+        <div className="hero-content">
+          <p className="hero-eyebrow">Desde 1954 · Zona Sur, Buenos Aires</p>
           <h1>
             Materiales
             <br />
@@ -342,7 +369,6 @@ function App() {
               </a>
             </div>
           </div>
-          <div className="hero-note">Desde 1954 en Zona Sur, Buenos Aires</div>
           <div className="hero-signals">
             {heroSignals.map((signal, index) => (
               <span className={activeSignal === index ? 'hero-signal-active' : ''} key={signal}>
@@ -351,22 +377,8 @@ function App() {
             ))}
           </div>
         </div>
-        <div className="hero-media">
-          <img src={promoCamion} alt="Camion de Los Eucaliptus Corralon" />
-        </div>
       </section>
 
-      <section className="service-band">
-        {serviceHighlights.map((item) => (
-          <article className="service-band-item" key={item.title}>
-            <ServiceIcon icon={item.icon} title={item.title} />
-            <div className="service-band-copy">
-              <strong>{item.title}</strong>
-              <span>{item.text}</span>
-            </div>
-          </article>
-        ))}
-      </section>
 
       <section className="featured-section-figma" id="productos-destacados">
         <div className="section-header">
@@ -429,7 +441,15 @@ function App() {
                   <button type="button" aria-label="Disminuir cantidad" onClick={() => changeProductDraftQuantity(product.id, -1)}>
                     -
                   </button>
-                  <span>{getProductDraftQuantity(product.id)}</span>
+                  <input
+                    className="mini-quantity-input"
+                    type="number"
+                    min="1"
+                    value={getProductDraftQuantity(product.id)}
+                    onChange={(event) => setProductDraftQuantity(product.id, event.target.value)}
+                    onBlur={(event) => setProductDraftQuantity(product.id, event.target.value)}
+                    aria-label="Cantidad"
+                  />
                   <button type="button" aria-label="Aumentar cantidad" onClick={() => changeProductDraftQuantity(product.id, 1)}>
                     +
                   </button>
@@ -443,17 +463,50 @@ function App() {
         </div>
       </section>
 
-      <section className="benefits-rail">
+      <section
+        className="benefits-rail"
+        onMouseEnter={() => setStepsPaused(true)}
+        onMouseLeave={() => setStepsPaused(false)}
+      >
         <div className="benefits-rail-intro">
-          <p className="section-kicker">Compra simple</p>
-          <h3>Todo lo importante para comprar rapido y coordinar tu entrega.</h3>
+          <div className="benefits-rail-intro-text">
+            <p className="section-kicker">Compra simple · paso {activeStep + 1} de {purchaseSteps.length}</p>
+            <h3>
+              <span className="benefits-rail-static">Pedir materiales es asi:</span>
+              <span className="benefits-rail-rotator" key={activeStep}>
+                {purchaseSteps[activeStep].title}
+              </span>
+            </h3>
+          </div>
+          <div className="benefits-rail-intro-side">
+            <div className="benefits-rail-progress" aria-hidden="true">
+              {purchaseSteps.map((step, i) => (
+                <button
+                  key={step.title}
+                  type="button"
+                  tabIndex={-1}
+                  className={`benefits-rail-progress-seg${i < activeStep ? ' benefits-rail-progress-seg-done' : ''}${stepsPaused && i === activeStep ? ' benefits-rail-progress-seg-paused' : ''}`}
+                  onClick={() => setActiveStep(i)}
+                >
+                  {!stepsPaused && i === activeStep ? <span className="benefits-rail-progress-fill" /> : null}
+                </button>
+              ))}
+            </div>
+            <button className="primary-cta benefits-rail-cta" type="button" onClick={() => setShowCart(true)}>
+              Ver pedido
+            </button>
+          </div>
         </div>
         <div className="benefits-rail-grid">
-          {utilityHighlights.map((banner) => (
-            <article className={`benefit-tile benefit-tile-${banner.tone}`} key={banner.title}>
-              <strong>{banner.title}</strong>
-              <p>{banner.text}</p>
-              {banner.title === 'WhatsApp directo' ? (
+          {purchaseSteps.map((step, i) => (
+            <article
+              className={`benefit-tile benefit-tile-${step.tone}${i === activeStep ? ' benefit-tile-active' : ''}`}
+              key={step.title}
+              onMouseEnter={() => setActiveStep(i)}
+            >
+              <strong>{step.title}</strong>
+              <p>{step.text}</p>
+              {step.showWhatsapp ? (
                 <div className="benefit-wa-links">
                   <a href={whatsappBase} target="_blank" rel="noreferrer">
                     Solano: 11 5974-8316
@@ -468,7 +521,7 @@ function App() {
         </div>
       </section>
 
-      <section className="location-section">
+      <section className="location-section" id="sucursales">
         <div className="location-carousel">
           <div className="location-carousel-viewport">
             {branches.map((branch, i) => (
@@ -490,11 +543,12 @@ function App() {
                   </a>
                 </div>
                 <div className="location-map-frame">
-                  <iframe
-                    title={`Mapa de ${branch.name}`}
-                    src={branch.mapsEmbedUrl}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
+                  <CoverageMap
+                    lat={branch.lat}
+                    lng={branch.lng}
+                    radius={branch.coverageRadius}
+                    color="#db3a1e"
+                    label={branch.kicker}
                   />
                 </div>
               </article>
@@ -533,53 +587,93 @@ function App() {
         </div>
       </section>
 
-      <section className="bottom-story-grid">
-        <article className="story-card story-card-dark story-card-image-only">
-          <img src={promoMateriales} alt="Materiales para la construccion" />
-        </article>
-
-        <article className="story-card story-card-highlight">
-          <div className="story-card-copy">
-            <h2>
-              Tu proyecto,
-              <br />
-              nuestro compromiso
-            </h2>
-            <p>Materiales de calidad, al mejor precio y con coordinacion comercial directa.</p>
-            <button className="secondary-cta dark" type="button" onClick={() => setShowCart(true)}>
-              Ver pedido
-            </button>
-          </div>
-          <div className="story-meta">
-            {contactItems.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-            <div className="story-brands">
-              {supplierBrands.map((brand) => (
-                <strong key={brand}>{brand}</strong>
+      <section className="promo-carousel">
+        <div className="promo-carousel-track">
+          {promoImages.map((img, i) => (
+            <div
+              key={i}
+              className={`promo-carousel-slide${activePromo === i ? ' promo-carousel-slide-active' : ''}`}
+            >
+              <img src={img.src} alt={img.alt} />
+            </div>
+          ))}
+        </div>
+        {promoImages.length > 1 && (
+          <>
+            <button className="promo-carousel-nav promo-carousel-prev" type="button" onClick={prevPromo} aria-label="Imagen anterior">←</button>
+            <button className="promo-carousel-nav promo-carousel-next" type="button" onClick={nextPromo} aria-label="Imagen siguiente">→</button>
+            <div className="promo-carousel-dots">
+              {promoImages.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`promo-dot${activePromo === i ? ' promo-dot-active' : ''}`}
+                  onClick={() => setActivePromo(i)}
+                  aria-label={`Ver imagen ${i + 1}`}
+                />
               ))}
             </div>
-          </div>
-        </article>
+          </>
+        )}
       </section>
 
       <footer className="site-footer">
-        <div className="site-footer-brand">
-          <strong>Los Eucaliptus Corralon</strong>
-          <p>Materiales para la construccion, envios en Zona Sur y atencion comercial directa.</p>
+        <div className="site-footer-grid">
+          <div className="site-footer-brand">
+            <strong>Los Eucaliptus Corralon</strong>
+            <p>
+              Materiales de construccion a los mejores precios de Zona Sur. Stock permanente y
+              envio propio desde 1954.
+            </p>
+            <div className="site-footer-actions">
+              <a className="footer-chip footer-chip-wa" href={whatsappBase} target="_blank" rel="noreferrer">
+                WhatsApp
+              </a>
+              <a className="footer-chip" href="tel:+5491159748316">
+                Llamar
+              </a>
+            </div>
+          </div>
+
+          <div className="site-footer-block">
+            <strong>Navegacion</strong>
+            <button type="button" onClick={scrollToProducts}>Productos destacados</button>
+            <button type="button" onClick={() => setCurrentPage('catalog')}>Catalogo completo</button>
+            <button type="button" onClick={() => setShowCoverage(true)}>¿Llegamos a tu zona?</button>
+            <button
+              type="button"
+              onClick={() => document.getElementById('sucursales')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Sucursales
+            </button>
+            <button type="button" onClick={() => setShowCart(true)}>Mi carrito</button>
+          </div>
+
+          <div className="site-footer-block">
+            <strong>Horarios</strong>
+            <span className="footer-branch-name">Solano</span>
+            <span>Lunes a Viernes <b>8:00 a 12:00 y 14:00 a 19:00</b></span>
+            <span>Sabados <b>8:00 a 14:00</b></span>
+            <span className="footer-branch-name">Bosques</span>
+            <span>Lunes a Viernes <b>8:00 a 18:00</b></span>
+            <span>Sabados <b>8:00 a 15:00</b></span>
+          </div>
+
+          <div className="site-footer-block">
+            <strong>Contacto</strong>
+            <span>📍 Av. Monteverde 2766, San Francisco Solano</span>
+            <a href="tel:+5491159748316">11 5974-8316</a>
+            <span>📍 Av. Guillermo Hudson 2855, Bosques, F. Varela</span>
+            <a href="tel:+5491130623113">11 3062-3113</a>
+            <a href={whatsappBase} target="_blank" rel="noreferrer">
+              Escribinos por WhatsApp
+            </a>
+          </div>
         </div>
-        <div className="site-footer-block">
-          <strong>Contacto</strong>
-          <span>Av. Monteverde 2766, San Francisco Solano</span>
-          <span>+54 9 11 5974-8316</span>
-          <span>Lun a Vie 8:00 a 12:00 y 14:00 a 19:00</span>
-          <span>Sabados de 08:00 a 14:00</span>
-        </div>
-        <div className="site-footer-block">
-          <strong>Compras</strong>
-          <span>Pedidos por WhatsApp</span>
-          <span>Efectivo, transferencias, credito y debito</span>
-          <span>1 a 3 cuotas 20% | 4 a 6 cuotas 29%</span>
+
+        <div className="site-footer-legal">
+          © {new Date().getFullYear()} Corralon Los Eucaliptus. Todos los derechos reservados.
+          Precios sujetos a actualizacion.
         </div>
       </footer>
         </>
@@ -617,6 +711,17 @@ function App() {
             <span>Ver pedido</span>
           </div>
         </button>
+      ) : null}
+
+      {showCoverage ? (
+        <CoverageChecker
+          branches={[
+            { name: 'Solano', lat: branches[0].lat, lng: branches[0].lng, radius: branches[0].coverageRadius, whatsappUrl: whatsappBase },
+            { name: 'Bosques', lat: branches[1].lat, lng: branches[1].lng, radius: branches[1].coverageRadius, whatsappUrl: whatsappBosques },
+          ]}
+          onClose={() => setShowCoverage(false)}
+          onResult={handleCoverageResult}
+        />
       ) : null}
 
       {showCart && (

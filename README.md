@@ -16,7 +16,7 @@ Landing + catálogo comercial para **Corralon Los Eucaliptus**, con sucursales e
 - Header sticky con acceso rápido al carrito y botones de WhatsApp por sucursal
 - Hero con highlights animados rotativos y CTA de compra / WhatsApp
 - Service band: envíos, stock, atención y medios de pago
-- Grilla de productos destacados con filtro por categoría y carousel automático
+- Grilla de productos destacados con buscador en vivo, filtro por categoría y carousel automático
 - Rail de beneficios: envíos coordinados, medios de pago, armado de pedido, WhatsApp directo
 - Carrusel de sucursales con mapa embed de Google Maps para Solano y Bosques
 - Bloque editorial de cierre con CTA comercial
@@ -24,11 +24,15 @@ Landing + catálogo comercial para **Corralon Los Eucaliptus**, con sucursales e
 - Botón flotante de WhatsApp (Solano)
 - Carrito flotante resumen con acceso directo al drawer
 - Drawer de carrito lateral: cantidades, totales, envío a WhatsApp por sucursal
+- Accesibilidad: objetivos táctiles ampliados, contraste del carrito y soporte de `prefers-reduced-motion`
+- Header responsivo: logo y acciones en fila hasta 640px
+- SEO: canonical, Open Graph con URL absoluta, JSON-LD `HardwareStore` por sucursal, `robots.txt` y `sitemap.xml` (dominio placeholder `web-loseucaliptus.vercel.app` — actualizar al definir dominio final)
 
 ### Catálogo (`/catalogo`)
 
 - Búsqueda por nombre, marca o categoría (normalización de tildes)
 - Filtros por categoría con conteo de productos
+- Imágenes en las fichas de producto
 - Grilla de productos: precio, marca, unidad, selector de cantidad
 - Botón "Agregar al carrito" cuando hay precio, "Consultar precio" vía WhatsApp cuando no
 - Nota de actualización de precios al pie
@@ -56,10 +60,11 @@ src/
 ├── main.jsx                        — entrada de la app
 ├── assets/
 │   ├── logo-header-los-eucaliptos.png
-│   ├── promo-camion.png / .svg
+│   ├── promo-camion.png
 │   ├── promo-cta-corralon.png
-│   ├── icono-cubo.png
-│   └── featured-products/          — imágenes de productos destacados (SVG/PNG)
+│   └── featured-products/          — imágenes de productos destacados (PNG)
+├── components/
+│   └── CoverageMap.jsx             — mapa Leaflet con radio de cobertura por sucursal
 ├── context/
 │   └── CartContext.jsx             — carrito global + persistencia localStorage
 ├── data/
@@ -74,9 +79,9 @@ src/
 
 ## Datos cargados
 
-- Catálogo raw del Excel con ~3000+ SKUs (`src/data/catalog.js`)
-- 18 productos destacados curados con precios manuales (`featured-catalog.json`, actualizado 2026-06-05)
-- ~63 productos para el CatalogPage en 6 categorías
+- Catálogo raw del Excel con 1756 SKUs (`src/data/catalog.js`), 1753 con precio cargado
+- 18 productos destacados curados (`featured-catalog.json`, actualizado 2026-06-05) — todos con imagen real
+- 64 productos para el CatalogPage en 6 categorías
 - Marcas: Loma Negra, Weber, Klaukol, Tuyango, Acindar, Quilmes, Premecol, Polipol, Fanelli, Argent
 
 ## Categorías de productos
@@ -109,8 +114,8 @@ npm run dev
 
 ## Próximos pasos recomendados
 
-- Completar precios en `featured-catalog.json` para los productos con `price: 0`
-- Agregar imágenes reales para más productos destacados
+- Completar precios en `featured-catalog.json`: 51 de 64 productos del CatalogPage tienen `price: 0` (hoy caen en "Consultar precio")
 - Cubrir más SKUs del catálogo raw en el CatalogPage
+- Sumar imágenes reales a más productos del CatalogPage
 - Revisar optimización de imágenes pesadas del home
 - Agregar número de teléfono de Solano en la sección de sucursales (actualmente sin `phone` explícito en el objeto de la sucursal)
