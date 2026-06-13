@@ -57,6 +57,21 @@ select {
   touch-action: manipulation;
 }
 
+/* Foco visible para navegacion por teclado (a11y: focus-states) */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* En superficies oscuras (hero, footer, drawer) el anillo va claro */
+.benefits-rail-intro :focus-visible,
+.site-footer :focus-visible,
+.hero-content :focus-visible,
+.cart-drawer :focus-visible,
+.coverage-box:focus-visible {
+  outline-color: #fff7ef;
+}
+
 img {
   max-width: 100%;
 }

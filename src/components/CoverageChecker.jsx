@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CheckCircle2, Truck, MapPin } from 'lucide-react'
 
 /**
  * Modal para que el cliente verifique si su direccion esta dentro de la
@@ -139,10 +140,10 @@ export default function CoverageChecker({ branches, onClose, onResult }) {
 
         {status === 'result' && result ? (
           <div className={`coverage-result coverage-result-${result.zone}`}>
-            <strong>
-              {result.zone === 'in' && '✅ ¡Si, llegamos!'}
-              {result.zone === 'near' && '🚚 Estamos cerca tuyo'}
-              {result.zone === 'out' && '📍 Estas fuera de la zona habitual'}
+            <strong className="coverage-result-title">
+              {result.zone === 'in' && (<><CheckCircle2 size={18} aria-hidden="true" /> ¡Si, llegamos!</>)}
+              {result.zone === 'near' && (<><Truck size={18} aria-hidden="true" /> Estamos cerca tuyo</>)}
+              {result.zone === 'out' && (<><MapPin size={18} aria-hidden="true" /> Estas fuera de la zona habitual</>)}
             </strong>
             <p>
               {result.zone === 'in' &&
@@ -204,7 +205,7 @@ export default function CoverageChecker({ branches, onClose, onResult }) {
               </button>
             </div>
             <button type="button" className="coverage-geo" onClick={useMyLocation} disabled={status === 'loading'}>
-              📍 Usar mi ubicacion actual
+              <MapPin size={16} aria-hidden="true" /> Usar mi ubicacion actual
             </button>
             {status === 'error' ? <p className="coverage-error">{errorMsg}</p> : null}
           </div>

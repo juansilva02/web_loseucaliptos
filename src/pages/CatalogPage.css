@@ -68,7 +68,7 @@
 .catalog-header-title span {
   font-size: 0.7rem;
   font-weight: 500;
-  color: rgba(23, 20, 17, 0.38);
+  color: var(--muted);
   letter-spacing: 0.02em;
 }
 
@@ -98,7 +98,7 @@
 
 .catalog-cart-btn span {
   font-size: 0.76rem;
-  color: rgba(23, 20, 17, 0.45);
+  color: var(--muted);
 }
 
 /* ── Search ─────────────────────────────────────────────── */
@@ -176,8 +176,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 34px;
-  padding: 0 11px;
+  min-height: 44px;
+  padding: 0 14px;
   border: 1.5px solid rgba(23, 20, 17, 0.1);
   border-radius: 6px;
   background: transparent;
@@ -192,7 +192,7 @@
 
 .catalog-cat-btn em {
   font-style: normal;
-  color: rgba(23, 20, 17, 0.38);
+  color: rgba(23, 20, 17, 0.6);
   font-size: 0.76rem;
 }
 
@@ -361,7 +361,7 @@
   flex: 1;
 }
 
-.catalog-card-body h3 {
+.catalog-card-body h2 {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
@@ -405,7 +405,7 @@
 .catalog-unit {
   font-size: 0.72rem;
   font-weight: 500;
-  color: rgba(23, 20, 17, 0.42);
+  color: var(--muted);
 }
 
 .catalog-installments {
@@ -463,7 +463,7 @@
 .catalog-empty {
   padding: 64px 28px;
   text-align: center;
-  color: rgba(23, 20, 17, 0.45);
+  color: var(--muted);
 }
 
 .catalog-empty p {
@@ -487,7 +487,7 @@
 .catalog-footer-note {
   padding: 14px 22px 0;
   margin: 0;
-  color: rgba(23, 20, 17, 0.35);
+  color: var(--muted);
   font-size: 0.73rem;
 }
 

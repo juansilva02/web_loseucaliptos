@@ -1,27 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { CreditCard, Landmark, Truck, MapPin, Hammer, Zap } from 'lucide-react'
 import CoverageMap from './components/CoverageMap'
 import CoverageChecker from './components/CoverageChecker'
-import logoHeader from './assets/logo-header-los-eucaliptos.png'
-import promoCamion from './assets/promo-camion.png'
-import promoMateriales from './assets/promo-cta-corralon.png'
-import imgLadrilloHueco12 from './assets/featured-products/ladrillo-hueco-12.png'
-import imgLadrilloHueco8 from './assets/featured-products/ladrillo-hueco-8.png'
-import imgLadrilloComun from './assets/featured-products/ladrillo-comun.png'
-import imgPortland25 from './assets/featured-products/portland-25kg.png'
-import imgCalCacique from './assets/featured-products/cal-cacique-25kg.png'
-import imgBloqueLiso13 from './assets/featured-products/bloque-liso-13.png'
-import imgBloqueLiso20 from './assets/featured-products/bloque-liso-20.png'
-import imgBloqueLiso10 from './assets/featured-products/bloque-liso-10.png'
-import imgHierro6 from './assets/featured-products/hierro-6.png'
-import imgHierro8 from './assets/featured-products/hierro-8.png'
-import imgHierro10 from './assets/featured-products/hierro-10.png'
-import imgHierro42 from './assets/featured-products/hierro-4-2.png'
-import imgLadrilloCordoba from './assets/featured-products/ladrillo-cordoba-media-vista.png'
-import imgArenaBolson from './assets/featured-products/arena-bolson.png'
-import imgPegamentoCeramica from './assets/featured-products/pegamento-ceramica.png'
-import imgTelgopor10 from './assets/featured-products/telgopor-10.png'
-import imgTelgopor125 from './assets/featured-products/telgopor-12-5.png'
-import imgCableUnipolar from './assets/featured-products/cable-unipolar-2-5.png'
+import logoHeader from './assets/logo-header-los-eucaliptos.webp'
+import promoCamion from './assets/promo-camion.webp'
+import promoMateriales from './assets/promo-cta-corralon.webp'
+import imgLadrilloHueco12 from './assets/featured-products/ladrillo-hueco-12.webp'
+import imgLadrilloHueco8 from './assets/featured-products/ladrillo-hueco-8.webp'
+import imgLadrilloComun from './assets/featured-products/ladrillo-comun.webp'
+import imgPortland25 from './assets/featured-products/portland-25kg.webp'
+import imgCalCacique from './assets/featured-products/cal-cacique-25kg.webp'
+import imgBloqueLiso13 from './assets/featured-products/bloque-liso-13.webp'
+import imgBloqueLiso20 from './assets/featured-products/bloque-liso-20.webp'
+import imgBloqueLiso10 from './assets/featured-products/bloque-liso-10.webp'
+import imgHierro6 from './assets/featured-products/hierro-6.webp'
+import imgHierro8 from './assets/featured-products/hierro-8.webp'
+import imgHierro10 from './assets/featured-products/hierro-10.webp'
+import imgHierro42 from './assets/featured-products/hierro-4-2.webp'
+import imgLadrilloCordoba from './assets/featured-products/ladrillo-cordoba-media-vista.webp'
+import imgArenaBolson from './assets/featured-products/arena-bolson.webp'
+import imgPegamentoCeramica from './assets/featured-products/pegamento-ceramica.webp'
+import imgTelgopor10 from './assets/featured-products/telgopor-10.webp'
+import imgTelgopor125 from './assets/featured-products/telgopor-12-5.webp'
+import imgCableUnipolar from './assets/featured-products/cable-unipolar-2-5.webp'
 import {
   categoryCards,
   formatPrice,
@@ -40,9 +42,57 @@ const promoImages = [
   { src: promoMateriales, alt: 'Materiales para la construccion en Corralon Los Eucaliptus' },
 ]
 
+// Icono Instagram inline (lucide v1 ya no exporta iconos de marca)
+function InstagramGlyph(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  )
+}
+
+const benefitTicker = [
+  { Icon: CreditCard, label: <>Hasta <strong>16% OFF</strong> en efectivo</> },
+  { Icon: Landmark, label: <><strong>3 y 6 cuotas</strong> sin interés</> },
+  { Icon: Truck, label: <>Envíos propios <strong>Zona Sur</strong></> },
+  { Icon: MapPin, label: <>Retirá en <strong>Solano</strong> y <strong>Bosques</strong></> },
+  { Icon: Hammer, label: <>Stock <strong>permanente</strong></> },
+  { Icon: Zap, label: <>Atención <strong>mayorista y minorista</strong></> },
+]
+
+// Coincide con el FAQPage JSON-LD de index.html (AEO)
+const faqs = [
+  {
+    q: '¿Hacen envíos a domicilio?',
+    a: 'Sí. Tenemos envío propio en Zona Sur desde nuestras sucursales de Solano y Bosques. Coordinás la entrega por WhatsApp y verificás tu zona desde el sitio.',
+  },
+  {
+    q: '¿Dónde están las sucursales?',
+    a: 'Tenemos dos sucursales: Solano en Av. Monteverde 2766 (San Francisco Solano) y Bosques en Av. Guillermo Hudson 2855 (Florencio Varela).',
+  },
+  {
+    q: '¿Qué medios de pago aceptan?',
+    a: 'Aceptamos efectivo (hasta 16% de descuento), transferencia bancaria, tarjeta de débito y crédito en 3 y 6 cuotas sin interés.',
+  },
+  {
+    q: '¿Cuál es el horario de atención?',
+    a: 'Solano: lunes a viernes de 8:00 a 12:00 y de 14:00 a 19:00, sábados de 8:00 a 14:00. Bosques: lunes a viernes de 8:00 a 18:00, sábados de 8:00 a 15:00.',
+  },
+  {
+    q: '¿Cómo hago un pedido?',
+    a: 'Armás tu carrito en el sitio y lo enviás por WhatsApp, o nos consultás directamente. Te respondemos en el día con precios y disponibilidad.',
+  },
+  {
+    q: '¿Puedo retirar en el corralón?',
+    a: 'Sí, podés retirar tu pedido por cualquiera de las dos sucursales, Solano o Bosques.',
+  },
+]
+
 
 const heroSignals = [
-  '3 y 6 cuotas con todos los bancos',
+  '3 y 6 cuotas sin interés, todos los bancos',
   'Pedidos por WhatsApp con respuesta directa',
   'Envios rapidos en Zona Sur y alrededores',
 ]
@@ -175,7 +225,13 @@ function App() {
   const [productQuantities, setProductQuantities] = useState({})
   const [activeLocation, setActiveLocation] = useState(0)
   const [activePromo, setActivePromo] = useState(0)
-  const [currentPage, setCurrentPage] = useState('home')
+  const navigate = useNavigate()
+  const location = useLocation()
+  const isCatalog = location.pathname === '/catalogo'
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
   const [activeStep, setActiveStep] = useState(0)
   const [stepsPaused, setStepsPaused] = useState(false)
   const [showCoverage, setShowCoverage] = useState(false)
@@ -287,24 +343,22 @@ function App() {
 
   return (
     <main className="figma-storefront">
-      {currentPage === 'catalog' ? (
-        <CatalogPage onBack={() => setCurrentPage('home')} onOpenCart={() => setShowCart(true)} />
+      {isCatalog ? (
+        <CatalogPage onBack={() => navigate('/')} onOpenCart={() => setShowCart(true)} />
       ) : (
         <>
       <div className="benefits-bar" aria-label="Beneficios">
         <div className="benefits-bar-track">
-          <div className="benefits-bar-item">💳 Hasta <strong>16% OFF</strong> en efectivo</div>
-          <div className="benefits-bar-item">🏦 <strong>3 y 6 cuotas</strong> sin interés</div>
-          <div className="benefits-bar-item">🚚 Envíos propios <strong>Zona Sur</strong></div>
-          <div className="benefits-bar-item">📍 Retirá en <strong>Solano</strong> y <strong>Bosques</strong></div>
-          <div className="benefits-bar-item">🔨 Stock <strong>permanente</strong></div>
-          <div className="benefits-bar-item">⚡ Atención <strong>mayorista y minorista</strong></div>
-          <div className="benefits-bar-item" aria-hidden="true">💳 Hasta <strong>16% OFF</strong> en efectivo</div>
-          <div className="benefits-bar-item" aria-hidden="true">🏦 <strong>3 y 6 cuotas</strong> sin interés</div>
-          <div className="benefits-bar-item" aria-hidden="true">🚚 Envíos propios <strong>Zona Sur</strong></div>
-          <div className="benefits-bar-item" aria-hidden="true">📍 Retirá en <strong>Solano</strong> y <strong>Bosques</strong></div>
-          <div className="benefits-bar-item" aria-hidden="true">🔨 Stock <strong>permanente</strong></div>
-          <div className="benefits-bar-item" aria-hidden="true">⚡ Atención <strong>mayorista y minorista</strong></div>
+          {[...benefitTicker, ...benefitTicker].map((item, index) => (
+            <div
+              className="benefits-bar-item"
+              key={index}
+              aria-hidden={index >= benefitTicker.length ? 'true' : undefined}
+            >
+              <item.Icon className="benefits-bar-icon" size={16} strokeWidth={2.25} aria-hidden="true" />
+              <span>{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -349,26 +403,29 @@ function App() {
           <img src={promoCamion} alt="Camion de Los Eucaliptus Corralon" />
         </div>
         <div className="hero-content">
-          <p className="hero-eyebrow">Desde 1954 · Zona Sur, Buenos Aires</p>
+          <p className="hero-eyebrow">Desde 1954 · Solano y Bosques, Zona Sur</p>
           <h1>
-            Materiales
+            Corralón de
             <br />
-            que construyen
+            materiales en
             <br />
-            tu hogar
+            Zona Sur
           </h1>
-          <p>Stock permanente | Mejores precios | Envios en Zona Sur</p>
+          <p>Materiales que construyen tu hogar · Stock permanente · Envíos propios</p>
           <div className="hero-cta-row">
-            <button className="primary-cta" type="button" onClick={scrollToProducts}>
-              Compra online
+            <button className="primary-cta hero-primary-cta" type="button" onClick={scrollToProducts}>
+              Comprá online
             </button>
             <div className="hero-wa-group">
-              <a className="secondary-cta hero-wa-btn" href={whatsappBase} target="_blank" rel="noreferrer">
-                WhatsApp Solano
-              </a>
-              <a className="secondary-cta hero-wa-btn" href={whatsappBosques} target="_blank" rel="noreferrer">
-                WhatsApp Bosques
-              </a>
+              <span className="hero-wa-label">o pedí por WhatsApp</span>
+              <div className="hero-wa-buttons">
+                <a className="hero-wa-btn" href={whatsappBase} target="_blank" rel="noreferrer">
+                  Solano
+                </a>
+                <a className="hero-wa-btn" href={whatsappBosques} target="_blank" rel="noreferrer">
+                  Bosques
+                </a>
+              </div>
             </div>
           </div>
           <div className="hero-signals">
@@ -397,7 +454,7 @@ function App() {
                 ))}
               </select>
             </label>
-            <button className="text-link-button" type="button" onClick={() => setCurrentPage('catalog')}>
+            <button className="text-link-button" type="button" onClick={() => navigate('/catalogo')}>
               Ver todos los productos
             </button>
           </div>
@@ -619,6 +676,21 @@ function App() {
         )}
       </section>
 
+      <section className="faq-section" id="preguntas-frecuentes" aria-label="Preguntas frecuentes">
+        <div className="faq-intro">
+          <p className="section-kicker">¿Tenés dudas?</p>
+          <h2>Preguntas frecuentes</h2>
+        </div>
+        <div className="faq-list">
+          {faqs.map((item) => (
+            <details className="faq-item" key={item.q}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       <footer className="site-footer">
         <div className="site-footer-grid">
           <div className="site-footer-brand">
@@ -640,7 +712,7 @@ function App() {
           <div className="site-footer-block">
             <strong>Navegacion</strong>
             <button type="button" onClick={scrollToProducts}>Productos destacados</button>
-            <button type="button" onClick={() => setCurrentPage('catalog')}>Catalogo completo</button>
+            <button type="button" onClick={() => navigate('/catalogo')}>Catalogo completo</button>
             <button type="button" onClick={() => setShowCoverage(true)}>¿Llegamos a tu zona?</button>
             <button
               type="button"
@@ -663,12 +735,24 @@ function App() {
 
           <div className="site-footer-block">
             <strong>Contacto</strong>
-            <span>📍 Av. Monteverde 2766, San Francisco Solano</span>
+            <span className="footer-contact-line">
+              <MapPin className="footer-contact-icon" size={15} aria-hidden="true" />
+              Av. Monteverde 2766, San Francisco Solano
+            </span>
             <a href="tel:+5491159748316">11 5974-8316</a>
-            <span>📍 Av. Guillermo Hudson 2855, Bosques, F. Varela</span>
+            <span className="footer-contact-line">
+              <MapPin className="footer-contact-icon" size={15} aria-hidden="true" />
+              Av. Guillermo Hudson 2855, Bosques, F. Varela
+            </span>
             <a href="tel:+5491130623113">11 3062-3113</a>
             <a href={whatsappBase} target="_blank" rel="noreferrer">
               Escribinos por WhatsApp
+            </a>
+            <a className="footer-social-link" href="https://www.instagram.com/corralon.loseucaliptus/" target="_blank" rel="noreferrer">
+              <InstagramGlyph /> @corralon.loseucaliptus
+            </a>
+            <a className="footer-social-link" href="https://www.instagram.com/loseucaliptus.bosques/" target="_blank" rel="noreferrer">
+              <InstagramGlyph /> @loseucaliptus.bosques
             </a>
           </div>
         </div>

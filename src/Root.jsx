@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { BrowserRouter } from 'react-router-dom'
 import { CartProvider } from './context/CartContext'
 import App from './App.jsx'
 import AdminPage from './admin/AdminPage.jsx'
@@ -18,8 +19,10 @@ export default function Root() {
   if (isAdmin) return <AdminPage />
 
   return (
-    <CartProvider>
-      <App />
-    </CartProvider>
+    <BrowserRouter>
+      <CartProvider>
+        <App />
+      </CartProvider>
+    </BrowserRouter>
   )
 }

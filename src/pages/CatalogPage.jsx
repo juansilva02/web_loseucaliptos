@@ -4,28 +4,28 @@ import { formatPrice, resolveImage, whatsappBase } from '../lib/catalog'
 import { useCart } from '../context/CartContext'
 import './CatalogPage.css'
 
-import imgLadrilloHueco12 from '../assets/featured-products/ladrillo-hueco-12.png'
-import imgLadrilloHueco8 from '../assets/featured-products/ladrillo-hueco-8.png'
-import imgLadrilloComun from '../assets/featured-products/ladrillo-comun.png'
-import imgLadrilloCordoba from '../assets/featured-products/ladrillo-cordoba-media-vista.png'
-import imgBloqueLiso10 from '../assets/featured-products/bloque-liso-10.png'
-import imgBloqueLiso13 from '../assets/featured-products/bloque-liso-13.png'
-import imgBloqueLiso20 from '../assets/featured-products/bloque-liso-20.png'
-import imgTelgopor10 from '../assets/featured-products/telgopor-10.png'
-import imgTelgopor125 from '../assets/featured-products/telgopor-12-5.png'
-import imgPortland25 from '../assets/featured-products/portland-25kg.png'
-import imgCalCacique from '../assets/featured-products/cal-cacique-25kg.png'
-import imgArenaBolson from '../assets/featured-products/arena-bolson.png'
-import imgArenaSupelta from '../assets/featured-products/arena-suelta.png'
-import imgCascoteBolson from '../assets/featured-products/cascote-bolson.png'
-import imgPiedraBolson from '../assets/featured-products/piedra-bolson.png'
-import imgHierro42 from '../assets/featured-products/hierro-4-2.png'
-import imgHierro6 from '../assets/featured-products/hierro-6.png'
-import imgHierro8 from '../assets/featured-products/hierro-8.png'
-import imgHierro10 from '../assets/featured-products/hierro-10.png'
-import imgHierro12 from '../assets/featured-products/hierro-12.png'
-import imgPegamentoCeramica from '../assets/featured-products/pegamento-ceramica.png'
-import imgCableUnipolar from '../assets/featured-products/cable-unipolar-2-5.png'
+import imgLadrilloHueco12 from '../assets/featured-products/ladrillo-hueco-12.webp'
+import imgLadrilloHueco8 from '../assets/featured-products/ladrillo-hueco-8.webp'
+import imgLadrilloComun from '../assets/featured-products/ladrillo-comun.webp'
+import imgLadrilloCordoba from '../assets/featured-products/ladrillo-cordoba-media-vista.webp'
+import imgBloqueLiso10 from '../assets/featured-products/bloque-liso-10.webp'
+import imgBloqueLiso13 from '../assets/featured-products/bloque-liso-13.webp'
+import imgBloqueLiso20 from '../assets/featured-products/bloque-liso-20.webp'
+import imgTelgopor10 from '../assets/featured-products/telgopor-10.webp'
+import imgTelgopor125 from '../assets/featured-products/telgopor-12-5.webp'
+import imgPortland25 from '../assets/featured-products/portland-25kg.webp'
+import imgCalCacique from '../assets/featured-products/cal-cacique-25kg.webp'
+import imgArenaBolson from '../assets/featured-products/arena-bolson.webp'
+import imgArenaSupelta from '../assets/featured-products/arena-suelta.webp'
+import imgCascoteBolson from '../assets/featured-products/cascote-bolson.webp'
+import imgPiedraBolson from '../assets/featured-products/piedra-bolson.webp'
+import imgHierro42 from '../assets/featured-products/hierro-4-2.webp'
+import imgHierro6 from '../assets/featured-products/hierro-6.webp'
+import imgHierro8 from '../assets/featured-products/hierro-8.webp'
+import imgHierro10 from '../assets/featured-products/hierro-10.webp'
+import imgHierro12 from '../assets/featured-products/hierro-12.webp'
+import imgPegamentoCeramica from '../assets/featured-products/pegamento-ceramica.webp'
+import imgCableUnipolar from '../assets/featured-products/cable-unipolar-2-5.webp'
 
 const productImageMap = {
   'ladrillo-hueco-12':    imgLadrilloHueco12,
@@ -224,7 +224,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                     <span className="catalog-badge">{catName}</span>
                   </div>
                   <div className="catalog-card-body">
-                    <h3>{product.name}</h3>
+                    <h2>{product.name}</h2>
                     <p className="catalog-brand">{product.brand || 'Sin marca'}</p>
                   </div>
                   <div className="catalog-price-block">
