@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import catalogData from '../data/featured-catalog.json'
 import { formatPrice, resolveImage, whatsappBase } from '../lib/catalog'
-import { useCart } from '../context/CartContext'
+import { useCart } from '../context/useCart'
 import './CatalogPage.css'
 
 import imgLadrilloHueco12 from '../assets/featured-products/ladrillo-hueco-12.webp'

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { CreditCard, Landmark, Truck, MapPin, Hammer, Zap } from 'lucide-react'
 import CoverageMap from './components/CoverageMap'
@@ -33,8 +33,8 @@ import {
   whatsappBase,
   whatsappBosques,
 } from './lib/catalog'
-import { useCart } from './context/CartContext'
-import CatalogPage from './pages/CatalogPage'
+import { useCart } from './context/useCart'
+const CatalogPage = lazy(() => import('./pages/CatalogPage'))
 import featuredCatalog from './data/featured-catalog.json'
 import './App.css'
 
@@ -297,10 +297,7 @@ function App() {
   }, [stepsPaused])
 
   useEffect(() => {
-    if (!filteredProducts.length) {
-      setActiveProduct(0)
-      return
-    }
+    if (!filteredProducts.length) return undefined
 
     const timer = window.setInterval(() => {
       setActiveProduct((current) => (current + 1) % filteredProducts.length)
@@ -308,6 +305,9 @@ function App() {
 
     return () => window.clearInterval(timer)
   }, [filteredProducts])
+
+  // Indice resaltado clampeado al rango actual (evita setState dentro del efecto)
+  const highlightedProduct = filteredProducts.length ? activeProduct % filteredProducts.length : -1
 
   const scrollToProducts = () => {
     const section = document.getElementById('productos-destacados')
@@ -344,7 +344,9 @@ function App() {
   return (
     <main className="figma-storefront">
       {isCatalog ? (
-        <CatalogPage onBack={() => navigate('/')} onOpenCart={() => setShowCart(true)} />
+        <Suspense fallback={<div className="route-loading">Cargando catálogo…</div>}>
+          <CatalogPage onBack={() => navigate('/')} onOpenCart={() => setShowCart(true)} />
+        </Suspense>
       ) : (
         <>
       <div className="benefits-bar" aria-label="Beneficios">
@@ -477,7 +479,7 @@ function App() {
         <div className="products-grid">
           {filteredProducts.map((product, index) => (
             <article
-              className={`product-card${activeProduct === index ? ' product-card-active' : ''}`}
+              className={`product-card${highlightedProduct === index ? ' product-card-active' : ''}`}
               key={product.id}
               onMouseEnter={() => setActiveProduct(index)}
             >

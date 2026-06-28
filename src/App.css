@@ -2469,6 +2469,17 @@ a,
   }
 }
 
+/* ── Fallback de carga de ruta (lazy /catalogo) ── */
+.route-loading {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+  padding: 48px 24px;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 /* ── FAQ (AEO) ── */
 .faq-section {
   margin-top: 18px;

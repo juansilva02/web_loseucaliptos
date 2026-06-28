@@ -117,7 +117,7 @@ ADMIN.md                            — guía de uso del panel de administració
 | `ladrillos-y-bloques` | Ladrillos y Bloques |
 | `construccion-en-seco` | Construcción en Seco |
 | `sanitarios-y-plomeria` | Sanitarios y Plomería |
-| `ferreteria-y-herramientas` | Ferretería y Herramientas |
+| `electricidad-y-ferreteria` | Electricidad y Ferretería |
 
 ## Scripts
 

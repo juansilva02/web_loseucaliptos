@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { CartContext } from './cart-context'
 
-const CartContext = createContext(null)
 const STORAGE_KEY = 'loseucaliptos-cart-v1'
 
 function readCart() {
@@ -70,14 +70,4 @@ export function CartProvider({ children }) {
   }, [items])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
-}
-
-export function useCart() {
-  const context = useContext(CartContext)
-
-  if (!context) {
-    throw new Error('useCart must be used within CartProvider')
-  }
-
-  return context
 }
