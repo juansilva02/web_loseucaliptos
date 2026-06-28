@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    container_name: loseucaliptos-api
+    restart: unless-stopped
+    env_file: .env
+    # Solo accesible desde el host (Nginx hace de proxy). No se expone a internet.
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - ./data:/app/data       # base SQLite (persistente, fuera de la imagen)
+      - ./uploads:/app/uploads # imagenes de productos (las sirve Nginx)
+    # Permite alcanzar n8n (y otros servicios del host) por host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
