@@ -2,6 +2,9 @@ import 'dotenv/config'
 import express from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
+import { db, initSchema } from './db.js'
+
+initSchema()
 
 const app = express()
 
@@ -30,6 +33,18 @@ app.get('/health', (_req, res) => {
     version: '0.1.0',
     time: new Date().toISOString(),
   })
+})
+
+// Catalogo publico: categorias + productos activos (mismo shape que el front)
+app.get('/api/catalog', (_req, res) => {
+  const categories = db.prepare('SELECT key, name FROM categories ORDER BY sort').all()
+  const products = db
+    .prepare(
+      `SELECT id, name, category_key AS category, brand, unit, price, image_url AS image
+       FROM products WHERE active = 1 ORDER BY sort`,
+    )
+    .all()
+  res.json({ categories, products, count: products.length })
 })
 
 const PORT = Number(process.env.PORT) || 3001

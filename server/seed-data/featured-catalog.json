@@ -1,0 +1,671 @@
+{
+  "updatedAt": "2026-06-05",
+  "featured": [
+    {
+      "title": "Ladrillo hueco del 12",
+      "subtitle": "Marca Quilmes",
+      "match": "LADRILLO HUECO 12",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": 790
+    },
+    {
+      "title": "Ladrillos comunes",
+      "subtitle": "Sin marca",
+      "match": "LADRILLO COMUN",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": 220
+    },
+    {
+      "title": "Ladrillo hueco del 8",
+      "subtitle": "Marca Quilmes",
+      "match": "LADRILLO HUECO 8",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": 630
+    },
+    {
+      "title": "Cemento Portland 25kg",
+      "subtitle": "Marca Loma Negra",
+      "match": "PORTLAND 25",
+      "categoryKey": "aridos-y-obra-gruesa",
+      "priceOverride": 7200
+    },
+    {
+      "title": "Cal Cacique Max 25kg",
+      "subtitle": "Marca Cacique",
+      "match": "CACIQUE MAX 25",
+      "categoryKey": "aridos-y-obra-gruesa",
+      "priceOverride": 7100
+    },
+    {
+      "title": "Bloque liso de cemento del 13",
+      "subtitle": "Sin marca",
+      "match": "BLOQUE LISO 13",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": null
+    },
+    {
+      "title": "Bloque liso de cemento del 20",
+      "subtitle": "Sin marca",
+      "match": "BLOQUE LISO 20",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": null
+    },
+    {
+      "title": "Bloque liso de cemento del 10",
+      "subtitle": "Sin marca",
+      "match": "BLOQUE LISO 10",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": null
+    },
+    {
+      "title": "Hierro del 6",
+      "subtitle": "Marca Acindar",
+      "match": "HIERRO 6",
+      "categoryKey": "hierros-y-estructura",
+      "priceOverride": 6250
+    },
+    {
+      "title": "Hierro del 8",
+      "subtitle": "Marca Acindar",
+      "match": "HIERRO 8",
+      "categoryKey": "hierros-y-estructura",
+      "priceOverride": 10800
+    },
+    {
+      "title": "Ladrillo Cordoba media vista",
+      "subtitle": "Sin marca",
+      "match": "CORDOBA MEDIA VISTA",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": null
+    },
+    {
+      "title": "Arena por metro bolson",
+      "subtitle": "Sin marca",
+      "match": "ARENA BOLSON",
+      "categoryKey": "aridos-y-obra-gruesa",
+      "priceOverride": 49200
+    },
+    {
+      "title": "Hierro del 10",
+      "subtitle": "Marca Acindar",
+      "match": "HIERRO 10",
+      "categoryKey": "hierros-y-estructura",
+      "priceOverride": 16900
+    },
+    {
+      "title": "Hierro del 4,2",
+      "subtitle": "Marca Acindar",
+      "match": "HIERRO 4,2",
+      "categoryKey": "hierros-y-estructura",
+      "priceOverride": 2500
+    },
+    {
+      "title": "Pegamento para ceramica",
+      "subtitle": "Marca Premecol",
+      "match": "PEGAMENTO CERAMICA",
+      "categoryKey": "electricidad-y-ferreteria",
+      "priceOverride": 7400
+    },
+    {
+      "title": "Ladrillo de telgopor 10cm",
+      "subtitle": "Marca Polipol",
+      "match": "TELGOPOR 10",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": 4000
+    },
+    {
+      "title": "Ladrillo de telgopor 12.5cm",
+      "subtitle": "Marca Polipol",
+      "match": "TELGOPOR 12.5",
+      "categoryKey": "ladrillos-y-bloques",
+      "priceOverride": 4800
+    },
+    {
+      "title": "Cable unipolar 1 x 2.5",
+      "subtitle": "Sin marca",
+      "match": "UNIPOLAR 1 X2.5",
+      "categoryKey": "electricidad-y-ferreteria",
+      "priceOverride": null
+    }
+  ],
+  "categories": [
+    {
+      "key": "aridos-y-obra-gruesa",
+      "name": "Áridos y Obra Gruesa"
+    },
+    {
+      "key": "hierros-y-estructura",
+      "name": "Hierros y Estructura"
+    },
+    {
+      "key": "ladrillos-y-bloques",
+      "name": "Ladrillos y Bloques"
+    },
+    {
+      "key": "construccion-en-seco",
+      "name": "Construcción en Seco"
+    },
+    {
+      "key": "sanitarios-y-plomeria",
+      "name": "Sanitarios y Plomería"
+    },
+    {
+      "key": "ferreteria-y-herramientas",
+      "name": "Ferretería y Herramientas"
+    }
+  ],
+  "products": [
+    {
+      "id": "arena-fina-bolsa",
+      "name": "Arena fina — bolsa",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "",
+      "unit": "bolsa",
+      "price": 0
+    },
+    {
+      "id": "arena-gruesa-bolsa",
+      "name": "Arena gruesa — bolsa",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "",
+      "unit": "bolsa",
+      "price": 0
+    },
+    {
+      "id": "arena-bolson",
+      "name": "Arena — bolsón",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "",
+      "unit": "bolsón",
+      "price": 49200
+    },
+    {
+      "id": "cascote-bolson",
+      "name": "Cascote — bolsón",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "",
+      "unit": "bolsón",
+      "price": 0
+    },
+    {
+      "id": "tosca-bolson",
+      "name": "Tosca — bolsón",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "",
+      "unit": "bolsón",
+      "price": 0
+    },
+    {
+      "id": "portland-25kg",
+      "name": "Cemento Portland 25 kg",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "Loma Negra",
+      "unit": "bolsa",
+      "price": 7200
+    },
+    {
+      "id": "portland-50kg",
+      "name": "Cemento Portland 50 kg",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "Loma Negra",
+      "unit": "bolsa",
+      "price": 0
+    },
+    {
+      "id": "cal-25kg",
+      "name": "Cal hidráulica 25 kg",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "Cacique",
+      "unit": "bolsa",
+      "price": 7100
+    },
+    {
+      "id": "piedra-partida",
+      "name": "Piedra partida 6/20",
+      "category": "aridos-y-obra-gruesa",
+      "brand": "",
+      "unit": "bolsón",
+      "price": 0
+    },
+    {
+      "id": "hierro-4-2",
+      "name": "Hierro del 4.2",
+      "category": "hierros-y-estructura",
+      "brand": "Acindar",
+      "unit": "barra",
+      "price": 2500
+    },
+    {
+      "id": "hierro-6",
+      "name": "Hierro del 6",
+      "category": "hierros-y-estructura",
+      "brand": "Acindar",
+      "unit": "barra",
+      "price": 6250
+    },
+    {
+      "id": "hierro-8",
+      "name": "Hierro del 8",
+      "category": "hierros-y-estructura",
+      "brand": "Acindar",
+      "unit": "barra",
+      "price": 10800
+    },
+    {
+      "id": "hierro-10",
+      "name": "Hierro del 10",
+      "category": "hierros-y-estructura",
+      "brand": "Acindar",
+      "unit": "barra",
+      "price": 16900
+    },
+    {
+      "id": "hierro-12",
+      "name": "Hierro del 12",
+      "category": "hierros-y-estructura",
+      "brand": "Acindar",
+      "unit": "barra",
+      "price": 0
+    },
+    {
+      "id": "hierro-16",
+      "name": "Hierro del 16",
+      "category": "hierros-y-estructura",
+      "brand": "Acindar",
+      "unit": "barra",
+      "price": 0
+    },
+    {
+      "id": "malla-acero",
+      "name": "Malla de acero estándar",
+      "category": "hierros-y-estructura",
+      "brand": "",
+      "unit": "rollo",
+      "price": 0
+    },
+    {
+      "id": "alambre-negro",
+      "name": "Alambre negro para atar",
+      "category": "hierros-y-estructura",
+      "brand": "",
+      "unit": "rollo",
+      "price": 0
+    },
+    {
+      "id": "ladrillo-hueco-8",
+      "name": "Ladrillo hueco del 8",
+      "category": "ladrillos-y-bloques",
+      "brand": "Quilmes",
+      "unit": "unidad",
+      "price": 630
+    },
+    {
+      "id": "ladrillo-hueco-12",
+      "name": "Ladrillo hueco del 12",
+      "category": "ladrillos-y-bloques",
+      "brand": "Quilmes",
+      "unit": "unidad",
+      "price": 790
+    },
+    {
+      "id": "ladrillo-hueco-18",
+      "name": "Ladrillo hueco del 18",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "ladrillo-comun",
+      "name": "Ladrillo común",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 220
+    },
+    {
+      "id": "ladrillo-cordoba-mv",
+      "name": "Ladrillo Córdoba media vista",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "ladrillo-cordoba-v",
+      "name": "Ladrillo Córdoba vista",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "bloque-cemento-10",
+      "name": "Bloque de cemento del 10",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "bloque-cemento-13",
+      "name": "Bloque de cemento del 13",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "bloque-cemento-20",
+      "name": "Bloque de cemento del 20",
+      "category": "ladrillos-y-bloques",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "telgopor-10",
+      "name": "Ladrillo telgopor 10 cm",
+      "category": "ladrillos-y-bloques",
+      "brand": "Polipol",
+      "unit": "unidad",
+      "price": 4000
+    },
+    {
+      "id": "telgopor-12-5",
+      "name": "Ladrillo telgopor 12.5 cm",
+      "category": "ladrillos-y-bloques",
+      "brand": "Polipol",
+      "unit": "unidad",
+      "price": 4800
+    },
+    {
+      "id": "yeso-bolsa",
+      "name": "Yeso en polvo",
+      "category": "construccion-en-seco",
+      "brand": "",
+      "unit": "bolsa",
+      "price": 0
+    },
+    {
+      "id": "placa-yeso-std",
+      "name": "Placa de yeso estándar",
+      "category": "construccion-en-seco",
+      "brand": "",
+      "unit": "placa",
+      "price": 0
+    },
+    {
+      "id": "placa-yeso-hd",
+      "name": "Placa de yeso húmedo",
+      "category": "construccion-en-seco",
+      "brand": "",
+      "unit": "placa",
+      "price": 0
+    },
+    {
+      "id": "membrana-bicapa",
+      "name": "Membrana bicapa",
+      "category": "construccion-en-seco",
+      "brand": "",
+      "unit": "rollo",
+      "price": 0
+    },
+    {
+      "id": "pegamento-ceramica",
+      "name": "Pegamento para cerámica",
+      "category": "construccion-en-seco",
+      "brand": "Premecol",
+      "unit": "bolsa",
+      "price": 7400
+    },
+    {
+      "id": "masilla-plastica",
+      "name": "Masilla plástica",
+      "category": "construccion-en-seco",
+      "brand": "",
+      "unit": "cuñete",
+      "price": 0
+    },
+    {
+      "id": "cano-pvc-100",
+      "name": "Caño PVC 100 mm (4\")",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "cano-pvc-160",
+      "name": "Caño PVC 160 mm (6\")",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "codo-pvc-90",
+      "name": "Codo PVC 90°",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "union-pvc",
+      "name": "Unión PVC",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "cano-corrugado",
+      "name": "Caño corrugado",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "metro",
+      "price": 0
+    },
+    {
+      "id": "teflon",
+      "name": "Teflón",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "rollo",
+      "price": 0
+    },
+    {
+      "id": "canilla-simple",
+      "name": "Canilla simple",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "canilla-doble",
+      "name": "Canilla doble — pico giratorio",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "bacha-cocina",
+      "name": "Bacha de cocina",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "bomba-agua",
+      "name": "Bomba de agua",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "llave-paso",
+      "name": "Llave de paso",
+      "category": "sanitarios-y-plomeria",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "pala-punta",
+      "name": "Pala punta",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "pala-cuadrada",
+      "name": "Pala cuadrada",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "cuchara-ch",
+      "name": "Cuchara de albañil chica",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "cuchara-gr",
+      "name": "Cuchara de albañil grande",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "tanza-albanil",
+      "name": "Tanza de albañil",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "rollo",
+      "price": 0
+    },
+    {
+      "id": "hilo-albanil",
+      "name": "Hilo de albañil",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "carretel",
+      "price": 0
+    },
+    {
+      "id": "alambre-galvanizado",
+      "name": "Alambre galvanizado",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "rollo",
+      "price": 0
+    },
+    {
+      "id": "tornillos-autoperf",
+      "name": "Tornillos autoperforantes",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "caja x100",
+      "price": 0
+    },
+    {
+      "id": "tarugos",
+      "name": "Tarugos plásticos",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "bolsa",
+      "price": 0
+    },
+    {
+      "id": "clavos-punta-paris",
+      "name": "Clavos punta París",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "kg",
+      "price": 0
+    },
+    {
+      "id": "nivel-burbuja",
+      "name": "Nivel de burbuja",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "barreta",
+      "name": "Barreta",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "balde-obra",
+      "name": "Balde de obra",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "alicate",
+      "name": "Alicate",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "pinzas",
+      "name": "Pinzas",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "cable-unipolar-2-5",
+      "name": "Cable unipolar 1×2.5",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "metro",
+      "price": 0
+    },
+    {
+      "id": "cable-unipolar-4",
+      "name": "Cable unipolar 1×4",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "metro",
+      "price": 0
+    },
+    {
+      "id": "anteojos-seguridad",
+      "name": "Anteojos de seguridad",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    },
+    {
+      "id": "cinta-metrica",
+      "name": "Cinta métrica 5 m",
+      "category": "ferreteria-y-herramientas",
+      "brand": "",
+      "unit": "unidad",
+      "price": 0
+    }
+  ]
+}
