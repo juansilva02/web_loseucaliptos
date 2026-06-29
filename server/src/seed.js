@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, initSchema } from './db.js'
+import { hashPassword } from './auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const dataDir = join(__dirname, '..', 'seed-data')
@@ -50,8 +51,20 @@ seedCategories(featured.categories)
 seedProducts(featured.products)
 seedRaw(rawSkus)
 
+// Admin user por defecto: admin / eucaliptus2026
+// Solo se crea si no existe ningun usuario todavia (seed fresca).
+const existingUser = db.prepare('SELECT id FROM users LIMIT 1').get()
+if (!existingUser) {
+  const hash = hashPassword('eucaliptus2026')
+  db.prepare("INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'admin')").run('admin', hash)
+  console.log('[seed] admin user created: admin / eucaliptus2026')
+} else {
+  console.log('[seed] admin user already exists, skipping')
+}
+
 const count = (t) => db.prepare(`SELECT COUNT(*) n FROM ${t}`).get().n
 console.log('[seed] categories:', count('categories'))
 console.log('[seed] products  :', count('products'))
 console.log('[seed] raw_skus  :', count('raw_skus'))
+console.log('[seed] users     :', count('users'))
 console.log('[seed] OK')

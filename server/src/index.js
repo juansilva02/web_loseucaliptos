@@ -2,7 +2,13 @@ import 'dotenv/config'
 import express from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
+import rateLimit from 'express-rate-limit'
 import { db, initSchema } from './db.js'
+import authRoutes from './routes/auth.js'
+import productRoutes from './routes/products.js'
+import categoryRoutes from './routes/categories.js'
+import rawSkuRoutes from './routes/raw-skus.js'
+import uploadRoutes from './routes/uploads.js'
 
 initSchema()
 
@@ -23,7 +29,20 @@ app.use(
   }),
 )
 
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json({ limit: '10mb' }))
+
+// Rate limit global para todas las rutas
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+)
+
+// Archivos estaticos (imagenes subidas)
+app.use('/uploads', express.static('uploads'))
 
 // Healthcheck — usado para verificar que el container vive
 app.get('/health', (_req, res) => {
@@ -35,7 +54,7 @@ app.get('/health', (_req, res) => {
   })
 })
 
-// Catalogo publico: categorias + productos activos (mismo shape que el front)
+// Catalogo publico: categorias + productos activos
 app.get('/api/catalog', (_req, res) => {
   const categories = db.prepare('SELECT key, name FROM categories ORDER BY sort').all()
   const products = db
@@ -46,6 +65,13 @@ app.get('/api/catalog', (_req, res) => {
     .all()
   res.json({ categories, products, count: products.length })
 })
+
+// Rutas administrativas (protegidas con JWT)
+app.use('/api/admin/auth', authRoutes)
+app.use('/api/admin/products', productRoutes)
+app.use('/api/admin/categories', categoryRoutes)
+app.use('/api/admin/raw-skus', rawSkuRoutes)
+app.use('/api/admin/upload', uploadRoutes)
 
 const PORT = Number(process.env.PORT) || 3001
 
