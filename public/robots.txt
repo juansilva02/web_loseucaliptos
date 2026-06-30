@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://loseucaliptus.zuzudev.pro/sitemap.xml
+Sitemap: https://corralonloseucaliptus.com/sitemap.xml

@@ -7,7 +7,7 @@ productos y suba imágenes, **sin tocar código**.
 
 - En el sitio, agregá `#admin` a la URL:
   - Local: `http://localhost:5173/#admin`
-  - Producción: `https://loseucaliptus.zuzudev.pro/#admin`
+  - Producción: `https://corralonloseucaliptus.com/#admin`
 - Login por **usuario + contraseña**.
 
 ### Credenciales por defecto
