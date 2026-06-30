@@ -1,5 +1,4 @@
-import { useState, useMemo } from 'react'
-import catalogData from '../data/featured-catalog.json'
+import { useState, useMemo, useEffect } from 'react'
 import { formatPrice, resolveImage, whatsappBase } from '../lib/catalog'
 import { useCart } from '../context/useCart'
 import './CatalogPage.css'
@@ -64,25 +63,47 @@ export default function CatalogPage({ onBack, onOpenCart }) {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [quantities, setQuantities] = useState({})
+  const [catalog, setCatalog] = useState({ categories: [], products: [] })
+  const [status, setStatus] = useState('loading') // loading | ok | error
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/catalog')
+      .then((r) => {
+        if (!r.ok) throw new Error('http ' + r.status)
+        return r.json()
+      })
+      .then((d) => {
+        if (cancelled) return
+        setCatalog({ categories: d.categories || [], products: d.products || [] })
+        setStatus('ok')
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const categoryMap = useMemo(() => {
     const map = {}
-    for (const cat of catalogData.categories) map[cat.key] = cat.name
+    for (const cat of catalog.categories) map[cat.key] = cat.name
     return map
-  }, [])
+  }, [catalog.categories])
 
   const categoryCounts = useMemo(() => {
-    const visible = catalogData.products.filter((p) => !p.hidden)
+    const visible = catalog.products.filter((p) => !p.hidden)
     const counts = { all: visible.length }
     for (const p of visible) {
       counts[p.category] = (counts[p.category] || 0) + 1
     }
     return counts
-  }, [])
+  }, [catalog.products])
 
   const filtered = useMemo(() => {
     const term = normalize(search.trim())
-    return catalogData.products.filter((p) => {
+    return catalog.products.filter((p) => {
       if (p.hidden) return false
       const matchesSearch =
         !term ||
@@ -92,7 +113,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
       const matchesCategory = activeCategory === 'all' || p.category === activeCategory
       return matchesSearch && matchesCategory
     })
-  }, [search, activeCategory, categoryMap])
+  }, [search, activeCategory, categoryMap, catalog.products])
 
   const getQty = (id) => quantities[id] ?? 1
 
@@ -126,7 +147,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
         </button>
         <div className="catalog-header-title">
           <h1>Catálogo</h1>
-          <span>Actualizado {catalogData.updatedAt}</span>
+          <span>{status === 'ok' ? `${catalog.products.length} productos` : 'Cargando…'}</span>
         </div>
         <button className="catalog-cart-btn" type="button" onClick={onOpenCart}>
           <strong>Mi carrito — {itemCount} items</strong>
@@ -167,7 +188,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
           >
             Todos <em>{categoryCounts.all}</em>
           </button>
-          {catalogData.categories.map((cat) => (
+          {catalog.categories.map((cat) => (
             <button
               key={cat.key}
               className={`catalog-cat-btn${activeCategory === cat.key ? ' catalog-cat-btn-active' : ''}`}
@@ -180,7 +201,16 @@ export default function CatalogPage({ onBack, onOpenCart }) {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {status === 'loading' ? (
+        <div className="route-loading">Cargando catálogo…</div>
+      ) : status === 'error' ? (
+        <div className="catalog-empty">
+          <p>No se pudo cargar el catálogo. Reintentá en unos minutos.</p>
+          <button type="button" onClick={() => window.location.reload()}>
+            Reintentar
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="catalog-empty">
           <p>No se encontraron productos{search ? ` para "${search}"` : ''}.</p>
           <button
@@ -278,7 +308,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
       )}
 
       <p className="catalog-footer-note">
-        Precios en pesos argentinos sujetos a actualización. Última actualización: {catalogData.updatedAt}.
+        Precios en pesos argentinos sujetos a actualización.
       </p>
     </div>
   )
