@@ -9,6 +9,7 @@ import productRoutes from './routes/products.js'
 import categoryRoutes from './routes/categories.js'
 import rawSkuRoutes from './routes/raw-skus.js'
 import uploadRoutes from './routes/uploads.js'
+import featuredRoutes from './routes/featured.js'
 
 initSchema()
 
@@ -66,12 +67,16 @@ app.get('/api/catalog', (_req, res) => {
   res.json({ categories, products, count: products.length })
 })
 
+// Destacados: ruta publica (con active=1) y admin (todas)
+app.use('/api/featured', featuredRoutes)
+
 // Rutas administrativas (protegidas con JWT)
 app.use('/api/admin/auth', authRoutes)
 app.use('/api/admin/products', productRoutes)
 app.use('/api/admin/categories', categoryRoutes)
 app.use('/api/admin/raw-skus', rawSkuRoutes)
 app.use('/api/admin/upload', uploadRoutes)
+app.use('/api/admin/featured', featuredRoutes)
 
 const PORT = Number(process.env.PORT) || 3001
 

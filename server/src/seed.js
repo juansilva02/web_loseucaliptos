@@ -23,6 +23,10 @@ const insProduct = db.prepare(`
 const insRaw = db.prepare(
   'INSERT OR IGNORE INTO raw_skus (code, name, price, stock, updated_at) VALUES (?, ?, ?, ?, ?)',
 )
+const insFeatured = db.prepare(`
+  INSERT OR IGNORE INTO featured (id, title, subtitle, match, category_key, price_override, sort, active)
+  VALUES (@id, @title, @subtitle, @match, @category_key, @price_override, @sort, 1)
+`)
 
 const seedCategories = db.transaction((cats) => {
   cats.forEach((c, i) => insCategory.run(c.key, c.name, i))
@@ -47,9 +51,24 @@ const seedRaw = db.transaction((skus) => {
   skus.forEach((s) => insRaw.run(s.code, s.name, s.price || 0, s.stock ?? null, s.updatedAt || null))
 })
 
+const seedFeatured = db.transaction((items) => {
+  items.forEach((f, i) =>
+    insFeatured.run({
+      id: f.id || `featured-${i}`,
+      title: f.title,
+      subtitle: f.subtitle || '',
+      match: f.match || '',
+      category_key: f.categoryKey || '',
+      price_override: f.priceOverride ?? null,
+      sort: i,
+    }),
+  )
+})
+
 seedCategories(featured.categories)
 seedProducts(featured.products)
 seedRaw(rawSkus)
+seedFeatured(featured.featured)
 
 // Admin user por defecto: admin / eucaliptus2026
 // Solo se crea si no existe ningun usuario todavia (seed fresca).
@@ -66,5 +85,6 @@ const count = (t) => db.prepare(`SELECT COUNT(*) n FROM ${t}`).get().n
 console.log('[seed] categories:', count('categories'))
 console.log('[seed] products  :', count('products'))
 console.log('[seed] raw_skus  :', count('raw_skus'))
+console.log('[seed] featured :', count('featured'))
 console.log('[seed] users     :', count('users'))
 console.log('[seed] OK')

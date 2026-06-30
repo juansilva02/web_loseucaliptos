@@ -65,5 +65,20 @@ CREATE TABLE IF NOT EXISTS leads (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Destacados: admin los edita desde el panel y se sirven por API (ya no requiere export/commit)
+CREATE TABLE IF NOT EXISTS featured (
+  id             TEXT PRIMARY KEY,
+  title          TEXT NOT NULL,
+  subtitle       TEXT DEFAULT '',
+  match          TEXT DEFAULT '',
+  category_key   TEXT DEFAULT '',
+  price_override INTEGER,
+  image_url      TEXT DEFAULT '',
+  sort           INTEGER DEFAULT 0,
+  active         INTEGER DEFAULT 1,
+  created_at     TEXT DEFAULT (datetime('now')),
+  updated_at     TEXT DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_key);
 CREATE INDEX IF NOT EXISTS idx_raw_added ON raw_skus(added);

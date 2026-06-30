@@ -34,8 +34,9 @@ import {
   whatsappBosques,
 } from './lib/catalog'
 import { useCart } from './context/useCart'
+import { api } from './admin/api'
 const CatalogPage = lazy(() => import('./pages/CatalogPage'))
-import featuredCatalog from './data/featured-catalog.json'
+import featuredCatalogFallback from './data/featured-catalog.json'
 import './App.css'
 
 const promoImages = [
@@ -176,8 +177,8 @@ const productImages = {
   'UNIPOLAR 1 X2.5': imgCableUnipolar,
 }
 
-function getCuratedShowcase() {
-  return featuredCatalog.featured.map((item, index) => {
+function getCuratedShowcase(featuredItems) {
+  return featuredItems.map((item, index) => {
     const match = storefrontProducts.find((product) => normalizeText(product.rawName).includes(item.match))
     const category = categoryCards.find((entry) => entry.key === item.categoryKey)
 
@@ -187,12 +188,12 @@ function getCuratedShowcase() {
       price: item.priceOverride ?? match?.price ?? 0,
       excelName: item.title,
       subtitle: item.subtitle,
-      categoryKey: item.categoryKey,
+      categoryKey: item.category_key || item.categoryKey,
       categoryName: category?.name ?? 'Materiales',
       brandName: match?.brandName ?? '',
       sourceName: match?.excelName ?? item.title,
       // Prioriza la imagen administrada (subida desde el panel) y cae al mapa estatico.
-      image: resolveImage(item.image) ?? productImages[item.match] ?? null,
+      image: resolveImage(item.image_url || item.image) ?? productImages[item.match] ?? null,
     }
   })
 }
@@ -243,6 +244,16 @@ function App() {
     }
   })
 
+  const [apiFeatured, setApiFeatured] = useState(() => featuredCatalogFallback.featured)
+
+  useEffect(() => {
+    let cancelled = false
+    api.getPublicFeatured()
+      .then((res) => { if (!cancelled && res.featured?.length) setApiFeatured(res.featured) })
+      .catch(() => { /* fallback al JSON importado */ })
+    return () => { cancelled = true }
+  }, [])
+
   const handleCoverageResult = (location) => {
     setDeliveryLocation(location)
     try {
@@ -252,7 +263,7 @@ function App() {
     }
   }
 
-  const featuredProducts = useMemo(() => getCuratedShowcase(), [])
+  const featuredProducts = useMemo(() => getCuratedShowcase(apiFeatured), [apiFeatured])
 
   const filteredProducts = useMemo(() => {
     const term = normalizeText(featuredSearch.trim())

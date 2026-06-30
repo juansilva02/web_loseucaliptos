@@ -93,4 +93,29 @@ export const api = {
   uploadImage(fileName, dataUrl) {
     return req('/api/admin/upload', { method: 'POST', body: JSON.stringify({ fileName, dataUrl }) })
   },
+
+  /* ----- featured ----- */
+
+  getFeatured(params = {}) {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== undefined))
+    ).toString()
+    return req(`/api/admin/featured/all${qs ? '?' + qs : ''}`)
+  },
+
+  getPublicFeatured() {
+    return req('/api/featured')
+  },
+
+  createFeatured(data) {
+    return req('/api/admin/featured', { method: 'POST', body: JSON.stringify(data) })
+  },
+
+  updateFeatured(id, data) {
+    return req(`/api/admin/featured/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) })
+  },
+
+  deleteFeatured(id) {
+    return req(`/api/admin/featured/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
 }

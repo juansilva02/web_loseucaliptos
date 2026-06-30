@@ -1,26 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { resolveImage } from '../lib/catalog'
 import { api } from './api'
-import {
-  createDraft,
-  loadDraft,
-  saveDraft,
-  clearDraft,
-  loadBaseCatalog,
-  slugify,
-  extensionFromDataUrl,
-  imagePath,
-  exportCatalogJson,
-  exportImages,
-} from './catalogStore'
+import { extensionFromDataUrl, imagePath, slugify } from './catalogStore'
 import './AdminPage.css'
 
 const EMPTY_FEATURED = {
-  title: 'Nuevo destacado',
-  subtitle: 'Sin marca',
+  title: '',
+  subtitle: '',
   match: '',
-  categoryKey: '',
-  priceOverride: null,
+  category_key: '',
+  price_override: null,
 }
 
 const EMPTY_PRODUCT = {
@@ -134,10 +123,9 @@ export default function AdminPage() {
 
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [featuredItems, setFeaturedItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  const [draft, setDraft] = useState(() => loadDraft() || createDraft())
 
   const flash = (msg) => {
     setToast(msg)
@@ -150,9 +138,14 @@ export default function AdminPage() {
   const syncFromServer = async () => {
     setLoading(true)
     try {
-      const [prodRes, catRes] = await Promise.all([api.getProducts({ all: '1' }), api.getCategories()])
+      const [prodRes, catRes, featRes] = await Promise.all([
+        api.getProducts({ all: '1' }),
+        api.getCategories(),
+        api.getFeatured(),
+      ])
       setProducts(prodRes.products)
       setCategories(catRes.categories)
+      setFeaturedItems(featRes.featured)
     } catch (err) {
       flash(`Error al cargar datos: ${err.message}`)
     } finally {
@@ -163,11 +156,81 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return
     let cancelled = false
-    Promise.all([api.getProducts({ all: '1' }), api.getCategories()])
-      .then(([prodRes, catRes]) => { if (!cancelled) { setProducts(prodRes.products); setCategories(catRes.categories); setLoading(false) } })
+    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getFeatured()])
+      .then(([prodRes, catRes, featRes]) => {
+        if (!cancelled) {
+          setProducts(prodRes.products)
+          setCategories(catRes.categories)
+          setFeaturedItems(featRes.featured)
+          setLoading(false)
+        }
+      })
       .catch((err) => { if (!cancelled) { flash(`Error al cargar datos: ${err.message}`); setLoading(false) } })
     return () => { cancelled = true }
   }, [authed])
+
+  /* -------- helpers de featured (local state) -------- */
+
+  const updateFeaturedItem = (index, patch) =>
+    setFeaturedItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+
+  const removeFeaturedItem = (index) =>
+    setFeaturedItems((prev) => prev.filter((_, i) => i !== index))
+
+  const addFeaturedItem = () => {
+    const key = categories[0]?.key || ''
+    setFeaturedItems((prev) => [{ ...EMPTY_FEATURED, id: `nuevo-${Date.now()}`, category_key: key }, ...prev])
+  }
+
+  const uploadFeaturedImage = async (index, dataUrl) => {
+    const item = featuredItems[index]
+    const ext = extensionFromDataUrl(dataUrl)
+    const base = item.id?.replace(/^nuevo-/, '') || slugify(item.title) || `destacado-${index}`
+    const fileName = `${base}.${ext}`
+    try {
+      await api.uploadImage(fileName, dataUrl)
+      updateFeaturedItem(index, { image_url: `product-images/${fileName}`, _preview: dataUrl })
+      flash(`Imagen subida: ${fileName}`)
+    } catch (err) {
+      flash(`Error al subir imagen: ${err.message}`)
+    }
+  }
+
+  const removeFeaturedImage = (index) => {
+    updateFeaturedItem(index, { image_url: '', _preview: undefined })
+  }
+
+  const saveFeaturedItems = async () => {
+    setSaving(true)
+    let ok = 0; let fail = 0
+    for (const f of featuredItems) {
+      try {
+        const body = {
+          title: f.title,
+          subtitle: f.subtitle || '',
+          match: f.match || '',
+          category_key: f.category_key || '',
+          price_override: f.price_override ?? null,
+          image_url: f.image_url || '',
+          active: f.active ?? 1,
+        }
+        const exists = f.id && !f.id.startsWith('nuevo-')
+        if (exists) {
+          await api.updateFeatured(f.id, body)
+        } else {
+          const id = f.id || `featured-${Date.now()}`
+          await api.createFeatured({ ...body, id })
+        }
+        ok++
+      } catch (err) {
+        fail++
+        console.error(`Error guardando destacado ${f.id || f.title}:`, err)
+      }
+    }
+    setSaving(false)
+    flash(`${ok} destacado(s) guardado(s)${fail ? `, ${fail} error(es)` : ''}`)
+    if (ok) syncFromServer()
+  }
 
   /* -------- helpers de productos (local state) -------- */
 
@@ -277,76 +340,6 @@ export default function AdminPage() {
     flash(`${ok} categoría(s) guardada(s)${fail ? `, ${fail} error(es)` : ''}`)
   }
 
-  /* -------- helpers de destacados (localStorage, igual que antes) -------- */
-
-  const catalog = draft.catalog
-  const baseCats = catalog.categories || []
-
-  const hasChanges = useMemo(
-    () => JSON.stringify(catalog) !== JSON.stringify(loadBaseCatalog()),
-    [catalog],
-  )
-
-  const pendingImageCount = Object.keys(draft.pendingImages || {}).length
-
-  const updateCatalog = (mutator) => {
-    const next = { ...draft, catalog: { ...draft.catalog }, pendingImages: { ...draft.pendingImages } }
-    mutator(next)
-    setDraft(next)
-    if (!saveDraft(next)) flash('⚠️ Borrador muy grande. Exportá pronto.')
-  }
-
-  const updateFeatured = (index, patch) =>
-    updateCatalog((d) => { d.catalog.featured = d.catalog.featured.map((it, i) => (i === index ? { ...it, ...patch } : it)) })
-
-  const removeFeatured = (index) =>
-    updateCatalog((d) => { d.catalog.featured = d.catalog.featured.filter((_, i) => i !== index) })
-
-  const addFeatured = () =>
-    updateCatalog((d) => {
-      d.catalog.featured = [
-        { ...EMPTY_FEATURED, categoryKey: d.catalog.categories?.[0]?.key || '' },
-        ...d.catalog.featured,
-      ]
-    })
-
-  const uploadFeaturedImage = (index, dataUrl) =>
-    updateCatalog((d) => {
-      const item = d.catalog.featured[index]
-      const ext = extensionFromDataUrl(dataUrl)
-      const base = slugify(item.match || item.title) || `destacado-${index}`
-      const fileName = `${base}.${ext}`
-      d.catalog.featured = d.catalog.featured.map((it, i) =>
-        i === index ? { ...it, image: imagePath(fileName), _preview: dataUrl } : it,
-      )
-      d.pendingImages[fileName] = dataUrl
-    })
-
-  const removeFeaturedImage = (index) =>
-    updateCatalog((d) => {
-      const item = d.catalog.featured[index]
-      if (item.image) delete d.pendingImages[item.image.split('/').pop()]
-      d.catalog.featured = d.catalog.featured.map((it, i) => {
-        if (i !== index) return it
-        const copy = { ...it }
-        delete copy.image; delete copy._preview
-        return copy
-      })
-    })
-
-  const handleExportFeatured = () => {
-    exportCatalogJson(catalog)
-    const names = exportImages(draft.pendingImages)
-    flash(names.length ? `Exportado: featured-catalog.json + ${names.length} imagen(es).` : 'Exportado: featured-catalog.json')
-  }
-
-  const handleDiscardFeatured = () => {
-    if (!window.confirm('¿Descartar todos los cambios del borrador y volver a lo publicado?')) return
-    clearDraft()
-    setDraft(createDraft())
-    flash('Borrador descartado.')
-  }
-
   /* -------- logout -------- */
 
   const logout = () => { api.logout(); setAuthed(false) }
@@ -374,7 +367,7 @@ export default function AdminPage() {
           Categorías <em>{categories.length}</em>
         </button>
         <button className={tab === 'featured' ? 'active' : ''} onClick={() => setTab('featured')}>
-          Destacados (home) <em>{catalog.featured?.length || 0}</em>
+          Destacados (home) <em>{featuredItems.length}</em>
         </button>
       </nav>
 
@@ -480,71 +473,85 @@ export default function AdminPage() {
         </section>
       ) : null}
 
-      {/* -------------------- DESTACADOS (localStorage + export) -------------------- */}
+      {/* -------------------- DESTACADOS (API) -------------------- */}
       {tab === 'featured' ? (
         <section className="admin-section">
-          {hasChanges ? (
-            <div className="admin-howto">
-              <strong>Cambios sin exportar.</strong> Editá los destacados, tocá <em>Exportar</em>, reemplazá
-              <code> src/data/featured-catalog.json</code>, copiá las imágenes a <code>public/product-images/</code>,
-              hacé <code>commit</code> y <code>push</code>.
-            </div>
-          ) : (
-            <div className="admin-howto">
-              Los destacados son los productos que aparecen en la portada con imagen.
-              Se editan localmente y se exportan como JSON + imágenes para commitear al repo.
-            </div>
-          )}
+          <div className="admin-howto">
+            Los destacados son los productos que aparecen en la portada con imagen.
+            Se editan y <strong>se guardan directo al servidor</strong> (ya no requieren export/commit).
+          </div>
 
           <div className="admin-section-head">
             <p>Productos con imagen que aparecen en la portada. El precio puede sobrescribir al del catálogo.</p>
             <div className="admin-section-actions">
-              <button className="admin-btn admin-btn-ghost" onClick={handleDiscardFeatured}>Descartar</button>
-              <button className="admin-btn admin-btn-primary" onClick={addFeatured}>+ Agregar destacado</button>
-              <button className="admin-btn admin-btn-primary" onClick={handleExportFeatured}>
-                Exportar cambios{pendingImageCount ? ` (+${pendingImageCount} img)` : ''}
+              <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading}>
+                ↻ Recargar
+              </button>
+              <button className="admin-btn admin-btn-primary" onClick={addFeaturedItem}>+ Agregar destacado</button>
+              <button className="admin-btn admin-btn-primary" onClick={saveFeaturedItems} disabled={saving}>
+                {saving ? 'Guardando…' : '💾 Guardar cambios'}
               </button>
             </div>
           </div>
 
-          <div className="admin-cards">
-            {catalog.featured?.map((item, index) => (
-              <article className="admin-card" key={`${item.match}-${index}`}>
-                <ImageCell
-                  item={item}
-                  currentSrc={item._preview || resolveImage(item.image)}
-                  onUpload={(dataUrl) => uploadFeaturedImage(index, dataUrl)}
-                  onRemove={() => removeFeaturedImage(index)}
-                />
-                <div className="admin-card-fields">
-                  <label>Título
-                    <input value={item.title} onChange={(e) => updateFeatured(index, { title: e.target.value })} />
-                  </label>
-                  <label>Subtítulo / marca
-                    <input value={item.subtitle} onChange={(e) => updateFeatured(index, { subtitle: e.target.value })} />
-                  </label>
-                  <label>Texto de match (en catálogo)
-                    <input value={item.match} onChange={(e) => updateFeatured(index, { match: e.target.value })} placeholder="Ej: HIERRO 8" />
-                  </label>
-                  <label>Categoría
-                    <select value={item.categoryKey} onChange={(e) => updateFeatured(index, { categoryKey: e.target.value })}>
-                      <option value="">—</option>
-                      {baseCats.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
-                    </select>
-                  </label>
-                  <label>Precio
-                    <PriceField value={item.priceOverride} onChange={(v) => updateFeatured(index, { priceOverride: v })} />
-                  </label>
-                </div>
-                <button className="admin-card-delete" title="Eliminar" onClick={() => removeFeatured(index)}>🗑 Eliminar</button>
-              </article>
-            ))}
-          </div>
+          {loading ? (
+            <p className="admin-note">Cargando destacados…</p>
+          ) : (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Imagen</th><th>Título</th><th>Subtítulo</th><th>Match</th><th>Categoría</th><th>Precio</th><th>Estado</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {featuredItems.map((f, index) => (
+                    <tr key={f.id || index} className={f.active === 0 ? 'admin-row-hidden' : ''}>
+                      <td>
+                        <ImageCell
+                          item={f}
+                          currentSrc={f._preview || resolveImage(f.image_url)}
+                          onUpload={(dataUrl) => uploadFeaturedImage(index, dataUrl)}
+                          onRemove={() => removeFeaturedImage(index)}
+                        />
+                      </td>
+                      <td><input value={f.title} onChange={(e) => updateFeaturedItem(index, { title: e.target.value })} /></td>
+                      <td><input value={f.subtitle || ''} onChange={(e) => updateFeaturedItem(index, { subtitle: e.target.value })} placeholder="Sin marca" /></td>
+                      <td><input value={f.match || ''} onChange={(e) => updateFeaturedItem(index, { match: e.target.value })} placeholder="Ej: HIERRO 8" /></td>
+                      <td>
+                        <select value={f.category_key || ''} onChange={(e) => updateFeaturedItem(index, { category_key: e.target.value })}>
+                          <option value="">—</option>
+                          {categories.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
+                        </select>
+                      </td>
+                      <td>
+                        <PriceField value={f.price_override} onChange={(v) => updateFeaturedItem(index, { price_override: v })} consultLabel="Usar catálogo" />
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={`admin-toggle${f.active !== 0 ? ' admin-toggle-on' : ''}`}
+                          onClick={() => updateFeaturedItem(index, { active: f.active === 0 ? 1 : 0 })}
+                        >
+                          {f.active === 0 ? 'Inactivo' : 'Activo'}
+                        </button>
+                      </td>
+                      <td>
+                        <button className="admin-card-delete" onClick={() => {
+                          if (window.confirm(`¿Desactivar "${f.title}"?`)) removeFeaturedItem(index)
+                        }}>🗑</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       ) : null}
 
       <footer className="admin-foot">
-        Catálogo y categorías se guardan directo al servidor. Destacados se exportan como JSON.
+        Catálogo, categorías y destacados se guardan directo al servidor.
       </footer>
     </div>
   )
