@@ -1,14 +1,15 @@
 # Panel de administración del catálogo
 
-Sección privada para que el administrador cambie precios, agregue/elimine/oculte
-productos y suba imágenes, **sin tocar código**.
+Sección privada para cambiar precios, agregar/editar/borrar productos, elegir
+destacados y subir imágenes — **en vivo, sin tocar código ni redeployar**.
+
+Los cambios se guardan en la base de datos del backend (SQLite en el VPS) y se
+reflejan en la web al instante (el catálogo y los destacados leen de la API).
 
 ## Cómo entrar
 
-- En el sitio, agregá `#admin` a la URL:
-  - Local: `http://localhost:5173/#admin`
-  - Producción: `https://corralonloseucaliptus.com/#admin`
-- Login por **usuario + contraseña**.
+- Agregá `#admin` a la URL: `https://corralonloseucaliptus.com/#admin`
+- Login por **usuario + contraseña** (validado en el servidor, JWT).
 
 ### Credenciales por defecto
 
@@ -16,61 +17,46 @@ productos y suba imágenes, **sin tocar código**.
 |---------|------------|
 | `admin` | `eucaliptus2026` |
 
-> ⚠️ **Cambialas antes de producción.** Ver "Cambiar credenciales" más abajo.
+> ⚠️ **Cambialas** (quedaron en historial). Ver "Cambiar la contraseña" más abajo.
 
 ## Qué se puede hacer
 
-- **Destacados (home):** productos con imagen de la portada — título, subtítulo/marca, categoría, precio e imagen.
-- **Catálogo completo:** todos los productos — nombre, marca, categoría, unidad, precio, imagen.
-  - **Precio vacío / 0** → se muestra como “A consultar”.
-  - **Visible / Oculto** → “quitar” un producto del sitio sin borrarlo.
-  - 🗑 → eliminar definitivamente.
-- **Categorías:** renombrar las categorías (la `key` interna no se edita).
-- **Imágenes:** subir PNG/JPG/WEBP/SVG por producto (vista previa al instante).
+- **Catálogo:** agregar, editar (nombre, marca, categoría, unidad, precio, imagen)
+  y **borrar** productos. El borrado es *soft* (el producto se desactiva, no se
+  pierde el dato). Precio vacío / 0 → se muestra como "A consultar".
+- **Agregar desde la pileta:** hay 1756 SKUs del Excel disponibles para sumar al
+  catálogo desde una búsqueda; al agregarlos pasan a ser productos del sitio.
+- **Destacados (home):** marcar/desmarcar productos como `featured`. Lo marcado
+  aparece en la grilla de "Productos destacados" del home (vía `/api/featured`).
+  Inicialmente están destacados los productos con precio.
+- **Imágenes:** subir por producto; el backend las comprime a WebP (`sharp`) y las
+  sirve desde `/uploads/`.
 
-El borrador se guarda solo en el navegador, así que podés cerrar y seguir después.
+## Cómo funciona por detrás
 
-## Cómo se publican los cambios (modelo export / commit)
+| Acción | Endpoint |
+|---|---|
+| Login | `POST /api/admin/auth/login` |
+| Listar/crear/editar/borrar producto | `GET/POST/PUT/DELETE /api/admin/products` |
+| Pileta de SKUs | `GET /api/admin/raw-skus?search=` |
+| Categorías | `/api/admin/categories` |
+| Subir imagen | `/api/admin/upload` |
+| (Público) catálogo / destacados | `GET /api/catalog`, `GET /api/featured` |
 
-El sitio es estático (sin base de datos), así que los cambios se publican
-exportando y commiteando:
+Todo lo de `/api/admin/*` requiere el token JWT del login.
 
-1. Tocá **“Exportar cambios”** en el panel. Se descargan:
-   - `featured-catalog.json`
-   - las imágenes nuevas (una por una), ya con el nombre correcto.
-2. Reemplazá el archivo `src/data/featured-catalog.json` del proyecto por el descargado.
-3. Copiá las imágenes descargadas a `public/product-images/`.
-4. Commiteá y pusheá:
-   ```bash
-   git add src/data/featured-catalog.json public/product-images
-   git commit -m "Actualiza precios e imágenes del catálogo"
-   git push
-   ```
-5. Vercel redeploya solo. En ~1 minuto los clientes ven los cambios.
+## Cambiar la contraseña
 
-> El storefront usa la imagen administrada (`public/product-images/...`) si existe;
-> si no, cae a la imagen estática de `src/assets/featured-products/`.
-
-## Cambiar credenciales (sin tocar código)
-
-Definí variables de entorno en Vercel (Project → Settings → Environment Variables):
-
-- `VITE_ADMIN_USER` → usuario.
-- `VITE_ADMIN_PASS_HASH` → hash SHA-256 (hex) de la contraseña.
-
-Para generar el hash:
+La contraseña vive hasheada (scrypt) en la tabla `users` del backend. Para
+cambiarla, en el VPS:
 
 ```bash
-node -e "import('crypto').then(c=>console.log(c.createHash('sha256').update('TU_CLAVE').digest('hex')))"
-# o
-python -c "import hashlib;print(hashlib.sha256('TU_CLAVE'.encode()).hexdigest())"
+cd /opt/loseucaliptos/server
+docker compose exec api node -e "import('./src/auth.js').then(async a=>{const {db}=await import('./src/db.js');db.prepare('UPDATE users SET password_hash=? WHERE email=?').run(a.hashPassword('NUEVA_CLAVE'),'admin');console.log('contraseña actualizada');process.exit(0)})"
 ```
 
-Redeployá para que tomen efecto.
+## Seguridad
 
-## Nota de seguridad
-
-Al ser un sitio 100% estático, el login se valida en el navegador: es una
-**barrera disuasoria**, no seguridad fuerte (alguien técnico podría inspeccionar
-el bundle). Alcanza para mantener el panel fuera de la vista y administrar el
-catálogo. Para seguridad real haría falta un backend con autenticación de servidor.
+Auth real de servidor: contraseña con **scrypt** + login que emite **JWT** (7 días).
+Las rutas de administración están protegidas; sin token válido devuelven 401.
+El panel `#admin` no aparece en la navegación del sitio.
