@@ -32,3 +32,4 @@ dist-ssr
 .claude/
 .agents/
 skills-lock.json
+seo-audit/

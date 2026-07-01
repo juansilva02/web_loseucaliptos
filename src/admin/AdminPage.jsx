@@ -4,6 +4,13 @@ import { api } from './api'
 import { extensionFromDataUrl, imagePath, slugify } from './catalogStore'
 import './AdminPage.css'
 
+const ADMIN_APPEARANCE_KEY = 'eucaliptus-admin-appearance'
+const ADMIN_THEME_PRESETS = {
+  forest: { label: 'Bosque', shellClass: 'admin-theme-forest' },
+  sand: { label: 'Arena', shellClass: 'admin-theme-sand' },
+  graphite: { label: 'Grafito', shellClass: 'admin-theme-graphite' },
+}
+
 const EMPTY_FEATURED = {
   title: '',
   subtitle: '',
@@ -29,7 +36,22 @@ function readFileAsDataUrl(file) {
   })
 }
 
-/* ------------------------------ Login ------------------------------ */
+function loadAdminAppearance() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ADMIN_APPEARANCE_KEY))
+    return {
+      theme: parsed?.theme && ADMIN_THEME_PRESETS[parsed.theme] ? parsed.theme : 'forest',
+      wallpaper: typeof parsed?.wallpaper === 'string' ? parsed.wallpaper : '',
+    }
+  } catch {
+    return { theme: 'forest', wallpaper: '' }
+  }
+}
+
+function matchesQuery(values, query) {
+  if (!query) return true
+  return values.filter(Boolean).some((value) => String(value).toLowerCase().includes(query))
+}
 
 function LoginView({ onSuccess }) {
   const [user, setUser] = useState('')
@@ -37,8 +59,8 @@ function LoginView({ onSuccess }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const submit = async (e) => {
-    e.preventDefault()
+  const submit = async (event) => {
+    event.preventDefault()
     setBusy(true)
     setError('')
     try {
@@ -54,37 +76,40 @@ function LoginView({ onSuccess }) {
   return (
     <div className="admin-login">
       <form className="admin-login-card" onSubmit={submit}>
-        <h1>Panel de administración</h1>
-        <p className="admin-login-sub">Corralón Los Eucaliptus</p>
+        <h1>Panel de administracion</h1>
+        <p className="admin-login-sub">Corralon Los Eucaliptus</p>
         <label>
           Usuario
-          <input type="text" value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus />
+          <input type="text" value={user} onChange={(event) => setUser(event.target.value)} autoComplete="username" autoFocus />
         </label>
         <label>
-          Contraseña
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+          Contrasena
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
         </label>
         {error ? <p className="admin-login-error">{error}</p> : null}
         <button type="submit" className="admin-btn admin-btn-primary" disabled={busy}>
-          {busy ? 'Verificando…' : 'Ingresar'}
+          {busy ? 'Verificando...' : 'Ingresar'}
         </button>
-        <a className="admin-login-back" href="#">← Volver al sitio</a>
+        <a className="admin-login-back" href="#">&larr; Volver al sitio</a>
       </form>
     </div>
   )
 }
-
-/* ----------------------------- Editor ------------------------------ */
 
 function PriceField({ value, onChange, consultLabel = 'Consultar' }) {
   const isConsult = !value || Number(value) <= 0
   return (
     <div className="admin-price-field">
       <input
-        type="number" min="0" step="1"
+        type="number"
+        min="0"
+        step="1"
         value={isConsult ? '' : value}
         placeholder={consultLabel}
-        onChange={(e) => { const v = e.target.value; onChange(v === '' ? null : Number(v)) }}
+        onChange={(event) => {
+          const nextValue = event.target.value
+          onChange(nextValue === '' ? null : Number(nextValue))
+        }}
       />
       <span className="admin-price-hint">{isConsult ? consultLabel : 'ARS'}</span>
     </div>
@@ -93,6 +118,7 @@ function PriceField({ value, onChange, consultLabel = 'Consultar' }) {
 
 function ImageCell({ item, currentSrc, onUpload, onRemove }) {
   const inputRef = useRef(null)
+
   return (
     <div className="admin-image-cell">
       <div className="admin-image-preview">
@@ -103,14 +129,32 @@ function ImageCell({ item, currentSrc, onUpload, onRemove }) {
           {currentSrc ? 'Cambiar' : 'Subir'}
         </button>
         {currentSrc ? (
-          <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={onRemove}>Quitar</button>
+          <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={onRemove}>
+            Quitar
+          </button>
         ) : null}
         <input
-          ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden
-          onChange={async (e) => { const file = e.target.files?.[0]; if (file) onUpload(await readFileAsDataUrl(file)); e.target.value = '' }}
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          hidden
+          onChange={async (event) => {
+            const file = event.target.files?.[0]
+            if (file) onUpload(await readFileAsDataUrl(file))
+            event.target.value = ''
+          }}
         />
       </div>
       {item.image ? <code className="admin-image-path">{item.image}</code> : null}
+    </div>
+  )
+}
+
+function EmptyState({ title, body }) {
+  return (
+    <div className="admin-empty-state">
+      <strong>{title}</strong>
+      <p>{body}</p>
     </div>
   )
 }
@@ -119,6 +163,14 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(() => api.isAuthed())
   const [tab, setTab] = useState('products')
   const [toast, setToast] = useState('')
+  const [showAppearancePanel, setShowAppearancePanel] = useState(false)
+  const [productQuery, setProductQuery] = useState('')
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all')
+  const [productStatusFilter, setProductStatusFilter] = useState('all')
+  const [featuredQuery, setFeaturedQuery] = useState('')
+  const [featuredCategoryFilter, setFeaturedCategoryFilter] = useState('all')
+  const [featuredStatusFilter, setFeaturedStatusFilter] = useState('all')
+  const [categoryQuery, setCategoryQuery] = useState('')
   const toastTimer = useRef(null)
 
   const [products, setProducts] = useState([])
@@ -126,14 +178,17 @@ export default function AdminPage() {
   const [featuredItems, setFeaturedItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [appearance, setAppearance] = useState(() => loadAdminAppearance())
 
-  const flash = (msg) => {
-    setToast(msg)
+  const flash = (message) => {
+    setToast(message)
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
     toastTimer.current = window.setTimeout(() => setToast(''), 4000)
   }
 
-  /* -------- sync desde el servidor -------- */
+  useEffect(() => {
+    window.localStorage.setItem(ADMIN_APPEARANCE_KEY, JSON.stringify(appearance))
+  }, [appearance])
 
   const syncFromServer = async () => {
     setLoading(true)
@@ -165,17 +220,23 @@ export default function AdminPage() {
           setLoading(false)
         }
       })
-      .catch((err) => { if (!cancelled) { flash(`Error al cargar datos: ${err.message}`); setLoading(false) } })
-    return () => { cancelled = true }
+      .catch((err) => {
+        if (!cancelled) {
+          flash(`Error al cargar datos: ${err.message}`)
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [authed])
 
-  /* -------- helpers de featured (local state) -------- */
-
   const updateFeaturedItem = (index, patch) =>
-    setFeaturedItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+    setFeaturedItems((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
 
   const removeFeaturedItem = (index) =>
-    setFeaturedItems((prev) => prev.filter((_, i) => i !== index))
+    setFeaturedItems((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
 
   const addFeaturedItem = () => {
     const key = categories[0]?.key || ''
@@ -202,29 +263,30 @@ export default function AdminPage() {
 
   const saveFeaturedItems = async () => {
     setSaving(true)
-    let ok = 0; let fail = 0
-    for (const f of featuredItems) {
+    let ok = 0
+    let fail = 0
+    for (const item of featuredItems) {
       try {
         const body = {
-          title: f.title,
-          subtitle: f.subtitle || '',
-          match: f.match || '',
-          category_key: f.category_key || '',
-          price_override: f.price_override ?? null,
-          image_url: f.image_url || '',
-          active: f.active ?? 1,
+          title: item.title,
+          subtitle: item.subtitle || '',
+          match: item.match || '',
+          category_key: item.category_key || '',
+          price_override: item.price_override ?? null,
+          image_url: item.image_url || '',
+          active: item.active ?? 1,
         }
-        const exists = f.id && !f.id.startsWith('nuevo-')
+        const exists = item.id && !item.id.startsWith('nuevo-')
         if (exists) {
-          await api.updateFeatured(f.id, body)
+          await api.updateFeatured(item.id, body)
         } else {
-          const id = f.id || `featured-${Date.now()}`
+          const id = item.id || `featured-${Date.now()}`
           await api.createFeatured({ ...body, id })
         }
         ok++
       } catch (err) {
         fail++
-        console.error(`Error guardando destacado ${f.id || f.title}:`, err)
+        console.error(`Error guardando destacado ${item.id || item.title}:`, err)
       }
     }
     setSaving(false)
@@ -232,13 +294,11 @@ export default function AdminPage() {
     if (ok) syncFromServer()
   }
 
-  /* -------- helpers de productos (local state) -------- */
-
   const updateProduct = (index, patch) =>
-    setProducts((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+    setProducts((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
 
   const removeProduct = (index) =>
-    setProducts((prev) => prev.filter((_, i) => i !== index))
+    setProducts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
 
   const addProduct = () => {
     const key = categories[0]?.key || ''
@@ -263,18 +323,16 @@ export default function AdminPage() {
     updateProduct(index, { image_url: '', _preview: undefined })
   }
 
-  /* -------- helpers de categorías (local state) -------- */
-
   const updateCategory = (index, patch) =>
-    setCategories((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+    setCategories((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
 
   const removeCategory = async (index) => {
-    const cat = categories[index]
-    if (!cat) return
+    const category = categories[index]
+    if (!category) return
     try {
-      await api.deleteCategory(cat.key)
-      setCategories((prev) => prev.filter((_, i) => i !== index))
-      flash(`Categoría "${cat.name}" eliminada`)
+      await api.deleteCategory(category.key)
+      setCategories((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+      flash(`Categoria "${category.name}" eliminada`)
     } catch (err) {
       flash(`Error: ${err.message}`)
     }
@@ -285,38 +343,40 @@ export default function AdminPage() {
     if (!key) return
     const name = prompt('Nombre visible:')
     if (!name) return
-    api.createCategory({ key, name }).then((res) => {
-      setCategories((prev) => [...prev, res.category])
-      flash(`Categoría "${name}" creada`)
-    }).catch((err) => flash(`Error: ${err.message}`))
-  }
 
-  /* -------- guardar al servidor -------- */
+    api.createCategory({ key, name })
+      .then((res) => {
+        setCategories((prev) => [...prev, res.category])
+        flash(`Categoria "${name}" creada`)
+      })
+      .catch((err) => flash(`Error: ${err.message}`))
+  }
 
   const saveProducts = async () => {
     setSaving(true)
-    let ok = 0; let fail = 0
-    for (const p of products) {
+    let ok = 0
+    let fail = 0
+    for (const product of products) {
       try {
         const body = {
-          name: p.name,
-          category: p.category_key,
-          brand: p.brand || '',
-          unit: p.unit || '',
-          price: p.price ?? 0,
-          active: p.active ?? 1,
+          name: product.name,
+          category: product.category_key,
+          brand: product.brand || '',
+          unit: product.unit || '',
+          price: product.price ?? 0,
+          active: product.active ?? 1,
         }
-        const exists = p.id && (p.id.startsWith('nuevo-') ? false : true)
+        const exists = product.id && !product.id.startsWith('nuevo-')
         if (exists) {
-          await api.updateProduct(p.id, body)
+          await api.updateProduct(product.id, body)
         } else {
-          body.id = p.id || slugify(p.name) || `prod-${Date.now()}`
+          body.id = product.id || slugify(product.name) || `prod-${Date.now()}`
           await api.createProduct(body)
         }
         ok++
       } catch (err) {
         fail++
-        console.error(`Error guardando ${p.id || p.name}:`, err)
+        console.error(`Error guardando ${product.id || product.name}:`, err)
       }
     }
     setSaving(false)
@@ -326,45 +386,162 @@ export default function AdminPage() {
 
   const saveCategories = async () => {
     setSaving(true)
-    let ok = 0; let fail = 0
-    for (const c of categories) {
+    let ok = 0
+    let fail = 0
+    for (const category of categories) {
       try {
-        await api.updateCategory(c.key, { name: c.name })
+        await api.updateCategory(category.key, { name: category.name })
         ok++
       } catch (err) {
         fail++
-        console.error(`Error guardando categoría ${c.key}:`, err)
+        console.error(`Error guardando categoria ${category.key}:`, err)
       }
     }
     setSaving(false)
-    flash(`${ok} categoría(s) guardada(s)${fail ? `, ${fail} error(es)` : ''}`)
+    flash(`${ok} categoria(s) guardada(s)${fail ? `, ${fail} error(es)` : ''}`)
   }
 
-  /* -------- logout -------- */
+  const productStats = {
+    total: products.length,
+    active: products.filter((product) => product.active !== 0).length,
+    consult: products.filter((product) => !product.price || Number(product.price) <= 0).length,
+  }
 
-  const logout = () => { api.logout(); setAuthed(false) }
+  const featuredStats = {
+    total: featuredItems.length,
+    active: featuredItems.filter((item) => item.active !== 0).length,
+    withOverride: featuredItems.filter((item) => !!item.price_override).length,
+  }
+
+  const filteredProducts = products.filter((product) => {
+    const query = productQuery.trim().toLowerCase()
+    const categoryKey = product.category_key || product.category || ''
+    const matchesCategory = productCategoryFilter === 'all' || categoryKey === productCategoryFilter
+    const isActive = product.active !== 0
+    const matchesStatus =
+      productStatusFilter === 'all' ||
+      (productStatusFilter === 'active' && isActive) ||
+      (productStatusFilter === 'inactive' && !isActive) ||
+      (productStatusFilter === 'consult' && (!product.price || Number(product.price) <= 0))
+
+    return matchesQuery([product.name, product.brand, product.id, categoryKey], query) && matchesCategory && matchesStatus
+  })
+
+  const filteredFeaturedItems = featuredItems.filter((item) => {
+    const query = featuredQuery.trim().toLowerCase()
+    const categoryKey = item.category_key || ''
+    const matchesCategory = featuredCategoryFilter === 'all' || categoryKey === featuredCategoryFilter
+    const isActive = item.active !== 0
+    const matchesStatus =
+      featuredStatusFilter === 'all' ||
+      (featuredStatusFilter === 'active' && isActive) ||
+      (featuredStatusFilter === 'inactive' && !isActive) ||
+      (featuredStatusFilter === 'priced' && !!item.price_override)
+
+    return matchesQuery([item.title, item.subtitle, item.match, item.id, categoryKey], query) && matchesCategory && matchesStatus
+  })
+
+  const filteredCategories = categories.filter((category) => {
+    const query = categoryQuery.trim().toLowerCase()
+    return matchesQuery([category.key, category.name], query)
+  })
+
+  const logout = () => {
+    api.logout()
+    setAuthed(false)
+  }
+
+  const updateAppearance = (patch) => {
+    setAppearance((current) => ({ ...current, ...patch }))
+  }
+
+  const uploadWallpaper = async (file) => {
+    if (!file) return
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      updateAppearance({ wallpaper: dataUrl })
+      flash(`Wallpaper listo: ${file.name}`)
+    } catch {
+      flash('No se pudo cargar el wallpaper')
+    }
+  }
+
+  const currentTheme = ADMIN_THEME_PRESETS[appearance.theme] || ADMIN_THEME_PRESETS.forest
+  const shellStyle = appearance.wallpaper
+    ? { '--admin-wallpaper': `url("${appearance.wallpaper}")` }
+    : { '--admin-wallpaper': 'none' }
 
   if (!authed) return <LoginView onSuccess={() => { setAuthed(true); syncFromServer() }} />
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell ${currentTheme.shellClass}`} style={shellStyle}>
       <header className="admin-topbar">
         <div className="admin-topbar-left">
           <strong>Panel · Los Eucaliptus</strong>
-          {loading ? <span className="admin-badge-changes">Cargando…</span> : null}
+          {loading ? <span className="admin-badge-changes">Cargando...</span> : null}
         </div>
         <div className="admin-topbar-actions">
+          <button
+            type="button"
+            className={`admin-btn admin-btn-ghost${showAppearancePanel ? ' admin-btn-ghost-active' : ''}`}
+            onClick={() => setShowAppearancePanel((current) => !current)}
+          >
+            Apariencia
+          </button>
           <a className="admin-btn admin-btn-ghost" href="#">Ver sitio</a>
           <button type="button" className="admin-btn admin-btn-ghost" onClick={logout}>Salir</button>
         </div>
       </header>
 
+      {showAppearancePanel ? (
+        <section className="admin-appearance-panel">
+          <div className="admin-appearance-copy">
+            <strong>Personalizar turno</strong>
+            <p>Este tema se guarda solo en este navegador. No toca el servidor ni afecta al sitio publico.</p>
+          </div>
+          <div className="admin-appearance-controls">
+            <div className="admin-theme-grid">
+              {Object.entries(ADMIN_THEME_PRESETS).map(([key, preset]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`admin-theme-chip${appearance.theme === key ? ' admin-theme-chip-active' : ''}`}
+                  onClick={() => updateAppearance({ theme: key })}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <div className="admin-wallpaper-actions">
+              <label className="admin-btn admin-btn-primary admin-wallpaper-upload">
+                Subir wallpaper
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    uploadWallpaper(file)
+                    event.target.value = ''
+                  }}
+                />
+              </label>
+              {appearance.wallpaper ? (
+                <button type="button" className="admin-btn" onClick={() => updateAppearance({ wallpaper: '' })}>
+                  Quitar wallpaper
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <nav className="admin-tabs">
         <button className={tab === 'products' ? 'active' : ''} onClick={() => setTab('products')}>
-          Catálogo completo <em>{products.length}</em>
+          Catalogo completo <em>{products.length}</em>
         </button>
         <button className={tab === 'categories' ? 'active' : ''} onClick={() => setTab('categories')}>
-          Categorías <em>{categories.length}</em>
+          Categorias <em>{categories.length}</em>
         </button>
         <button className={tab === 'featured' ? 'active' : ''} onClick={() => setTab('featured')}>
           Destacados (home) <em>{featuredItems.length}</em>
@@ -373,185 +550,324 @@ export default function AdminPage() {
 
       {toast ? <div className="admin-toast">{toast}</div> : null}
 
-      {/* -------------------- CATALOGO COMPLETO (API) -------------------- */}
       {tab === 'products' ? (
         <section className="admin-section">
           <div className="admin-section-head">
-            <p>Productos del catálogo. Editá y guardá — los cambios se persisten en el servidor.</p>
+            <p>Productos del catalogo. Filtra, edita y guarda; los cambios se persisten directo en el servidor.</p>
             <div className="admin-section-actions">
               <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading}>
-                ↻ Recargar
+                Recargar
               </button>
               <button className="admin-btn admin-btn-primary" onClick={addProduct}>+ Agregar producto</button>
               <button className="admin-btn admin-btn-primary" onClick={saveProducts} disabled={saving}>
-                {saving ? 'Guardando…' : '💾 Guardar cambios'}
+                {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </div>
 
+          <div className="admin-kpi-row">
+            <div className="admin-kpi-card">
+              <span>Total</span>
+              <strong>{productStats.total}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>Activos</span>
+              <strong>{productStats.active}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>A consultar</span>
+              <strong>{productStats.consult}</strong>
+            </div>
+            <div className="admin-kpi-card admin-kpi-card-muted">
+              <span>En vista</span>
+              <strong>{filteredProducts.length}</strong>
+            </div>
+          </div>
+
+          <div className="admin-filter-bar">
+            <input
+              className="admin-filter-search"
+              type="search"
+              placeholder="Buscar por nombre, marca, ID o categoria"
+              value={productQuery}
+              onChange={(event) => setProductQuery(event.target.value)}
+            />
+            <select value={productCategoryFilter} onChange={(event) => setProductCategoryFilter(event.target.value)}>
+              <option value="all">Todas las categorias</option>
+              {categories.map((category) => (
+                <option key={category.key} value={category.key}>{category.name}</option>
+              ))}
+            </select>
+            <select value={productStatusFilter} onChange={(event) => setProductStatusFilter(event.target.value)}>
+              <option value="all">Todos los estados</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+              <option value="consult">A consultar</option>
+            </select>
+            <button
+              type="button"
+              className="admin-btn"
+              onClick={() => {
+                setProductQuery('')
+                setProductCategoryFilter('all')
+                setProductStatusFilter('all')
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
           {loading ? (
-            <p className="admin-note">Cargando productos…</p>
-          ) : (
+            <p className="admin-note">Cargando productos...</p>
+          ) : filteredProducts.length ? (
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoría</th><th>Unidad</th><th>Precio</th><th>Estado</th><th></th>
+                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Estado</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((p, index) => (
-                    <tr key={p.id || index} className={p.active === 0 ? 'admin-row-hidden' : ''}>
-                      <td>
-                        <ImageCell
-                          item={p}
-                          currentSrc={p._preview || resolveImage(p.image_url || p.image)}
-                          onUpload={(dataUrl) => uploadProductImage(index, dataUrl)}
-                          onRemove={() => removeProductImage(index)}
-                        />
-                      </td>
-                      <td><input value={p.name} onChange={(e) => updateProduct(index, { name: e.target.value })} /></td>
-                      <td><input value={p.brand || ''} onChange={(e) => updateProduct(index, { brand: e.target.value })} placeholder="Sin marca" /></td>
-                      <td>
-                        <select value={p.category_key || p.category || ''} onChange={(e) => updateProduct(index, { category_key: e.target.value })}>
-                          <option value="">—</option>
-                          {categories.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
-                        </select>
-                      </td>
-                      <td><input className="admin-input-sm" value={p.unit || ''} onChange={(e) => updateProduct(index, { unit: e.target.value })} /></td>
-                      <td>
-                        <PriceField value={p.price} onChange={(v) => updateProduct(index, { price: v ?? 0 })} consultLabel="A consultar" />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className={`admin-toggle${p.active !== 0 ? ' admin-toggle-on' : ''}`}
-                          onClick={() => updateProduct(index, { active: p.active === 0 ? 1 : 0 })}
-                        >
-                          {p.active === 0 ? 'Inactivo' : 'Activo'}
-                        </button>
-                      </td>
-                      <td>
-                        <button className="admin-card-delete" onClick={() => {
-                          if (window.confirm(`¿Desactivar "${p.name}"?`)) removeProduct(index)
-                        }}>🗑</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredProducts.map((product) => {
+                    const index = products.findIndex((item) => item.id === product.id)
+                    return (
+                      <tr key={product.id || index} className={product.active === 0 ? 'admin-row-hidden' : ''}>
+                        <td>
+                          <ImageCell
+                            item={product}
+                            currentSrc={product._preview || resolveImage(product.image_url || product.image)}
+                            onUpload={(dataUrl) => uploadProductImage(index, dataUrl)}
+                            onRemove={() => removeProductImage(index)}
+                          />
+                        </td>
+                        <td><input value={product.name} onChange={(event) => updateProduct(index, { name: event.target.value })} /></td>
+                        <td><input value={product.brand || ''} onChange={(event) => updateProduct(index, { brand: event.target.value })} placeholder="Sin marca" /></td>
+                        <td>
+                          <select value={product.category_key || product.category || ''} onChange={(event) => updateProduct(index, { category_key: event.target.value })}>
+                            <option value="">-</option>
+                            {categories.map((category) => <option key={category.key} value={category.key}>{category.name}</option>)}
+                          </select>
+                        </td>
+                        <td><input className="admin-input-sm" value={product.unit || ''} onChange={(event) => updateProduct(index, { unit: event.target.value })} /></td>
+                        <td>
+                          <PriceField value={product.price} onChange={(value) => updateProduct(index, { price: value ?? 0 })} consultLabel="A consultar" />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`admin-toggle${product.active !== 0 ? ' admin-toggle-on' : ''}`}
+                            onClick={() => updateProduct(index, { active: product.active === 0 ? 1 : 0 })}
+                          >
+                            {product.active === 0 ? 'Inactivo' : 'Activo'}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            className="admin-card-delete"
+                            onClick={() => {
+                              if (window.confirm(`Desactivar "${product.name}"?`)) removeProduct(index)
+                            }}
+                          >
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+          ) : (
+            <EmptyState title="Sin resultados" body="No hay productos que coincidan con los filtros actuales." />
           )}
         </section>
       ) : null}
 
-      {/* -------------------- CATEGORIAS (API) -------------------- */}
       {tab === 'categories' ? (
         <section className="admin-section">
           <div className="admin-section-head">
-            <p>Nombres de categorías. La key no se edita para no romper productos existentes.</p>
+            <p>Nombres de categorias. La key no se edita para no romper productos existentes.</p>
             <div className="admin-section-actions">
-              <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading}>↻ Recargar</button>
-              <button className="admin-btn admin-btn-primary" onClick={addCategory}>+ Agregar categoría</button>
+              <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading}>Recargar</button>
+              <button className="admin-btn admin-btn-primary" onClick={addCategory}>+ Agregar categoria</button>
               <button className="admin-btn admin-btn-primary" onClick={saveCategories} disabled={saving}>
-                {saving ? 'Guardando…' : '💾 Guardar cambios'}
+                {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </div>
-          <div className="admin-cats-list">
-            {categories.map((c, index) => (
-              <div className="admin-cat-row" key={c.key}>
-                <code>{c.key}</code>
-                <input value={c.name} onChange={(e) => updateCategory(index, { name: e.target.value })} />
-                <span className="admin-cat-count">
-                  {products.filter((p) => (p.category_key || p.category) === c.key).length} productos
-                </span>
-                <button className="admin-btn admin-btn-mini admin-btn-ghost" onClick={() => removeCategory(index)}>🗑</button>
-              </div>
-            ))}
+
+          <div className="admin-filter-bar">
+            <input
+              className="admin-filter-search"
+              type="search"
+              placeholder="Buscar categoria por key o nombre"
+              value={categoryQuery}
+              onChange={(event) => setCategoryQuery(event.target.value)}
+            />
           </div>
+
+          {filteredCategories.length ? (
+            <div className="admin-cats-list">
+              {filteredCategories.map((category) => {
+                const index = categories.findIndex((item) => item.key === category.key)
+                return (
+                  <div className="admin-cat-row" key={category.key}>
+                    <code>{category.key}</code>
+                    <input value={category.name} onChange={(event) => updateCategory(index, { name: event.target.value })} />
+                    <span className="admin-cat-count">
+                      {products.filter((product) => (product.category_key || product.category) === category.key).length} productos
+                    </span>
+                    <button className="admin-btn admin-btn-mini admin-btn-ghost" onClick={() => removeCategory(index)}>X</button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <EmptyState title="Sin resultados" body="No hay categorias que coincidan con la busqueda actual." />
+          )}
         </section>
       ) : null}
 
-      {/* -------------------- DESTACADOS (API) -------------------- */}
       {tab === 'featured' ? (
         <section className="admin-section">
           <div className="admin-howto">
             Los destacados son los productos que aparecen en la portada con imagen.
-            Se editan y <strong>se guardan directo al servidor</strong> (ya no requieren export/commit).
+            Se editan y <strong>se guardan directo al servidor</strong>.
           </div>
 
           <div className="admin-section-head">
-            <p>Productos con imagen que aparecen en la portada. El precio puede sobrescribir al del catálogo.</p>
+            <p>Productos con imagen que aparecen en la portada. El precio puede sobrescribir al del catalogo.</p>
             <div className="admin-section-actions">
               <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading}>
-                ↻ Recargar
+                Recargar
               </button>
               <button className="admin-btn admin-btn-primary" onClick={addFeaturedItem}>+ Agregar destacado</button>
               <button className="admin-btn admin-btn-primary" onClick={saveFeaturedItems} disabled={saving}>
-                {saving ? 'Guardando…' : '💾 Guardar cambios'}
+                {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </div>
 
+          <div className="admin-kpi-row">
+            <div className="admin-kpi-card">
+              <span>Total</span>
+              <strong>{featuredStats.total}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>Activos</span>
+              <strong>{featuredStats.active}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>Precio manual</span>
+              <strong>{featuredStats.withOverride}</strong>
+            </div>
+            <div className="admin-kpi-card admin-kpi-card-muted">
+              <span>En vista</span>
+              <strong>{filteredFeaturedItems.length}</strong>
+            </div>
+          </div>
+
+          <div className="admin-filter-bar">
+            <input
+              className="admin-filter-search"
+              type="search"
+              placeholder="Buscar por titulo, match, ID o categoria"
+              value={featuredQuery}
+              onChange={(event) => setFeaturedQuery(event.target.value)}
+            />
+            <select value={featuredCategoryFilter} onChange={(event) => setFeaturedCategoryFilter(event.target.value)}>
+              <option value="all">Todas las categorias</option>
+              {categories.map((category) => (
+                <option key={category.key} value={category.key}>{category.name}</option>
+              ))}
+            </select>
+            <select value={featuredStatusFilter} onChange={(event) => setFeaturedStatusFilter(event.target.value)}>
+              <option value="all">Todos los estados</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+              <option value="priced">Con precio manual</option>
+            </select>
+            <button
+              type="button"
+              className="admin-btn"
+              onClick={() => {
+                setFeaturedQuery('')
+                setFeaturedCategoryFilter('all')
+                setFeaturedStatusFilter('all')
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
           {loading ? (
-            <p className="admin-note">Cargando destacados…</p>
-          ) : (
+            <p className="admin-note">Cargando destacados...</p>
+          ) : filteredFeaturedItems.length ? (
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Título</th><th>Subtítulo</th><th>Match</th><th>Categoría</th><th>Precio</th><th>Estado</th><th></th>
+                    <th>Imagen</th><th>Titulo</th><th>Subtitulo</th><th>Match</th><th>Categoria</th><th>Precio</th><th>Estado</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {featuredItems.map((f, index) => (
-                    <tr key={f.id || index} className={f.active === 0 ? 'admin-row-hidden' : ''}>
-                      <td>
-                        <ImageCell
-                          item={f}
-                          currentSrc={f._preview || resolveImage(f.image_url)}
-                          onUpload={(dataUrl) => uploadFeaturedImage(index, dataUrl)}
-                          onRemove={() => removeFeaturedImage(index)}
-                        />
-                      </td>
-                      <td><input value={f.title} onChange={(e) => updateFeaturedItem(index, { title: e.target.value })} /></td>
-                      <td><input value={f.subtitle || ''} onChange={(e) => updateFeaturedItem(index, { subtitle: e.target.value })} placeholder="Sin marca" /></td>
-                      <td><input value={f.match || ''} onChange={(e) => updateFeaturedItem(index, { match: e.target.value })} placeholder="Ej: HIERRO 8" /></td>
-                      <td>
-                        <select value={f.category_key || ''} onChange={(e) => updateFeaturedItem(index, { category_key: e.target.value })}>
-                          <option value="">—</option>
-                          {categories.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
-                        </select>
-                      </td>
-                      <td>
-                        <PriceField value={f.price_override} onChange={(v) => updateFeaturedItem(index, { price_override: v })} consultLabel="Usar catálogo" />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className={`admin-toggle${f.active !== 0 ? ' admin-toggle-on' : ''}`}
-                          onClick={() => updateFeaturedItem(index, { active: f.active === 0 ? 1 : 0 })}
-                        >
-                          {f.active === 0 ? 'Inactivo' : 'Activo'}
-                        </button>
-                      </td>
-                      <td>
-                        <button className="admin-card-delete" onClick={() => {
-                          if (window.confirm(`¿Desactivar "${f.title}"?`)) removeFeaturedItem(index)
-                        }}>🗑</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredFeaturedItems.map((item) => {
+                    const index = featuredItems.findIndex((entry) => entry.id === item.id)
+                    return (
+                      <tr key={item.id || index} className={item.active === 0 ? 'admin-row-hidden' : ''}>
+                        <td>
+                          <ImageCell
+                            item={item}
+                            currentSrc={item._preview || resolveImage(item.image_url)}
+                            onUpload={(dataUrl) => uploadFeaturedImage(index, dataUrl)}
+                            onRemove={() => removeFeaturedImage(index)}
+                          />
+                        </td>
+                        <td><input value={item.title} onChange={(event) => updateFeaturedItem(index, { title: event.target.value })} /></td>
+                        <td><input value={item.subtitle || ''} onChange={(event) => updateFeaturedItem(index, { subtitle: event.target.value })} placeholder="Sin subtitulo" /></td>
+                        <td><input value={item.match || ''} onChange={(event) => updateFeaturedItem(index, { match: event.target.value })} placeholder="Ej: HIERRO 8" /></td>
+                        <td>
+                          <select value={item.category_key || ''} onChange={(event) => updateFeaturedItem(index, { category_key: event.target.value })}>
+                            <option value="">-</option>
+                            {categories.map((category) => <option key={category.key} value={category.key}>{category.name}</option>)}
+                          </select>
+                        </td>
+                        <td>
+                          <PriceField value={item.price_override} onChange={(value) => updateFeaturedItem(index, { price_override: value })} consultLabel="Usar catalogo" />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`admin-toggle${item.active !== 0 ? ' admin-toggle-on' : ''}`}
+                            onClick={() => updateFeaturedItem(index, { active: item.active === 0 ? 1 : 0 })}
+                          >
+                            {item.active === 0 ? 'Inactivo' : 'Activo'}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            className="admin-card-delete"
+                            onClick={() => {
+                              if (window.confirm(`Desactivar "${item.title}"?`)) removeFeaturedItem(index)
+                            }}
+                          >
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+          ) : (
+            <EmptyState title="Sin resultados" body="No hay destacados que coincidan con los filtros actuales." />
           )}
         </section>
       ) : null}
 
       <footer className="admin-foot">
-        Catálogo, categorías y destacados se guardan directo al servidor.
+        Catalogo, categorias y destacados se guardan directo al servidor.
       </footer>
     </div>
   )
