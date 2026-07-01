@@ -70,13 +70,18 @@ seedProducts(featured.products)
 seedRaw(rawSkus)
 seedFeatured(featured.featured)
 
-// Admin user por defecto: admin / eucaliptus2026
-// Solo se crea si no existe ningun usuario todavia (seed fresca).
+// Admin user por defecto: solo si no existe ningun usuario.
 const existingUser = db.prepare('SELECT id FROM users LIMIT 1').get()
 if (!existingUser) {
-  const hash = hashPassword('eucaliptus2026')
-  db.prepare("INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'admin')").run('admin', hash)
-  console.log('[seed] admin user created: admin / eucaliptus2026')
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin'
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD
+  if (!adminPassword) {
+    console.warn('[seed] SEED_ADMIN_PASSWORD no configurado, saltando creacion de admin user')
+  } else {
+    const hash = hashPassword(adminPassword)
+    db.prepare("INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'admin')").run(adminEmail, hash)
+    console.log(`[seed] admin user created: ${adminEmail}`)
+  }
 } else {
   console.log('[seed] admin user already exists, skipping')
 }

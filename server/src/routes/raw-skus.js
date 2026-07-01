@@ -63,12 +63,21 @@ router.get('/', requireAuth, (req, res) => {
 })
 
 router.post('/:code/promote', requireAuth, (req, res) => {
-  const raw = db.prepare('SELECT * FROM raw_skus WHERE code = ?').get(Number(req.params.code))
+  const code = Number(req.params.code)
+  if (!Number.isInteger(code) || code < 1) {
+    return res.status(400).json({ error: 'Código de SKU inválido' })
+  }
+  const raw = db.prepare('SELECT * FROM raw_skus WHERE code = ?').get(code)
   if (!raw) return res.status(404).json({ error: 'SKU no encontrado' })
   if (raw.added) return res.status(409).json({ error: 'Este SKU ya fue promovido al catálogo' })
 
   const id = slugify(req.body.id) || slugify(raw.name) || `sku-${raw.code}`
   const category = req.body.category_key || inferCategoryKeyFromRubro(raw.rubro)
+
+  const catExists = db.prepare('SELECT key FROM categories WHERE key = ?').get(category)
+  if (!catExists) {
+    return res.status(400).json({ error: `La categoría "${category}" no existe. Créala primero desde el panel.` })
+  }
 
   const result = db.transaction(() => {
     const maxSort = db.prepare('SELECT COALESCE(MAX(sort),0) + 1 AS next FROM products').get().next

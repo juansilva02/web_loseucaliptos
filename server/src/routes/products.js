@@ -12,7 +12,7 @@ router.get('/', requireAuth, (req, res) => {
   const params = {}
   if (!includeInactive) { sql += ' AND active = 1'; params.active = 1 }
   if (category) { sql += ' AND category_key = @category'; params.category = category }
-  if (search) { sql += ' AND (name LIKE @search OR brand LIKE @search2)'; params.search = `%${search}%`; params.search2 = `%${search}%` }
+  if (search) { sql += ' AND (name LIKE @search OR brand LIKE @search2)'; const esc = search.replace(/[%_]/g, '\\$&'); params.search = `%${esc}%`; params.search2 = `%${esc}%` }
   sql += ' ORDER BY sort'
   const products = db.prepare(sql).all(params)
   res.json({ products, count: products.length })
@@ -57,7 +57,9 @@ router.put('/:id', requireAuth, (req, res) => {
   for (const f of fields) {
     if (req.body[f] !== undefined) {
       sets.push(`${f} = @${f}`)
-      params[f] = req.body[f]
+      let val = req.body[f]
+      if (f === 'featured' || f === 'active') val = val ? 1 : 0
+      params[f] = val
     }
   }
   if (!sets.length) return res.status(400).json({ error: 'Sin campos para actualizar' })
@@ -72,6 +74,20 @@ router.delete('/:id', requireAuth, (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Producto no encontrado' })
   db.prepare("UPDATE products SET active = 0, updated_at = datetime('now') WHERE id = ?").run(req.params.id)
   res.json({ message: 'Producto desactivado' })
+})
+
+router.post('/:id/deactivate', requireAuth, (req, res) => {
+  const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
+  if (!existing) return res.status(404).json({ error: 'Producto no encontrado' })
+  db.prepare("UPDATE products SET active = 0, updated_at = datetime('now') WHERE id = ?").run(req.params.id)
+  res.json({ message: 'Producto desactivado' })
+})
+
+router.post('/:id/activate', requireAuth, (req, res) => {
+  const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
+  if (!existing) return res.status(404).json({ error: 'Producto no encontrado' })
+  db.prepare("UPDATE products SET active = 1, updated_at = datetime('now') WHERE id = ?").run(req.params.id)
+  res.json({ message: 'Producto activado' })
 })
 
 export default router

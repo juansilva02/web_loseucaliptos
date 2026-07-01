@@ -1,5 +1,12 @@
 import crypto from 'node:crypto'
+import { db } from './db.js'
 
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET debe estar configurado en production')
+  }
+  console.warn('[auth] JWT_SECRET no configurado, usando fallback inseguro para desarrollo')
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production'
 const JWT_EXPIRES = '7d'
 const SALT_LENGTH = 32
@@ -72,6 +79,19 @@ export function requireAuth(req, res, next) {
   if (!payload) {
     return res.status(401).json({ error: 'Token inválido o expirado' })
   }
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(payload.id)
+  if (!user) {
+    return res.status(401).json({ error: 'Usuario no encontrado o eliminado' })
+  }
   req.user = payload
   next()
+}
+
+export function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Se requieren permisos de administrador' })
+    }
+    next()
+  })
 }

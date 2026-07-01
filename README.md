@@ -42,8 +42,8 @@ docs/ESTADO-PROYECTO.md  referencia operativa
 ## Datos dinámicos
 
 - **Catálogo** (`/catalogo`) y **destacados** del home leen de la API (`/api/catalog`, `/api/featured`). Lo que se carga/edita en el admin se refleja solo, sin redeploy.
-- **Destacados:** productos marcados `featured` en la DB (inicialmente, los que tienen precio). El admin puede cambiar cuáles son destacados.
-- Imágenes: se usa la subida del admin si existe; si no, cae a un asset bundleado por id.
+- **Destacados:** productos marcados `featured` en la DB. El admin puede cambiar cuáles son destacados.
+- Imágenes: se usa la subida del admin si existe; si no, cae a un asset bundleado por id o nombre. Sin imagen disponible muestra solo texto.
 
 ## Panel de administración
 
@@ -57,6 +57,13 @@ Editar local → `git push` → en el VPS:
 ssh <vps> "bash /opt/loseucaliptos/scripts/deploy.sh"
 # git pull + build frontend + docker backend + reload nginx + verificación
 ```
+
+## Seed inicial
+
+El primer deploy crea el usuario admin y los datos iniciales via `server/src/seed.js`.
+Las credenciales se definen por env:
+- `SEED_ADMIN_EMAIL` (default: `admin`)
+- `SEED_ADMIN_PASSWORD` (requerido si no hay usuarios)
 
 ## Desarrollo local
 

@@ -67,8 +67,12 @@ export const api = {
     return req(`/api/admin/products/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) })
   },
 
-  deleteProduct(id) {
-    return req(`/api/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  deactivateProduct(id) {
+    return req(`/api/admin/products/${encodeURIComponent(id)}/deactivate`, { method: 'POST' })
+  },
+
+  activateProduct(id) {
+    return req(`/api/admin/products/${encodeURIComponent(id)}/activate`, { method: 'POST' })
   },
 
   getCategories() {
