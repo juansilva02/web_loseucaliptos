@@ -302,6 +302,69 @@
 .admin-cat-count { font-size: 12px; color: #93a08d; }
 .admin-note { color: #93a08d; font-size: 12px; margin-top: 14px; }
 
+.admin-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.admin-review-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-review-block h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #2c342d;
+}
+
+.admin-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+.admin-review-card strong {
+  color: #1f2921;
+}
+
+.admin-review-card span {
+  font-size: 12px;
+  color: var(--admin-text-soft);
+}
+
+.admin-review-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-review-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(180, 35, 24, 0.12);
+  color: #8f2411;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .admin-foot { text-align: center; color: #8a978c; font-size: 12px; margin-top: 22px; }
 
 .admin-theme-forest {
@@ -338,4 +401,5 @@
   .admin-appearance-controls { width: 100%; }
   .admin-filter-bar { grid-template-columns: 1fr; }
   .admin-user-create-grid { grid-template-columns: 1fr; }
+  .admin-review-grid { grid-template-columns: 1fr; }
 }

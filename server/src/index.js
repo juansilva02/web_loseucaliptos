@@ -15,6 +15,10 @@ initSchema()
 
 const app = express()
 
+// El backend corre detras de un unico proxy reverso (Nginx en el VPS).
+// Esto permite usar X-Forwarded-For de forma segura para rate limiting y logs.
+app.set('trust proxy', 1)
+
 // Seguridad de headers
 app.use(helmet())
 
@@ -60,14 +64,14 @@ app.get('/api/catalog', (_req, res) => {
   const categories = db.prepare('SELECT key, name FROM categories ORDER BY sort').all()
   const products = db
     .prepare(
-      `SELECT id, name, category_key AS category, brand, unit, price, image_url AS image
+      `SELECT id, name, category_key AS category, brand, unit, price, image_url AS image, featured
        FROM products WHERE active = 1 ORDER BY sort`,
     )
     .all()
   res.json({ categories, products, count: products.length })
 })
 
-// Destacados: ruta publica (con active=1) y admin (todas)
+// Destacados publicos: derivados del catalogo activo con featured=1
 app.use('/api/featured', featuredRoutes)
 
 // Rutas administrativas (protegidas con JWT)
@@ -76,7 +80,6 @@ app.use('/api/admin/products', productRoutes)
 app.use('/api/admin/categories', categoryRoutes)
 app.use('/api/admin/raw-skus', rawSkuRoutes)
 app.use('/api/admin/upload', uploadRoutes)
-app.use('/api/admin/featured', featuredRoutes)
 
 const PORT = Number(process.env.PORT) || 3001
 

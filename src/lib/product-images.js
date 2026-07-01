@@ -39,3 +39,36 @@ export const productImages = {
   'TELGOPOR 12.5': imgTelgopor125,
   'UNIPOLAR 1 X2.5': imgCableUnipolar,
 }
+
+export const productImagesById = {
+  'ladrillo-hueco-12': imgLadrilloHueco12,
+  'ladrillo-hueco-8': imgLadrilloHueco8,
+  'ladrillo-comun': imgLadrilloComun,
+  'ladrillo-cordoba-mv': imgLadrilloCordoba,
+  'bloque-cemento-10': imgBloqueLiso10,
+  'bloque-cemento-13': imgBloqueLiso13,
+  'bloque-cemento-20': imgBloqueLiso20,
+  'telgopor-10': imgTelgopor10,
+  'telgopor-12-5': imgTelgopor125,
+  'portland-25kg': imgPortland25,
+  'cal-25kg': imgCalCacique,
+  'arena-bolson': imgArenaBolson,
+  'arena-fina-bolsa': imgArenaBolson,
+  'arena-gruesa-bolsa': imgArenaBolson,
+  'cascote-bolson': imgArenaBolson,
+  'piedra-partida': imgArenaBolson,
+  'hierro-4-2': imgHierro42,
+  'hierro-6': imgHierro6,
+  'hierro-8': imgHierro8,
+  'hierro-10': imgHierro10,
+  'pegamento-ceramica': imgPegamentoCeramica,
+  'cable-unipolar-2-5': imgCableUnipolar,
+}
+
+export function getBundledProductImage(product) {
+  if (!product) return null
+  const byId = product.id ? productImagesById[product.id] : null
+  if (byId) return byId
+  if (!product.name) return null
+  return productImages[String(product.name).toUpperCase()] || null
+}

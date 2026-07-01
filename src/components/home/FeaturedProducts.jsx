@@ -1,4 +1,5 @@
 import { categoryCards } from '../../lib/catalog'
+import { getCatalogQualitySummary } from '../../lib/catalog-quality'
 
 export default function FeaturedProducts({
   activeCategory,
@@ -14,6 +15,7 @@ export default function FeaturedProducts({
   setProductDraftQuantity,
   handleAddToCart,
   formatPrice,
+  onOpenProduct,
 }) {
   return (
     <section className="featured-section-figma" id="productos-destacados">
@@ -52,7 +54,10 @@ export default function FeaturedProducts({
       </div>
 
       <div className="products-grid">
-        {filteredProducts.map((product, index) => (
+        {filteredProducts.map((product, index) => {
+          const quality = getCatalogQualitySummary(product.excelName)
+
+          return (
           <article
             className={`product-card${highlightedProduct === index ? ' product-card-active' : ''}`}
             key={product.id}
@@ -60,20 +65,24 @@ export default function FeaturedProducts({
           >
             {product.image ? (
               <div className="product-visual-large product-visual-image-frame">
-                <img className="product-visual-image" src={product.image} alt={product.excelName} />
+                <img className="product-visual-image" src={product.image} alt={quality.displayName} />
               </div>
             ) : (
               <div className="product-visual-large" data-category={product.categoryKey}>
-                <span>{product.excelName}</span>
+                <span>{quality.displayName}</span>
               </div>
             )}
             <div className="product-copy">
-              <h3>{product.excelName}</h3>
+              <h3>{quality.displayName}</h3>
+              {quality.unavailable ? <p>No disponible por ahora</p> : null}
               <p>{product.subtitle}</p>
               <strong>{formatPrice(product.price)}</strong>
             </div>
             <div className="product-actions">
-              <div className="mini-quantity">
+              <button className="text-link-button" type="button" onClick={() => onOpenProduct(product)}>
+                Ver detalle
+              </button>
+              {!quality.unavailable ? <div className="mini-quantity">
                 <button type="button" aria-label="Disminuir cantidad" onClick={() => changeProductDraftQuantity(product.id, -1)}>
                   -
                 </button>
@@ -89,13 +98,16 @@ export default function FeaturedProducts({
                 <button type="button" aria-label="Aumentar cantidad" onClick={() => changeProductDraftQuantity(product.id, 1)}>
                   +
                 </button>
-              </div>
-              <button className="add-cart-button" type="button" onClick={() => handleAddToCart(product)}>
-                Agregar al carrito
-              </button>
+              </div> : null}
+              {!quality.unavailable ? (
+                <button className="add-cart-button" type="button" onClick={() => handleAddToCart(product)}>
+                  Agregar al carrito
+                </button>
+              ) : null}
             </div>
           </article>
-        ))}
+          )
+        })}
       </div>
     </section>
   )

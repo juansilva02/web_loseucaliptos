@@ -9,8 +9,8 @@ import Hero from './components/home/Hero'
 import PurchaseSteps from './components/home/PurchaseSteps'
 import SiteFooter from './components/home/SiteFooter'
 import SiteHeader from './components/home/SiteHeader'
+import ProductQuickView from './components/ProductQuickView'
 import { api } from './admin/api'
-import featuredCatalogFallback from './data/featured-catalog.json'
 import { benefitTicker, branches, faqs, heroSignals, promoImages, purchaseSteps } from './data/siteContent'
 import { useCart } from './context/useCart'
 import { useAutoRotate, useScrolled } from './hooks'
@@ -18,38 +18,15 @@ import {
   categoryCards,
   formatPrice,
   normalizeText,
-  resolveImage,
-  storefrontProducts,
   whatsappBase,
   whatsappBosques,
 } from './lib/catalog'
-import { productImages } from './lib/product-images'
 import './App.css'
 
 const CatalogPage = lazy(() => import('./pages/CatalogPage'))
 const Locations = lazy(() => import('./components/home/Locations'))
 const PromoCarousel = lazy(() => import('./components/home/PromoCarousel'))
 const FaqSection = lazy(() => import('./components/home/FaqSection'))
-
-function getCuratedShowcase(featuredItems) {
-  return featuredItems.map((item, index) => {
-    const match = storefrontProducts.find((product) => normalizeText(product.rawName).includes(item.match))
-    const category = categoryCards.find((entry) => entry.key === item.categoryKey)
-
-    return {
-      id: match?.id ?? `showcase-${index}`,
-      code: match?.code ?? `SC-${index + 1}`,
-      price: item.priceOverride ?? match?.price ?? 0,
-      excelName: item.title,
-      subtitle: item.subtitle,
-      categoryKey: item.category_key || item.categoryKey,
-      categoryName: category?.name ?? 'Materiales',
-      brandName: match?.brandName ?? '',
-      sourceName: match?.excelName ?? item.title,
-      image: resolveImage(item.image_url || item.image) ?? productImages[item.match] ?? null,
-    }
-  })
-}
 
 function buildWhatsappOrderMessage({ items, subtotal }) {
   const itemLines = items.map((item) => `- ${item.name} x${item.quantity} | ${formatPrice(item.price * item.quantity)}`)
@@ -77,7 +54,8 @@ function App() {
   const [activeLocation, setActiveLocation] = useState(0)
   const [activePromo, setActivePromo] = useState(0)
   const [stepsPaused, setStepsPaused] = useState(false)
-  const [apiFeatured, setApiFeatured] = useState(() => featuredCatalogFallback.featured)
+  const [apiFeatured, setApiFeatured] = useState([])
+  const [quickViewProduct, setQuickViewProduct] = useState(null)
   const [deliveryLocation, setDeliveryLocation] = useState(() => {
     try {
       return JSON.parse(window.localStorage.getItem('eucaliptus-delivery-location')) ?? null
@@ -102,10 +80,10 @@ function App() {
 
     api.getPublicFeatured()
       .then((res) => {
-        if (!cancelled && res.featured?.length) setApiFeatured(res.featured)
+        if (!cancelled) setApiFeatured(res.featured || [])
       })
       .catch(() => {
-        // fallback al JSON importado
+        if (!cancelled) setApiFeatured([])
       })
 
     return () => {
@@ -113,7 +91,20 @@ function App() {
     }
   }, [])
 
-  const featuredProducts = useMemo(() => getCuratedShowcase(apiFeatured), [apiFeatured])
+  const featuredProducts = useMemo(() => {
+    return apiFeatured.map((product) => {
+      const category = categoryCards.find((entry) => entry.key === product.categoryKey)
+      const subtitle = [product.brandName, product.unit ? `Venta por ${product.unit}` : '']
+        .filter(Boolean)
+        .join(' · ')
+
+      return {
+        ...product,
+        subtitle: subtitle || category?.description || 'Material disponible para entrega y retiro.',
+        publicBlurb: category?.description || '',
+      }
+    })
+  }, [apiFeatured])
 
   const filteredProducts = useMemo(() => {
     const term = normalizeText(featuredSearch.trim())
@@ -160,6 +151,11 @@ function App() {
   const handleAddToCart = (product) => {
     addItem(product, getProductDraftQuantity(product.id))
     setProductQuantities((current) => ({ ...current, [product.id]: 1 }))
+  }
+
+  const handleQuickViewQuantity = (productId, value) => {
+    const parsed = parseInt(value, 10)
+    setProductQuantities((current) => ({ ...current, [productId]: parsed > 0 ? parsed : 1 }))
   }
 
   const handleCoverageResult = (nextLocation) => {
@@ -212,6 +208,7 @@ function App() {
             setProductDraftQuantity={setProductDraftQuantity}
             handleAddToCart={handleAddToCart}
             formatPrice={formatPrice}
+            onOpenProduct={setQuickViewProduct}
           />
           <PurchaseSteps
             purchaseSteps={purchaseSteps}
@@ -259,13 +256,28 @@ function App() {
         </svg>
       </a>
 
-      <FloatingCartButton
-        itemCount={itemCount}
-        floatingCartItems={floatingCartItems}
-        subtotal={subtotal}
-        formatPrice={formatPrice}
-        setShowCart={setShowCart}
+      <ProductQuickView
+        product={quickViewProduct}
+        quantity={quickViewProduct ? getProductDraftQuantity(quickViewProduct.id) : 1}
+        onClose={() => setQuickViewProduct(null)}
+        onChangeQuantity={(value) => quickViewProduct && handleQuickViewQuantity(quickViewProduct.id, value)}
+        onAddToCart={() => {
+          if (!quickViewProduct) return
+          handleAddToCart(quickViewProduct)
+          setQuickViewProduct(null)
+          setShowCart(true)
+        }}
       />
+
+      {!showCart ? (
+        <FloatingCartButton
+          itemCount={itemCount}
+          floatingCartItems={floatingCartItems}
+          subtotal={subtotal}
+          formatPrice={formatPrice}
+          setShowCart={setShowCart}
+        />
+      ) : null}
 
       {showCoverage ? (
         <CoverageChecker

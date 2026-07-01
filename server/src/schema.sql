@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS raw_skus (
   code       INTEGER PRIMARY KEY,
   name       TEXT NOT NULL,
+  rubro      TEXT DEFAULT '',
   price      INTEGER DEFAULT 0,
+  cost       INTEGER,
   stock      INTEGER,
   added      INTEGER DEFAULT 0,          -- 1 si ya se promovio al catalogo
   updated_at TEXT

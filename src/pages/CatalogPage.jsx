@@ -1,62 +1,26 @@
 import { useState, useMemo, useEffect } from 'react'
-import { formatPrice, resolveImage, whatsappBase } from '../lib/catalog'
+import ProductQuickView from '../components/ProductQuickView'
 import { useCart } from '../context/useCart'
+import { formatPrice, normalizeText, resolveImage, whatsappBase } from '../lib/catalog'
+import { getCatalogQualitySummary } from '../lib/catalog-quality'
+import { getBundledProductImage } from '../lib/product-images'
 import './CatalogPage.css'
 
-import imgLadrilloHueco12 from '../assets/featured-products/ladrillo-hueco-12.webp'
-import imgLadrilloHueco8 from '../assets/featured-products/ladrillo-hueco-8.webp'
-import imgLadrilloComun from '../assets/featured-products/ladrillo-comun.webp'
-import imgLadrilloCordoba from '../assets/featured-products/ladrillo-cordoba-media-vista.webp'
-import imgBloqueLiso10 from '../assets/featured-products/bloque-liso-10.webp'
-import imgBloqueLiso13 from '../assets/featured-products/bloque-liso-13.webp'
-import imgBloqueLiso20 from '../assets/featured-products/bloque-liso-20.webp'
-import imgTelgopor10 from '../assets/featured-products/telgopor-10.webp'
-import imgTelgopor125 from '../assets/featured-products/telgopor-12-5.webp'
-import imgPortland25 from '../assets/featured-products/portland-25kg.webp'
-import imgCalCacique from '../assets/featured-products/cal-cacique-25kg.webp'
-import imgArenaBolson from '../assets/featured-products/arena-bolson.webp'
-import imgArenaSupelta from '../assets/featured-products/arena-suelta.webp'
-import imgCascoteBolson from '../assets/featured-products/cascote-bolson.webp'
-import imgPiedraBolson from '../assets/featured-products/piedra-bolson.webp'
-import imgHierro42 from '../assets/featured-products/hierro-4-2.webp'
-import imgHierro6 from '../assets/featured-products/hierro-6.webp'
-import imgHierro8 from '../assets/featured-products/hierro-8.webp'
-import imgHierro10 from '../assets/featured-products/hierro-10.webp'
-import imgHierro12 from '../assets/featured-products/hierro-12.webp'
-import imgPegamentoCeramica from '../assets/featured-products/pegamento-ceramica.webp'
-import imgCableUnipolar from '../assets/featured-products/cable-unipolar-2-5.webp'
-
-const productImageMap = {
-  'ladrillo-hueco-12':    imgLadrilloHueco12,
-  'ladrillo-hueco-8':     imgLadrilloHueco8,
-  'ladrillo-comun':       imgLadrilloComun,
-  'ladrillo-cordoba-mv':  imgLadrilloCordoba,
-  'bloque-cemento-10':    imgBloqueLiso10,
-  'bloque-cemento-13':    imgBloqueLiso13,
-  'bloque-cemento-20':    imgBloqueLiso20,
-  'telgopor-10':          imgTelgopor10,
-  'telgopor-12-5':        imgTelgopor125,
-  'portland-25kg':        imgPortland25,
-  'cal-25kg':             imgCalCacique,
-  'arena-bolson':         imgArenaBolson,
-  'arena-fina-bolsa':     imgArenaSupelta,
-  'arena-gruesa-bolsa':   imgArenaSupelta,
-  'cascote-bolson':       imgCascoteBolson,
-  'piedra-partida':       imgPiedraBolson,
-  'hierro-4-2':           imgHierro42,
-  'hierro-6':             imgHierro6,
-  'hierro-8':             imgHierro8,
-  'hierro-10':            imgHierro10,
-  'hierro-12':            imgHierro12,
-  'pegamento-ceramica':   imgPegamentoCeramica,
-  'cable-unipolar-2-5':   imgCableUnipolar,
+function toCatalogCardProduct(product, categoryMap) {
+  return {
+    id: product.id,
+    code: product.id,
+    excelName: product.name,
+    price: product.price,
+    brandName: product.brand || '',
+    categoryKey: product.category,
+    categoryName: categoryMap[product.category] ?? product.category ?? 'Materiales',
+    unit: product.unit || 'unidad',
+    image: product.image || '',
+    featured: product.featured === 1,
+    quality: getCatalogQualitySummary(product.name),
+  }
 }
-
-const normalize = (str) =>
-  String(str)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
 
 export default function CatalogPage({ onBack, onOpenCart }) {
   const { addItem, itemCount, subtotal } = useCart()
@@ -64,7 +28,8 @@ export default function CatalogPage({ onBack, onOpenCart }) {
   const [activeCategory, setActiveCategory] = useState('all')
   const [quantities, setQuantities] = useState({})
   const [catalog, setCatalog] = useState({ categories: [], products: [] })
-  const [status, setStatus] = useState('loading') // loading | ok | error
+  const [status, setStatus] = useState('loading')
+  const [selectedProduct, setSelectedProduct] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -93,23 +58,21 @@ export default function CatalogPage({ onBack, onOpenCart }) {
   }, [catalog.categories])
 
   const categoryCounts = useMemo(() => {
-    const visible = catalog.products.filter((p) => !p.hidden)
-    const counts = { all: visible.length }
-    for (const p of visible) {
+    const counts = { all: catalog.products.length }
+    for (const p of catalog.products) {
       counts[p.category] = (counts[p.category] || 0) + 1
     }
     return counts
   }, [catalog.products])
 
   const filtered = useMemo(() => {
-    const term = normalize(search.trim())
+    const term = normalizeText(search.trim())
     return catalog.products.filter((p) => {
-      if (p.hidden) return false
       const matchesSearch =
         !term ||
-        normalize(p.name).includes(term) ||
-        normalize(p.brand).includes(term) ||
-        normalize(categoryMap[p.category] ?? '').includes(term)
+        normalizeText(p.name).includes(term) ||
+        normalizeText(p.brand).includes(term) ||
+        normalizeText(categoryMap[p.category] ?? '').includes(term)
       const matchesCategory = activeCategory === 'all' || p.category === activeCategory
       return matchesSearch && matchesCategory
     })
@@ -117,25 +80,17 @@ export default function CatalogPage({ onBack, onOpenCart }) {
 
   const getQty = (id) => quantities[id] ?? 1
 
-  const changeQty = (id, delta) =>
-    setQuantities((prev) => ({ ...prev, [id]: Math.max(1, (prev[id] ?? 1) + delta) }))
-
   const setQty = (id, value) => {
     const parsed = parseInt(value, 10)
     setQuantities((prev) => ({ ...prev, [id]: parsed > 0 ? parsed : 1 }))
   }
 
+  const changeQty = (id, delta) => {
+    setQuantities((prev) => ({ ...prev, [id]: Math.max(1, (prev[id] ?? 1) + delta) }))
+  }
+
   const handleAdd = (product) => {
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        brandName: product.brand,
-        categoryName: categoryMap[product.category] ?? product.category,
-      },
-      getQty(product.id),
-    )
+    addItem(product, getQty(product.id))
     setQuantities((prev) => ({ ...prev, [product.id]: 1 }))
   }
 
@@ -146,11 +101,11 @@ export default function CatalogPage({ onBack, onOpenCart }) {
           ← Volver
         </button>
         <div className="catalog-header-title">
-          <h1>Catálogo</h1>
-          <span>{status === 'ok' ? `${catalog.products.length} productos` : 'Cargando…'}</span>
+          <h1>Catalogo</h1>
+          <span>{status === 'ok' ? `${catalog.products.length} productos` : 'Cargando...'}</span>
         </div>
         <button className="catalog-cart-btn" type="button" onClick={onOpenCart}>
-          <strong>Mi carrito — {itemCount} items</strong>
+          <strong>Mi carrito - {itemCount} items</strong>
           <span>{formatPrice(subtotal)}</span>
         </button>
       </header>
@@ -160,22 +115,22 @@ export default function CatalogPage({ onBack, onOpenCart }) {
           <input
             type="search"
             className="catalog-search-input"
-            placeholder="Buscar producto, marca o categoría..."
+            placeholder="Buscar producto, marca o categoria..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoComplete="off"
             autoFocus
           />
-          {search && (
+          {search ? (
             <button
               className="catalog-search-clear"
               type="button"
               onClick={() => setSearch('')}
-              aria-label="Limpiar búsqueda"
+              aria-label="Limpiar busqueda"
             >
               ×
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -202,10 +157,10 @@ export default function CatalogPage({ onBack, onOpenCart }) {
       </div>
 
       {status === 'loading' ? (
-        <div className="route-loading">Cargando catálogo…</div>
+        <div className="route-loading">Cargando catalogo...</div>
       ) : status === 'error' ? (
         <div className="catalog-empty">
-          <p>No se pudo cargar el catálogo. Reintentá en unos minutos.</p>
+          <p>No se pudo cargar el catalogo. Reintenta en unos minutos.</p>
           <button type="button" onClick={() => window.location.reload()}>
             Reintentar
           </button>
@@ -225,56 +180,67 @@ export default function CatalogPage({ onBack, onOpenCart }) {
         </div>
       ) : (
         <div className="catalog-grid">
-          {filtered.map((product) => {
-            const catName = categoryMap[product.category]
+          {filtered.map((rawProduct) => {
+            const product = toCatalogCardProduct(rawProduct, categoryMap)
             const qty = getQty(product.id)
-            const imgSrc = resolveImage(product.image) ?? productImageMap[product.id]
-            const consultHref = `${whatsappBase}?text=${encodeURIComponent(
-              `Hola, consulto precio de: ${product.name}`,
-            )}`
+            const imgSrc = resolveImage(product.image) || getBundledProductImage({ id: product.id, name: product.excelName })
+            const consultHref = `${whatsappBase}?text=${encodeURIComponent(`Hola, consulto precio de: ${product.quality.displayName}`)}`
 
             return (
-              <article className="catalog-card" key={product.id} data-category={product.category}>
+              <article className="catalog-card" key={product.id} data-category={product.categoryKey}>
                 {imgSrc ? (
-                  <div className="catalog-card-visual catalog-card-visual-image">
+                  <button
+                    type="button"
+                    className="catalog-card-visual catalog-card-visual-image catalog-card-open"
+                    onClick={() => setSelectedProduct(product)}
+                  >
                     <img
                       src={imgSrc}
-                      alt={product.name}
+                      alt={product.quality.displayName}
                       className="catalog-card-img"
                       loading="lazy"
                     />
-                  </div>
+                  </button>
                 ) : (
-                  <div className="catalog-card-visual">
-                    <span>{product.name}</span>
-                  </div>
+                  <button
+                    type="button"
+                    className="catalog-card-visual catalog-card-open"
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    <span>{product.quality.displayName}</span>
+                  </button>
                 )}
                 <div className="catalog-card-info">
                   <div className="catalog-card-meta">
-                    <span className="catalog-badge">{catName}</span>
+                    <span className="catalog-badge">{product.categoryName}</span>
+                    {product.featured ? <span className="catalog-featured-pill">Destacado</span> : null}
+                    {product.quality.unavailable ? <span className="catalog-unavailable-pill">No disponible</span> : null}
                   </div>
                   <div className="catalog-card-body">
-                    <h2>{product.name}</h2>
-                    <p className="catalog-brand">{product.brand || 'Sin marca'}</p>
+                    <h2>{product.quality.displayName}</h2>
+                    <p className="catalog-brand">{product.brandName || 'Sin marca'}</p>
                   </div>
                   <div className="catalog-price-block">
-                    {product.price > 0 ? (
+                    {product.price > 0 && !product.quality.unavailable ? (
                       <>
                         <strong className="catalog-price">{formatPrice(product.price)}</strong>
-                        <span className="catalog-unit">Por {product.unit}</span>
-                        <span className="catalog-installments">💳 Credito: 1 a 3 cuotas 20% int. · 4 a 6 cuotas 29%</span>
+                        <span className="catalog-unit">Efectivo, transferencia y debito. Sin descuento.</span>
+                        <span className="catalog-installments">Credito: 1 a 3 cuotas +20% · 4 a 6 cuotas +29%</span>
                       </>
                     ) : (
                       <>
-                        <strong className="catalog-price catalog-price-consult">A consultar</strong>
+                        <strong className="catalog-price catalog-price-consult">{product.quality.unavailable ? 'No disponible' : 'A consultar'}</strong>
                         <span className="catalog-unit">Por {product.unit} · respuesta por WhatsApp</span>
                       </>
                     )}
                   </div>
                   <div className="catalog-card-actions">
-                    <div className="mini-quantity">
+                    <button type="button" className="catalog-detail-btn" onClick={() => setSelectedProduct(product)}>
+                      Ver detalle
+                    </button>
+                    {!product.quality.unavailable ? <div className="mini-quantity">
                       <button type="button" aria-label="Disminuir cantidad" onClick={() => changeQty(product.id, -1)}>
-                        −
+                        -
                       </button>
                       <input
                         className="mini-quantity-input"
@@ -288,10 +254,9 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                       <button type="button" aria-label="Aumentar cantidad" onClick={() => changeQty(product.id, 1)}>
                         +
                       </button>
-                    </div>
-                    {product.price > 0 ? (
+                    </div> : null}
+                    {product.price > 0 && !product.quality.unavailable ? (
                       <button className="add-cart-button" type="button" onClick={() => handleAdd(product)}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                         Agregar
                       </button>
                     ) : (
@@ -308,8 +273,21 @@ export default function CatalogPage({ onBack, onOpenCart }) {
       )}
 
       <p className="catalog-footer-note">
-        Precios en pesos argentinos sujetos a actualización.
+        Precios en pesos argentinos sujetos a actualizacion.
       </p>
+
+      <ProductQuickView
+        product={selectedProduct}
+        quantity={selectedProduct ? getQty(selectedProduct.id) : 1}
+        onClose={() => setSelectedProduct(null)}
+        onChangeQuantity={(value) => selectedProduct && setQty(selectedProduct.id, value)}
+        onAddToCart={() => {
+          if (!selectedProduct) return
+          handleAdd(selectedProduct)
+          setSelectedProduct(null)
+          onOpenCart()
+        }}
+      />
     </div>
   )
 }

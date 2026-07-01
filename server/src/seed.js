@@ -21,7 +21,7 @@ const insProduct = db.prepare(`
   VALUES (@id, @name, @category_key, @brand, @unit, @price, @featured, @sort)
 `)
 const insRaw = db.prepare(
-  'INSERT OR IGNORE INTO raw_skus (code, name, price, stock, updated_at) VALUES (?, ?, ?, ?, ?)',
+  'INSERT OR IGNORE INTO raw_skus (code, name, rubro, price, cost, stock, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
 )
 const insFeatured = db.prepare(`
   INSERT OR IGNORE INTO featured (id, title, subtitle, match, category_key, price_override, sort, active)
@@ -48,7 +48,7 @@ const seedProducts = db.transaction((products) => {
 })
 
 const seedRaw = db.transaction((skus) => {
-  skus.forEach((s) => insRaw.run(s.code, s.name, s.price || 0, s.stock ?? null, s.updatedAt || null))
+  skus.forEach((s) => insRaw.run(s.code, s.name, s.rubro || '', s.price || 0, s.cost ?? null, s.stock ?? null, s.updatedAt || null))
 })
 
 const seedFeatured = db.transaction((items) => {

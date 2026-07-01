@@ -230,6 +230,12 @@
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
+.catalog-card-open {
+  border: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
 .catalog-card:hover {
   transform: translateY(-4px);
   border-color: rgba(219, 58, 30, 0.28);
@@ -311,6 +317,8 @@
 .catalog-card-meta {
   display: flex;
   align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .catalog-badge {
@@ -411,16 +419,29 @@
 .catalog-installments {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #15803d;
+  color: #8f2411;
 }
 
 /* ── Actions ────────────────────────────────────────────── */
 
 .catalog-card-actions {
   display: grid;
-  grid-template-columns: 84px 1fr;
+  grid-template-columns: 1fr 84px 1fr;
   gap: 8px;
   margin-top: auto;
+}
+
+.catalog-detail-btn {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid rgba(23, 20, 17, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1a1410;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 /* Override App.css global sizes for catalog card context */
@@ -456,6 +477,32 @@
   text-decoration: none;
   text-align: center;
   width: 100%;
+}
+
+.catalog-featured-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(219, 58, 30, 0.12);
+  color: #8f2411;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.catalog-unavailable-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(177, 50, 22, 0.12);
+  color: #8f2411;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 /* ── Empty state ────────────────────────────────────────── */

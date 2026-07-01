@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { resolveImage } from '../lib/catalog'
+import { getCatalogQualitySummary } from '../lib/catalog-quality'
 import { api } from './api'
 import { extensionFromDataUrl, imagePath, slugify } from './catalogStore'
 import './AdminPage.css'
@@ -9,14 +10,6 @@ const ADMIN_THEME_PRESETS = {
   forest: { label: 'Bosque', shellClass: 'admin-theme-forest' },
   sand: { label: 'Arena', shellClass: 'admin-theme-sand' },
   graphite: { label: 'Grafito', shellClass: 'admin-theme-graphite' },
-}
-
-const EMPTY_FEATURED = {
-  title: '',
-  subtitle: '',
-  match: '',
-  category_key: '',
-  price_override: null,
 }
 
 const EMPTY_PRODUCT = {
@@ -171,6 +164,7 @@ export default function AdminPage() {
   const [featuredCategoryFilter, setFeaturedCategoryFilter] = useState('all')
   const [featuredStatusFilter, setFeaturedStatusFilter] = useState('all')
   const [categoryQuery, setCategoryQuery] = useState('')
+  const [reviewQuery, setReviewQuery] = useState('')
   const [users, setUsers] = useState([])
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
@@ -178,7 +172,7 @@ export default function AdminPage() {
 
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
-  const [featuredItems, setFeaturedItems] = useState([])
+  const [rawSkus, setRawSkus] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [appearance, setAppearance] = useState(() => loadAdminAppearance())
@@ -196,16 +190,16 @@ export default function AdminPage() {
   const syncFromServer = async () => {
     setLoading(true)
     try {
-      const [prodRes, catRes, featRes, usersRes] = await Promise.all([
+      const [prodRes, catRes, usersRes] = await Promise.all([
         api.getProducts({ all: '1' }),
         api.getCategories(),
-        api.getFeatured(),
         api.getUsers(),
       ])
+      const rawRes = await api.getRawSkus({ added: '0' })
       setProducts(prodRes.products)
       setCategories(catRes.categories)
-      setFeaturedItems(featRes.featured)
       setUsers(usersRes.users || [])
+      setRawSkus(rawRes.skus || [])
     } catch (err) {
       flash(`Error al cargar datos: ${err.message}`)
     } finally {
@@ -216,13 +210,13 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return
     let cancelled = false
-    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getFeatured(), api.getUsers()])
-      .then(([prodRes, catRes, featRes, usersRes]) => {
+    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getUsers(), api.getRawSkus({ added: '0' })])
+      .then(([prodRes, catRes, usersRes, rawRes]) => {
         if (!cancelled) {
           setProducts(prodRes.products)
           setCategories(catRes.categories)
-          setFeaturedItems(featRes.featured)
           setUsers(usersRes.users || [])
+          setRawSkus(rawRes.skus || [])
           setLoading(false)
         }
       })
@@ -238,68 +232,6 @@ export default function AdminPage() {
     }
   }, [authed])
 
-  const updateFeaturedItem = (index, patch) =>
-    setFeaturedItems((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
-
-  const removeFeaturedItem = (index) =>
-    setFeaturedItems((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
-
-  const addFeaturedItem = () => {
-    const key = categories[0]?.key || ''
-    setFeaturedItems((prev) => [{ ...EMPTY_FEATURED, id: `nuevo-${Date.now()}`, category_key: key }, ...prev])
-  }
-
-  const uploadFeaturedImage = async (index, dataUrl) => {
-    const item = featuredItems[index]
-    const ext = extensionFromDataUrl(dataUrl)
-    const base = item.id?.replace(/^nuevo-/, '') || slugify(item.title) || `destacado-${index}`
-    const fileName = `${base}.${ext}`
-    try {
-      await api.uploadImage(fileName, dataUrl)
-      updateFeaturedItem(index, { image_url: `product-images/${fileName}`, _preview: dataUrl })
-      flash(`Imagen subida: ${fileName}`)
-    } catch (err) {
-      flash(`Error al subir imagen: ${err.message}`)
-    }
-  }
-
-  const removeFeaturedImage = (index) => {
-    updateFeaturedItem(index, { image_url: '', _preview: undefined })
-  }
-
-  const saveFeaturedItems = async () => {
-    setSaving(true)
-    let ok = 0
-    let fail = 0
-    for (const item of featuredItems) {
-      try {
-        const body = {
-          title: item.title,
-          subtitle: item.subtitle || '',
-          match: item.match || '',
-          category_key: item.category_key || '',
-          price_override: item.price_override ?? null,
-          image_url: item.image_url || '',
-          active: item.active ?? 1,
-        }
-        const exists = item.id && !item.id.startsWith('nuevo-')
-        if (exists) {
-          await api.updateFeatured(item.id, body)
-        } else {
-          const id = item.id || `featured-${Date.now()}`
-          await api.createFeatured({ ...body, id })
-        }
-        ok++
-      } catch (err) {
-        fail++
-        console.error(`Error guardando destacado ${item.id || item.title}:`, err)
-      }
-    }
-    setSaving(false)
-    flash(`${ok} destacado(s) guardado(s)${fail ? `, ${fail} error(es)` : ''}`)
-    if (ok) syncFromServer()
-  }
-
   const updateProduct = (index, patch) =>
     setProducts((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
 
@@ -308,7 +240,7 @@ export default function AdminPage() {
 
   const addProduct = () => {
     const key = categories[0]?.key || ''
-    setProducts((prev) => [{ ...EMPTY_PRODUCT, category_key: key, id: `nuevo-${Date.now()}` }, ...prev])
+    setProducts((prev) => [{ ...EMPTY_PRODUCT, category_key: key, id: `nuevo-${prev.length + 1}` }, ...prev])
   }
 
   const uploadProductImage = async (index, dataUrl) => {
@@ -362,7 +294,7 @@ export default function AdminPage() {
     setSaving(true)
     let ok = 0
     let fail = 0
-    for (const product of products) {
+    for (const [index, product] of products.entries()) {
       try {
         const body = {
           name: product.name,
@@ -370,13 +302,15 @@ export default function AdminPage() {
           brand: product.brand || '',
           unit: product.unit || '',
           price: product.price ?? 0,
+          image_url: product.image_url || '',
+          featured: product.featured ? 1 : 0,
           active: product.active ?? 1,
         }
         const exists = product.id && !product.id.startsWith('nuevo-')
         if (exists) {
           await api.updateProduct(product.id, body)
         } else {
-          body.id = product.id || slugify(product.name) || `prod-${Date.now()}`
+          body.id = product.id || slugify(product.name) || `prod-${index + 1}`
           await api.createProduct(body)
         }
         ok++
@@ -411,12 +345,13 @@ export default function AdminPage() {
     total: products.length,
     active: products.filter((product) => product.active !== 0).length,
     consult: products.filter((product) => !product.price || Number(product.price) <= 0).length,
+    featured: products.filter((product) => product.featured === 1).length,
   }
 
   const featuredStats = {
-    total: featuredItems.length,
-    active: featuredItems.filter((item) => item.active !== 0).length,
-    withOverride: featuredItems.filter((item) => !!item.price_override).length,
+    total: products.length,
+    active: products.filter((item) => item.active !== 0).length,
+    featured: products.filter((item) => item.featured === 1).length,
   }
 
   const filteredProducts = products.filter((product) => {
@@ -433,24 +368,55 @@ export default function AdminPage() {
     return matchesQuery([product.name, product.brand, product.id, categoryKey], query) && matchesCategory && matchesStatus
   })
 
-  const filteredFeaturedItems = featuredItems.filter((item) => {
+  const filteredFeaturedItems = products.filter((item) => {
     const query = featuredQuery.trim().toLowerCase()
-    const categoryKey = item.category_key || ''
+    const categoryKey = item.category_key || item.category || ''
     const matchesCategory = featuredCategoryFilter === 'all' || categoryKey === featuredCategoryFilter
     const isActive = item.active !== 0
     const matchesStatus =
       featuredStatusFilter === 'all' ||
-      (featuredStatusFilter === 'active' && isActive) ||
+      (featuredStatusFilter === 'featured' && item.featured === 1) ||
+      (featuredStatusFilter === 'not_featured' && item.featured !== 1) ||
       (featuredStatusFilter === 'inactive' && !isActive) ||
-      (featuredStatusFilter === 'priced' && !!item.price_override)
+      (featuredStatusFilter === 'active' && isActive)
 
-    return matchesQuery([item.title, item.subtitle, item.match, item.id, categoryKey], query) && matchesCategory && matchesStatus
+    return matchesQuery([item.name, item.brand, item.id, categoryKey], query) && matchesCategory && matchesStatus
   })
 
   const filteredCategories = categories.filter((category) => {
     const query = categoryQuery.trim().toLowerCase()
     return matchesQuery([category.key, category.name], query)
   })
+
+  const reviewProducts = products
+    .map((product) => ({
+      ...product,
+      quality: getCatalogQualitySummary(product.name),
+    }))
+    .filter((product) => {
+      const categoryKey = product.category_key || product.category || ''
+      return product.quality.needsReview && matchesQuery([product.name, product.id, categoryKey], reviewQuery.trim().toLowerCase())
+    })
+
+  const reviewStats = {
+    flaggedProducts: reviewProducts.length,
+    unavailableProducts: products.filter((product) => getCatalogQualitySummary(product.name).unavailable).length,
+    pendingRaw: rawSkus.length,
+    productsWithoutCategory: products.filter((product) => !(product.category_key || product.category)).length,
+  }
+
+  const promoteRawSku = async (sku) => {
+    setSaving(true)
+    try {
+      await api.promoteSku(sku.code, { category_key: sku.suggested_category_key })
+      flash(`SKU ${sku.code} promovido con categoria sugerida`)
+      syncFromServer()
+    } catch (err) {
+      flash(`Error al promover SKU ${sku.code}: ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const logout = () => {
     api.logout()
@@ -572,7 +538,10 @@ export default function AdminPage() {
           Categorias <em>{categories.length}</em>
         </button>
         <button className={tab === 'featured' ? 'active' : ''} onClick={() => setTab('featured')}>
-          Destacados (home) <em>{featuredItems.length}</em>
+          Destacados (home) <em>{products.filter((item) => item.featured === 1).length}</em>
+        </button>
+        <button className={tab === 'review' ? 'active' : ''} onClick={() => setTab('review')}>
+          Revision <em>{reviewStats.flaggedProducts + reviewStats.pendingRaw}</em>
         </button>
         <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>
           Usuarios <em>{users.length}</em>
@@ -608,6 +577,10 @@ export default function AdminPage() {
             <div className="admin-kpi-card">
               <span>A consultar</span>
               <strong>{productStats.consult}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>En home</span>
+              <strong>{productStats.featured}</strong>
             </div>
             <div className="admin-kpi-card admin-kpi-card-muted">
               <span>En vista</span>
@@ -655,7 +628,7 @@ export default function AdminPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Estado</th><th></th>
+                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Home</th><th>Estado</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -682,6 +655,15 @@ export default function AdminPage() {
                         <td><input className="admin-input-sm" value={product.unit || ''} onChange={(event) => updateProduct(index, { unit: event.target.value })} /></td>
                         <td>
                           <PriceField value={product.price} onChange={(value) => updateProduct(index, { price: value ?? 0 })} consultLabel="A consultar" />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`admin-toggle${product.featured === 1 ? ' admin-toggle-on' : ''}`}
+                            onClick={() => updateProduct(index, { featured: product.featured === 1 ? 0 : 1 })}
+                          >
+                            {product.featured === 1 ? 'Visible' : 'Oculto'}
+                          </button>
                         </td>
                         <td>
                           <button
@@ -762,18 +744,16 @@ export default function AdminPage() {
       {tab === 'featured' ? (
         <section className="admin-section">
           <div className="admin-howto">
-            Los destacados son los productos que aparecen en la portada con imagen.
-            Se editan y <strong>se guardan directo al servidor</strong>.
+            Los destacados ahora salen del catalogo real. Solo activas o desactivas que producto va al home.
           </div>
 
           <div className="admin-section-head">
-            <p>Productos con imagen que aparecen en la portada. El precio puede sobrescribir al del catalogo.</p>
+            <p>Usa esta vista para decidir que productos del catalogo aparecen en portada y ajustar su imagen si hace falta.</p>
             <div className="admin-section-actions">
               <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading}>
                 Recargar
               </button>
-              <button className="admin-btn admin-btn-primary" onClick={addFeaturedItem}>+ Agregar destacado</button>
-              <button className="admin-btn admin-btn-primary" onClick={saveFeaturedItems} disabled={saving}>
+              <button className="admin-btn admin-btn-primary" onClick={saveProducts} disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
@@ -781,7 +761,7 @@ export default function AdminPage() {
 
           <div className="admin-kpi-row">
             <div className="admin-kpi-card">
-              <span>Total</span>
+              <span>Catalogo</span>
               <strong>{featuredStats.total}</strong>
             </div>
             <div className="admin-kpi-card">
@@ -789,8 +769,8 @@ export default function AdminPage() {
               <strong>{featuredStats.active}</strong>
             </div>
             <div className="admin-kpi-card">
-              <span>Precio manual</span>
-              <strong>{featuredStats.withOverride}</strong>
+              <span>En home</span>
+              <strong>{featuredStats.featured}</strong>
             </div>
             <div className="admin-kpi-card admin-kpi-card-muted">
               <span>En vista</span>
@@ -802,7 +782,7 @@ export default function AdminPage() {
             <input
               className="admin-filter-search"
               type="search"
-              placeholder="Buscar por titulo, match, ID o categoria"
+              placeholder="Buscar por nombre, marca, ID o categoria"
               value={featuredQuery}
               onChange={(event) => setFeaturedQuery(event.target.value)}
             />
@@ -814,9 +794,10 @@ export default function AdminPage() {
             </select>
             <select value={featuredStatusFilter} onChange={(event) => setFeaturedStatusFilter(event.target.value)}>
               <option value="all">Todos los estados</option>
+              <option value="featured">En home</option>
+              <option value="not_featured">Fuera del home</option>
               <option value="active">Activos</option>
               <option value="inactive">Inactivos</option>
-              <option value="priced">Con precio manual</option>
             </select>
             <button
               type="button"
@@ -838,51 +819,49 @@ export default function AdminPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Titulo</th><th>Subtitulo</th><th>Match</th><th>Categoria</th><th>Precio</th><th>Estado</th><th></th>
+                    <th>Imagen</th><th>Producto</th><th>Marca</th><th>Categoria</th><th>Precio</th><th>Home</th><th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredFeaturedItems.map((item) => {
-                    const index = featuredItems.findIndex((entry) => entry.id === item.id)
+                    const index = products.findIndex((entry) => entry.id === item.id)
                     return (
                       <tr key={item.id || index} className={item.active === 0 ? 'admin-row-hidden' : ''}>
                         <td>
                           <ImageCell
                             item={item}
-                            currentSrc={item._preview || resolveImage(item.image_url)}
-                            onUpload={(dataUrl) => uploadFeaturedImage(index, dataUrl)}
-                            onRemove={() => removeFeaturedImage(index)}
+                            currentSrc={item._preview || resolveImage(item.image_url || item.image)}
+                            onUpload={(dataUrl) => uploadProductImage(index, dataUrl)}
+                            onRemove={() => removeProductImage(index)}
                           />
                         </td>
-                        <td><input value={item.title} onChange={(event) => updateFeaturedItem(index, { title: event.target.value })} /></td>
-                        <td><input value={item.subtitle || ''} onChange={(event) => updateFeaturedItem(index, { subtitle: event.target.value })} placeholder="Sin subtitulo" /></td>
-                        <td><input value={item.match || ''} onChange={(event) => updateFeaturedItem(index, { match: event.target.value })} placeholder="Ej: HIERRO 8" /></td>
+                        <td><input value={item.name} onChange={(event) => updateProduct(index, { name: event.target.value })} /></td>
+                        <td><input value={item.brand || ''} onChange={(event) => updateProduct(index, { brand: event.target.value })} placeholder="Sin marca" /></td>
                         <td>
-                          <select value={item.category_key || ''} onChange={(event) => updateFeaturedItem(index, { category_key: event.target.value })}>
+                          <select value={item.category_key || ''} onChange={(event) => updateProduct(index, { category_key: event.target.value })}>
                             <option value="">-</option>
                             {categories.map((category) => <option key={category.key} value={category.key}>{category.name}</option>)}
                           </select>
                         </td>
                         <td>
-                          <PriceField value={item.price_override} onChange={(value) => updateFeaturedItem(index, { price_override: value })} consultLabel="Usar catalogo" />
+                          <PriceField value={item.price} onChange={(value) => updateProduct(index, { price: value ?? 0 })} consultLabel="A consultar" />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`admin-toggle${item.featured === 1 ? ' admin-toggle-on' : ''}`}
+                            onClick={() => updateProduct(index, { featured: item.featured === 1 ? 0 : 1 })}
+                          >
+                            {item.featured === 1 ? 'Visible' : 'Oculto'}
+                          </button>
                         </td>
                         <td>
                           <button
                             type="button"
                             className={`admin-toggle${item.active !== 0 ? ' admin-toggle-on' : ''}`}
-                            onClick={() => updateFeaturedItem(index, { active: item.active === 0 ? 1 : 0 })}
+                            onClick={() => updateProduct(index, { active: item.active === 0 ? 1 : 0 })}
                           >
                             {item.active === 0 ? 'Inactivo' : 'Activo'}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            className="admin-card-delete"
-                            onClick={() => {
-                              if (window.confirm(`Desactivar "${item.title}"?`)) removeFeaturedItem(index)
-                            }}
-                          >
-                            X
                           </button>
                         </td>
                       </tr>
@@ -950,8 +929,99 @@ export default function AdminPage() {
         </section>
       ) : null}
 
+      {tab === 'review' ? (
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <p>Cola de revision automatica para nombres sucios, productos no disponibles y altas nuevas desde el Excel.</p>
+            <div className="admin-section-actions">
+              <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading || saving}>
+                Recargar
+              </button>
+            </div>
+          </div>
+
+          <div className="admin-kpi-row">
+            <div className="admin-kpi-card">
+              <span>Nombres a revisar</span>
+              <strong>{reviewStats.flaggedProducts}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>No disponible</span>
+              <strong>{reviewStats.unavailableProducts}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span>SKUs pendientes</span>
+              <strong>{reviewStats.pendingRaw}</strong>
+            </div>
+            <div className="admin-kpi-card admin-kpi-card-muted">
+              <span>Sin categoria</span>
+              <strong>{reviewStats.productsWithoutCategory}</strong>
+            </div>
+          </div>
+
+          <div className="admin-filter-bar">
+            <input
+              className="admin-filter-search"
+              type="search"
+              placeholder="Buscar por nombre o codigo"
+              value={reviewQuery}
+              onChange={(event) => setReviewQuery(event.target.value)}
+            />
+          </div>
+
+          <div className="admin-review-grid">
+            <div className="admin-review-block">
+              <h3>Productos con flags</h3>
+              {reviewProducts.length ? (
+                <div className="admin-review-list">
+                  {reviewProducts.slice(0, 120).map((product) => (
+                    <article className="admin-review-card" key={product.id}>
+                      <strong>{product.quality.displayName}</strong>
+                      <span>ID: {product.id}</span>
+                      <span>Original: {product.name}</span>
+                      <div className="admin-review-tags">
+                        {product.quality.flags.map((flag) => <span key={flag}>{flag}</span>)}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="Sin observaciones" body="No hay productos marcados por las reglas actuales." />
+              )}
+            </div>
+
+            <div className="admin-review-block">
+              <h3>SKUs crudos pendientes</h3>
+              {rawSkus.length ? (
+                <div className="admin-review-list">
+                  {rawSkus.slice(0, 80).map((sku) => (
+                    <article className="admin-review-card" key={sku.code}>
+                      <strong>{sku.name}</strong>
+                      <span>Codigo: {sku.code}</span>
+                      <span>Rubro: {sku.rubro || 'Sin rubro'}</span>
+                      <span>Categoria sugerida: {sku.suggested_category_key}</span>
+                      <span>Costo interno: {sku.cost ? `$${Number(sku.cost).toLocaleString('es-AR')}` : 'sin dato'}</span>
+                      {sku.quality_flags?.length ? (
+                        <div className="admin-review-tags">
+                          {sku.quality_flags.map((flag) => <span key={flag}>{flag}</span>)}
+                        </div>
+                      ) : null}
+                      <button className="admin-btn admin-btn-primary" type="button" onClick={() => promoteRawSku(sku)} disabled={saving}>
+                        Promover al catalogo
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="Sin pendientes" body="No hay SKUs crudos pendientes de promocion." />
+              )}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <footer className="admin-foot">
-        Catalogo, categorias y destacados se guardan directo al servidor.
+        Catalogo, categorias y seleccion de destacados se guardan directo al servidor.
       </footer>
     </div>
   )
