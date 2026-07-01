@@ -1,29 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CreditCard, Landmark, Truck, MapPin, Hammer, Zap } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import CoverageMap from './components/CoverageMap'
 import CoverageChecker from './components/CoverageChecker'
 import logoHeader from './assets/logo-header-los-eucaliptos.webp'
 import promoCamion from './assets/promo-camion.webp'
-import promoMateriales from './assets/promo-cta-corralon.webp'
-import imgLadrilloHueco12 from './assets/featured-products/ladrillo-hueco-12.webp'
-import imgLadrilloHueco8 from './assets/featured-products/ladrillo-hueco-8.webp'
-import imgLadrilloComun from './assets/featured-products/ladrillo-comun.webp'
-import imgPortland25 from './assets/featured-products/portland-25kg.webp'
-import imgCalCacique from './assets/featured-products/cal-cacique-25kg.webp'
-import imgBloqueLiso13 from './assets/featured-products/bloque-liso-13.webp'
-import imgBloqueLiso20 from './assets/featured-products/bloque-liso-20.webp'
-import imgBloqueLiso10 from './assets/featured-products/bloque-liso-10.webp'
-import imgHierro6 from './assets/featured-products/hierro-6.webp'
-import imgHierro8 from './assets/featured-products/hierro-8.webp'
-import imgHierro10 from './assets/featured-products/hierro-10.webp'
-import imgHierro42 from './assets/featured-products/hierro-4-2.webp'
-import imgLadrilloCordoba from './assets/featured-products/ladrillo-cordoba-media-vista.webp'
-import imgArenaBolson from './assets/featured-products/arena-bolson.webp'
-import imgPegamentoCeramica from './assets/featured-products/pegamento-ceramica.webp'
-import imgTelgopor10 from './assets/featured-products/telgopor-10.webp'
-import imgTelgopor125 from './assets/featured-products/telgopor-12-5.webp'
-import imgCableUnipolar from './assets/featured-products/cable-unipolar-2-5.webp'
 import {
   categoryCards,
   formatPrice,
@@ -34,14 +15,13 @@ import {
   whatsappBosques,
 } from './lib/catalog'
 import { useCart } from './context/useCart'
+import { useAutoRotate, useScrolled } from './hooks'
 import { api } from './admin/api'
 const CatalogPage = lazy(() => import('./pages/CatalogPage'))
 import featuredCatalogFallback from './data/featured-catalog.json'
+import { benefitTicker, faqs, heroSignals, branches, purchaseSteps, promoImages } from './data/siteContent'
+import { productImages } from './lib/product-images'
 import './App.css'
-
-const promoImages = [
-  { src: promoMateriales, alt: 'Materiales para la construccion en Corralon Los Eucaliptus' },
-]
 
 // Icono Instagram inline (lucide v1 ya no exporta iconos de marca)
 function InstagramGlyph(props) {
@@ -52,129 +32,6 @@ function InstagramGlyph(props) {
       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
     </svg>
   )
-}
-
-const benefitTicker = [
-  { Icon: CreditCard, label: <>Hasta <strong>16% OFF</strong> en efectivo</> },
-  { Icon: Landmark, label: <><strong>3 y 6 cuotas</strong> sin interés</> },
-  { Icon: Truck, label: <>Envíos propios <strong>Zona Sur</strong></> },
-  { Icon: MapPin, label: <>Retirá en <strong>Solano</strong> y <strong>Bosques</strong></> },
-  { Icon: Hammer, label: <>Stock <strong>permanente</strong></> },
-  { Icon: Zap, label: <>Atención <strong>mayorista y minorista</strong></> },
-]
-
-// Coincide con el FAQPage JSON-LD de index.html (AEO)
-const faqs = [
-  {
-    q: '¿Hacen envíos a domicilio?',
-    a: 'Sí. Tenemos envío propio en Zona Sur desde nuestras sucursales de Solano y Bosques. Coordinás la entrega por WhatsApp y verificás tu zona desde el sitio.',
-  },
-  {
-    q: '¿Dónde están las sucursales?',
-    a: 'Tenemos dos sucursales: Solano en Av. Monteverde 2766 (San Francisco Solano) y Bosques en Av. Guillermo Hudson 2855 (Florencio Varela).',
-  },
-  {
-    q: '¿Qué medios de pago aceptan?',
-    a: 'Aceptamos efectivo (hasta 16% de descuento), transferencia bancaria, tarjeta de débito y crédito en 3 y 6 cuotas sin interés.',
-  },
-  {
-    q: '¿Cuál es el horario de atención?',
-    a: 'Solano: lunes a viernes de 8:00 a 12:00 y de 14:00 a 19:00, sábados de 8:00 a 14:00. Bosques: lunes a viernes de 8:00 a 18:00, sábados de 8:00 a 15:00.',
-  },
-  {
-    q: '¿Cómo hago un pedido?',
-    a: 'Armás tu carrito en el sitio y lo enviás por WhatsApp, o nos consultás directamente. Te respondemos en el día con precios y disponibilidad.',
-  },
-  {
-    q: '¿Puedo retirar en el corralón?',
-    a: 'Sí, podés retirar tu pedido por cualquiera de las dos sucursales, Solano o Bosques.',
-  },
-]
-
-
-const heroSignals = [
-  '3 y 6 cuotas sin interés, todos los bancos',
-  'Pedidos por WhatsApp con respuesta directa',
-  'Envios rapidos en Zona Sur y alrededores',
-]
-
-const branches = [
-  {
-    name: 'Corralon Los Eucaliptus "Solano"',
-    kicker: 'Sucursal Solano',
-    heading: 'Visitanos en Av. Monteverde 2766',
-    description:
-      'Estamos en San Francisco Solano, Zona Sur. Podes acercarte o escribirnos por WhatsApp para coordinar el pedido y la entrega.',
-    address: 'Av. Monteverde 2766, San Francisco Solano, Buenos Aires',
-    hours: 'Lun a Vie 8:00 a 12:00 y 14:00 a 19:00 | Sab 08:00 a 14:00',
-    lat: -34.7904685,
-    lng: -58.3096963,
-    coverageRadius: 5000, // metros (5 km)
-    mapsEmbedUrl: 'https://www.google.com/maps?q=-34.7904685,-58.3096963&output=embed',
-    mapsDirectionsUrl:
-      'https://www.google.com/maps/place/Corral%C3%B3n+Los+Eucaliptus+%22Solano%22/@-34.7904685,-58.3096963,17z/data=!3m1!4b1!4m6!3m5!1s0x95a32c71520b4479:0x4a3a34f33c1db2be!8m2!3d-34.7904685!4d-58.3096963!16s%2Fg%2F11c6pnxypl?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDYwMS4wIKXMDSoASAFQAw%3D%3D',
-  },
-  {
-    name: 'Corralon Los Eucaliptus "Bosques"',
-    kicker: 'Sucursal Bosques',
-    heading: 'Visitanos en Av. Guillermo Hudson 2855',
-    description:
-      'Encontranos en Bosques, Florencio Varela. Los mismos materiales, la misma atencion y el mismo compromiso de siempre.',
-    address: 'Av. Guillermo Hudson 2855, Bosques, Buenos Aires',
-    phone: '11 3062-3113',
-    hours: 'Lun a Vie 08:00 a 18:00 | Sab 08:00 a 15:00',
-    lat: -34.8315412,
-    lng: -58.2423633,
-    coverageRadius: 5000, // metros (5 km)
-    mapsEmbedUrl: 'https://www.google.com/maps?q=-34.8315412,-58.2423633&output=embed',
-    mapsDirectionsUrl:
-      'https://www.google.com/maps/place/Corralon+Los+Eucaliptus+%22Bosques%22/@-34.8315412,-58.2449382,17z/data=!3m1!4b1!4m6!3m5!1s0x95a329fb5902748d:0xc9956ec6f35647e6!8m2!3d-34.8315412!4d-58.2423633!16s%2Fg%2F11l2fcpsk1?entry=tts',
-  },
-]
-
-const purchaseSteps = [
-  {
-    title: 'Arma tu carrito',
-    text: 'Suma ladrillos, cemento, hierros y todo lo que pida tu obra.',
-    tone: 'light',
-  },
-  {
-    title: 'Envialo por WhatsApp',
-    text: 'El pedido llega directo a Solano o Bosques y te respondemos en el dia.',
-    tone: 'dark',
-    showWhatsapp: true,
-  },
-  {
-    title: 'Elegi como pagar',
-    text: 'Efectivo, transferencia, debito o credito en 3 y 6 cuotas.',
-    tone: 'accent',
-  },
-  {
-    title: 'Recibilo en obra',
-    text: 'Coordinamos el envio en Zona Sur o lo retiras por la sucursal.',
-    tone: 'light',
-  },
-]
-
-const productImages = {
-  'LADRILLO HUECO 12': imgLadrilloHueco12,
-  'LADRILLO HUECO 8': imgLadrilloHueco8,
-  'LADRILLO COMUN': imgLadrilloComun,
-  'PORTLAND 25': imgPortland25,
-  'CACIQUE MAX 25': imgCalCacique,
-  'BLOQUE LISO 13': imgBloqueLiso13,
-  'BLOQUE LISO 20': imgBloqueLiso20,
-  'BLOQUE LISO 10': imgBloqueLiso10,
-  'HIERRO 6': imgHierro6,
-  'HIERRO 8': imgHierro8,
-  'HIERRO 10': imgHierro10,
-  'HIERRO 4,2': imgHierro42,
-  'CORDOBA MEDIA VISTA': imgLadrilloCordoba,
-  'ARENA BOLSON': imgArenaBolson,
-  'PEGAMENTO CERAMICA': imgPegamentoCeramica,
-  'TELGOPOR 10': imgTelgopor10,
-  'TELGOPOR 12.5': imgTelgopor125,
-  'UNIPOLAR 1 X2.5': imgCableUnipolar,
 }
 
 function getCuratedShowcase(featuredItems) {
@@ -220,9 +77,8 @@ function App() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [featuredSearch, setFeaturedSearch] = useState('')
   const [showCart, setShowCart] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [activeSignal, setActiveSignal] = useState(0)
-  const [activeProduct, setActiveProduct] = useState(0)
+  const isScrolled = useScrolled(24)
+  const [activeSignal] = useAutoRotate(heroSignals.length, 2600)
   const [productQuantities, setProductQuantities] = useState({})
   const [activeLocation, setActiveLocation] = useState(0)
   const [activePromo, setActivePromo] = useState(0)
@@ -233,8 +89,8 @@ function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [location.pathname])
-  const [activeStep, setActiveStep] = useState(0)
   const [stepsPaused, setStepsPaused] = useState(false)
+  const [activeStep, setActiveStep] = useAutoRotate(purchaseSteps.length, 3400, stepsPaused)
   const [showCoverage, setShowCoverage] = useState(false)
   const [deliveryLocation, setDeliveryLocation] = useState(() => {
     try {
@@ -277,45 +133,12 @@ function App() {
     })
   }, [activeCategory, featuredSearch, featuredProducts])
 
+  const [activeProduct, setActiveProduct] = useAutoRotate(filteredProducts.length, 2800)
+
   const floatingCartItems = items.slice(0, 3)
   const cartMsg = encodeURIComponent(buildWhatsappOrderMessage({ items, subtotal }))
   const cartWhatsappUrl = `${whatsappBase}?text=${cartMsg}`
   const cartWhatsappBosques = `${whatsappBosques}?text=${cartMsg}`
-
-  useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveSignal((current) => (current + 1) % heroSignals.length)
-    }, 2600)
-
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    if (stepsPaused) return undefined
-
-    const timer = window.setInterval(() => {
-      setActiveStep((current) => (current + 1) % purchaseSteps.length)
-    }, 3400)
-
-    return () => window.clearInterval(timer)
-  }, [stepsPaused])
-
-  useEffect(() => {
-    if (!filteredProducts.length) return undefined
-
-    const timer = window.setInterval(() => {
-      setActiveProduct((current) => (current + 1) % filteredProducts.length)
-    }, 2800)
-
-    return () => window.clearInterval(timer)
-  }, [filteredProducts])
 
   // Indice resaltado clampeado al rango actual (evita setState dentro del efecto)
   const highlightedProduct = filteredProducts.length ? activeProduct % filteredProducts.length : -1
