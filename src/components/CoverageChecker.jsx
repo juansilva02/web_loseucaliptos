@@ -40,6 +40,13 @@ function formatKm(meters) {
   return `${(meters / 1000).toFixed(1).replace('.', ',')} km`
 }
 
+async function reverseGeocode(lat, lng) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&zoom=18&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`
+  const response = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!response.ok) throw new Error('reverse geocode failed')
+  return response.json()
+}
+
 export default function CoverageChecker({ branches, onClose, onResult }) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading | options | result | error
@@ -59,7 +66,12 @@ export default function CoverageChecker({ branches, onClose, onResult }) {
 
     setResult({ zone, nearest, placeLabel })
     setStatus('result')
-    onResult?.({ label: shortLabel, zone })
+    onResult?.({
+      label: shortLabel,
+      zone,
+      nearestBranch: nearest.name,
+      nearestDistanceKm: Number((nearest.distance / 1000).toFixed(1)),
+    })
   }
 
   const geocode = async () => {
@@ -105,12 +117,24 @@ export default function CoverageChecker({ branches, onClose, onResult }) {
     setStatus('loading')
     setErrorMsg('')
     navigator.geolocation.getCurrentPosition(
-      (position) => evaluatePoint(position.coords.latitude, position.coords.longitude, 'Tu ubicacion actual'),
+      async (position) => {
+        try {
+          const place = await reverseGeocode(position.coords.latitude, position.coords.longitude)
+          evaluatePoint(
+            position.coords.latitude,
+            position.coords.longitude,
+            place.display_name || 'Tu ubicacion actual',
+            shortenPlaceLabel(place),
+          )
+        } catch {
+          evaluatePoint(position.coords.latitude, position.coords.longitude, 'Tu ubicacion actual')
+        }
+      },
       () => {
         setErrorMsg('No pudimos acceder a tu ubicacion. Escribi tu direccion o localidad.')
         setStatus('error')
       },
-      { timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 },
     )
   }
 

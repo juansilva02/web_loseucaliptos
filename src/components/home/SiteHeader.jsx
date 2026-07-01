@@ -27,8 +27,13 @@ export default function SiteHeader({
             <span className="header-location-label">Enviar a</span>
             <span className="header-location-val">
               {deliveryLocation ? deliveryLocation.label : 'Seleccionar ubicacion'}
-              {deliveryLocation?.zone === 'in' ? ' ✓' : ''}
             </span>
+            {deliveryLocation?.nearestBranch ? (
+              <span className="header-location-branch">
+                Recomendado: {deliveryLocation.nearestBranch}
+                {deliveryLocation.nearestDistanceKm ? ` · ${deliveryLocation.nearestDistanceKm} km` : ''}
+              </span>
+            ) : null}
           </span>
         </button>
         <button className="cart-box" type="button" onClick={() => setShowCart(true)}>

@@ -40,6 +40,14 @@ export const api = {
     }).then((data) => { storeToken(data.token); return data })
   },
 
+  getUsers() {
+    return req('/api/admin/auth/users')
+  },
+
+  createUser(data) {
+    return req('/api/admin/auth/users', { method: 'POST', body: JSON.stringify(data) })
+  },
+
   logout() { clearToken() },
 
   isAuthed() { return !!token() },

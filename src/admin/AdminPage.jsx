@@ -171,6 +171,9 @@ export default function AdminPage() {
   const [featuredCategoryFilter, setFeaturedCategoryFilter] = useState('all')
   const [featuredStatusFilter, setFeaturedStatusFilter] = useState('all')
   const [categoryQuery, setCategoryQuery] = useState('')
+  const [users, setUsers] = useState([])
+  const [newUserEmail, setNewUserEmail] = useState('')
+  const [newUserPassword, setNewUserPassword] = useState('')
   const toastTimer = useRef(null)
 
   const [products, setProducts] = useState([])
@@ -193,14 +196,16 @@ export default function AdminPage() {
   const syncFromServer = async () => {
     setLoading(true)
     try {
-      const [prodRes, catRes, featRes] = await Promise.all([
+      const [prodRes, catRes, featRes, usersRes] = await Promise.all([
         api.getProducts({ all: '1' }),
         api.getCategories(),
         api.getFeatured(),
+        api.getUsers(),
       ])
       setProducts(prodRes.products)
       setCategories(catRes.categories)
       setFeaturedItems(featRes.featured)
+      setUsers(usersRes.users || [])
     } catch (err) {
       flash(`Error al cargar datos: ${err.message}`)
     } finally {
@@ -211,12 +216,13 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return
     let cancelled = false
-    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getFeatured()])
-      .then(([prodRes, catRes, featRes]) => {
+    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getFeatured(), api.getUsers()])
+      .then(([prodRes, catRes, featRes, usersRes]) => {
         if (!cancelled) {
           setProducts(prodRes.products)
           setCategories(catRes.categories)
           setFeaturedItems(featRes.featured)
+          setUsers(usersRes.users || [])
           setLoading(false)
         }
       })
@@ -451,6 +457,28 @@ export default function AdminPage() {
     setAuthed(false)
   }
 
+  const createUser = async () => {
+    const email = newUserEmail.trim()
+    const password = newUserPassword
+    if (!email || !password) {
+      flash('Email y contraseña requeridos')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const response = await api.createUser({ email, password, role: 'admin' })
+      setUsers((current) => [response.user, ...current])
+      setNewUserEmail('')
+      setNewUserPassword('')
+      flash(`Usuario creado: ${response.user.email}`)
+    } catch (err) {
+      flash(`Error al crear usuario: ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const updateAppearance = (patch) => {
     setAppearance((current) => ({ ...current, ...patch }))
   }
@@ -545,6 +573,9 @@ export default function AdminPage() {
         </button>
         <button className={tab === 'featured' ? 'active' : ''} onClick={() => setTab('featured')}>
           Destacados (home) <em>{featuredItems.length}</em>
+        </button>
+        <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>
+          Usuarios <em>{users.length}</em>
         </button>
       </nav>
 
@@ -862,6 +893,59 @@ export default function AdminPage() {
             </div>
           ) : (
             <EmptyState title="Sin resultados" body="No hay destacados que coincidan con los filtros actuales." />
+          )}
+        </section>
+      ) : null}
+
+      {tab === 'users' ? (
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <p>Crea accesos nuevos para administrativos. Se generan como usuarios admin y pueden entrar al panel con email y contraseña.</p>
+            <div className="admin-section-actions">
+              <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading || saving}>
+                Recargar
+              </button>
+            </div>
+          </div>
+
+          <div className="admin-user-create">
+            <div className="admin-user-create-grid">
+              <label>
+                Email / usuario
+                <input
+                  type="text"
+                  value={newUserEmail}
+                  onChange={(event) => setNewUserEmail(event.target.value)}
+                  placeholder="ej: ventas.solano"
+                />
+              </label>
+              <label>
+                Contraseña inicial
+                <input
+                  type="text"
+                  value={newUserPassword}
+                  onChange={(event) => setNewUserPassword(event.target.value)}
+                  placeholder="Minimo 6 caracteres"
+                />
+              </label>
+            </div>
+            <button className="admin-btn admin-btn-primary" type="button" onClick={createUser} disabled={saving}>
+              {saving ? 'Creando...' : 'Crear usuario'}
+            </button>
+          </div>
+
+          {users.length ? (
+            <div className="admin-users-list">
+              {users.map((user) => (
+                <article className="admin-user-card" key={user.id}>
+                  <strong>{user.email}</strong>
+                  <span>Rol: {user.role}</span>
+                  <span>Alta: {String(user.created_at || '').replace('T', ' ').slice(0, 16) || 'sin fecha'}</span>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="Sin usuarios" body="Todavia no hay usuarios cargados en el sistema." />
           )}
         </section>
       ) : null}

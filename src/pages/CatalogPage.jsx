@@ -262,7 +262,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                       <>
                         <strong className="catalog-price">{formatPrice(product.price)}</strong>
                         <span className="catalog-unit">Por {product.unit}</span>
-                        <span className="catalog-installments">💳 3 y 6 cuotas sin interés</span>
+                        <span className="catalog-installments">💳 Credito: 1 a 3 cuotas 20% int. · 4 a 6 cuotas 29%</span>
                       </>
                     ) : (
                       <>

@@ -7,8 +7,8 @@ export const promoImages = [
 ]
 
 export const benefitTicker = [
-  { Icon: CreditCard, label: <>Hasta <strong>16% OFF</strong> en efectivo</> },
-  { Icon: Landmark, label: <><strong>3 y 6 cuotas</strong> sin interés</> },
+  { Icon: CreditCard, label: <>Efectivo, transferencia y <strong>tarjetas</strong></> },
+  { Icon: Landmark, label: <><strong>1 a 3 cuotas</strong> 20% int. · <strong>4 a 6</strong> 29%</> },
   { Icon: Truck, label: <>Envíos propios <strong>Zona Sur</strong></> },
   { Icon: MapPin, label: <>Retirá en <strong>Solano</strong> y <strong>Bosques</strong></> },
   { Icon: Hammer, label: <>Stock <strong>permanente</strong></> },
@@ -27,7 +27,7 @@ export const faqs = [
   },
   {
     q: '¿Qué medios de pago aceptan?',
-    a: 'Aceptamos efectivo (hasta 16% de descuento), transferencia bancaria, tarjeta de débito y crédito en 3 y 6 cuotas sin interés.',
+    a: 'Aceptamos efectivo, transferencias bancarias y tarjetas de credito y debito. Con tarjeta de credito: de 1 a 3 cuotas tiene un 20% de interes y de 4 a 6 cuotas un 29% de interes.',
   },
   {
     q: '¿Cuál es el horario de atención?',
@@ -44,7 +44,7 @@ export const faqs = [
 ]
 
 export const heroSignals = [
-  '3 y 6 cuotas sin interés, todos los bancos',
+  'Tarjetas de credito: 1 a 3 cuotas 20% int. · 4 a 6 cuotas 29%',
   'Pedidos por WhatsApp con respuesta directa',
   'Envios rapidos en Zona Sur y alrededores',
 ]
@@ -97,7 +97,7 @@ export const purchaseSteps = [
   },
   {
     title: 'Elegi como pagar',
-    text: 'Efectivo, transferencia, debito o credito en 3 y 6 cuotas.',
+    text: 'Efectivo, transferencia, debito o credito. Con credito: 1 a 3 cuotas 20% de interes y 4 a 6 cuotas 29%.',
     tone: 'accent',
   },
   {
