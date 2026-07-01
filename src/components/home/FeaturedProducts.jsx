@@ -1,5 +1,6 @@
-import { categoryCards } from '../../lib/catalog'
+import { categoryCards, resolveImage } from '../../lib/catalog'
 import { getCatalogQualitySummary } from '../../lib/catalog-quality'
+import { getBundledProductImage } from '../../lib/product-images'
 
 export default function FeaturedProducts({
   activeCategory,
@@ -54,8 +55,9 @@ export default function FeaturedProducts({
       </div>
 
       <div className="products-grid">
-        {filteredProducts.map((product, index) => {
+          {filteredProducts.map((product, index) => {
           const quality = getCatalogQualitySummary(product.excelName)
+          const imgSrc = resolveImage(product.image) || getBundledProductImage({ id: product.id, name: product.excelName })
 
           return (
           <article
@@ -63,9 +65,9 @@ export default function FeaturedProducts({
             key={product.id}
             onMouseEnter={() => setActiveProduct(index)}
           >
-            {product.image ? (
+            {imgSrc ? (
               <div className="product-visual-large product-visual-image-frame">
-                <img className="product-visual-image" src={product.image} alt={quality.displayName} />
+                <img className="product-visual-image" src={imgSrc} alt={quality.displayName} />
               </div>
             ) : (
               <div className="product-visual-large" data-category={product.categoryKey}>
