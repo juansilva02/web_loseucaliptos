@@ -27,6 +27,10 @@ function inferCategoryKeyFromRubro(rubro) {
   return RUBRO_CATEGORY_MAP[String(rubro || '').trim().toUpperCase()] || 'otros-materiales'
 }
 
+function slugify(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
 function getQualityFlags(name) {
   const value = String(name || '')
   const flags = []
@@ -41,8 +45,8 @@ router.get('/', requireAuth, (req, res) => {
   const added = req.query.added
   let sql = 'SELECT * FROM raw_skus WHERE 1=1'
   const params = {}
-  if (added === '0') { sql += ' AND added = 0'; params.added = 0 }
-  else if (added === '1') { sql += ' AND added = 1'; params.added = 1 }
+  if (added === '0') sql += ' AND added = 0'
+  else if (added === '1') sql += ' AND added = 1'
   if (search) {
     sql += ' AND (name LIKE @search OR CAST(code AS TEXT) LIKE @code OR rubro LIKE @rubro)'
     params.search = `%${search}%`
@@ -63,16 +67,24 @@ router.post('/:code/promote', requireAuth, (req, res) => {
   if (!raw) return res.status(404).json({ error: 'SKU no encontrado' })
   if (raw.added) return res.status(409).json({ error: 'Este SKU ya fue promovido al catálogo' })
 
-  db.transaction(() => {
-    const id = req.body.id || raw.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `sku-${raw.code}`
+  const id = slugify(req.body.id) || slugify(raw.name) || `sku-${raw.code}`
+  const category = req.body.category_key || inferCategoryKeyFromRubro(raw.rubro)
+
+  const result = db.transaction(() => {
     const maxSort = db.prepare('SELECT COALESCE(MAX(sort),0) + 1 AS next FROM products').get().next
-    const category = req.body.category_key || inferCategoryKeyFromRubro(raw.rubro)
-    db.prepare(`
+    const info = db.prepare(`
       INSERT OR IGNORE INTO products (id, name, category_key, brand, unit, price, source_code, sort, active, featured)
       VALUES (@id, @name, @category, '', '', @price, @code, @sort, 0, 0)
     `).run({ id, name: raw.name, category, price: raw.price || 0, code: raw.code, sort: maxSort })
+    // Colision de id (producto ya existente): no marcamos added, avisamos.
+    if (info.changes === 0) return { conflict: true }
     db.prepare('UPDATE raw_skus SET added = 1 WHERE code = ?').run(raw.code)
+    return { conflict: false }
   })()
+
+  if (result.conflict) {
+    return res.status(409).json({ error: `Ya existe un producto con id "${id}". Asigna un id distinto o renombra el SKU.` })
+  }
 
   const product = db.prepare('SELECT * FROM products WHERE source_code = ?').get(raw.code)
   res.status(201).json({ product })

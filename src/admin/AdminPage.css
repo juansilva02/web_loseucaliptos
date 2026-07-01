@@ -321,6 +321,12 @@
   color: #2c342d;
 }
 
+.admin-review-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7669;
+}
+
 .admin-review-list {
   display: flex;
   flex-direction: column;

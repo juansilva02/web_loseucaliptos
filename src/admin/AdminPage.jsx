@@ -173,6 +173,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [rawSkus, setRawSkus] = useState([])
+  const [rawSearch, setRawSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [appearance, setAppearance] = useState(() => loadAdminAppearance())
@@ -195,11 +196,10 @@ export default function AdminPage() {
         api.getCategories(),
         api.getUsers(),
       ])
-      const rawRes = await api.getRawSkus({ added: '0' })
       setProducts(prodRes.products)
       setCategories(catRes.categories)
       setUsers(usersRes.users || [])
-      setRawSkus(rawRes.skus || [])
+      // La pileta (rawSkus) la maneja el efecto de busqueda debounced.
     } catch (err) {
       flash(`Error al cargar datos: ${err.message}`)
     } finally {
@@ -210,13 +210,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return
     let cancelled = false
-    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getUsers(), api.getRawSkus({ added: '0' })])
-      .then(([prodRes, catRes, usersRes, rawRes]) => {
+    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getUsers()])
+      .then(([prodRes, catRes, usersRes]) => {
         if (!cancelled) {
           setProducts(prodRes.products)
           setCategories(catRes.categories)
           setUsers(usersRes.users || [])
-          setRawSkus(rawRes.skus || [])
           setLoading(false)
         }
       })
@@ -231,6 +230,18 @@ export default function AdminPage() {
       cancelled = true
     }
   }, [authed])
+
+  // Pileta de SKUs: busqueda server-side (debounced). Sin termino trae los primeros 200.
+  useEffect(() => {
+    if (!authed) return undefined
+    const term = rawSearch.trim()
+    const timer = window.setTimeout(() => {
+      api.getRawSkus(term ? { q: term, added: '0' } : { added: '0' })
+        .then((res) => setRawSkus(res.skus || []))
+        .catch((err) => flash(`Error al buscar SKUs: ${err.message}`))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [rawSearch, authed])
 
   const updateProduct = (index, patch) =>
     setProducts((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
@@ -410,6 +421,7 @@ export default function AdminPage() {
     try {
       await api.promoteSku(sku.code, { category_key: sku.suggested_category_key })
       flash(`SKU ${sku.code} promovido con categoria sugerida`)
+      setRawSkus((prev) => prev.filter((item) => item.code !== sku.code))
       syncFromServer()
     } catch (err) {
       flash(`Error al promover SKU ${sku.code}: ${err.message}`)
@@ -992,8 +1004,21 @@ export default function AdminPage() {
 
             <div className="admin-review-block">
               <h3>SKUs crudos pendientes</h3>
+              <input
+                className="admin-filter-search"
+                type="search"
+                placeholder="Buscar en la pileta por nombre, codigo o rubro..."
+                value={rawSearch}
+                onChange={(event) => setRawSearch(event.target.value)}
+                autoComplete="off"
+              />
               {rawSkus.length ? (
-                <div className="admin-review-list">
+                <>
+                  <p className="admin-review-hint">
+                    Mostrando {Math.min(rawSkus.length, 80)} de {rawSkus.length}
+                    {rawSkus.length >= 200 ? '+ — afina con la busqueda' : ''}.
+                  </p>
+                  <div className="admin-review-list">
                   {rawSkus.slice(0, 80).map((sku) => (
                     <article className="admin-review-card" key={sku.code}>
                       <strong>{sku.name}</strong>
@@ -1011,9 +1036,13 @@ export default function AdminPage() {
                       </button>
                     </article>
                   ))}
-                </div>
+                  </div>
+                </>
               ) : (
-                <EmptyState title="Sin pendientes" body="No hay SKUs crudos pendientes de promocion." />
+                <EmptyState
+                  title={rawSearch ? 'Sin resultados' : 'Sin pendientes'}
+                  body={rawSearch ? `No se encontraron SKUs para "${rawSearch}".` : 'No hay SKUs crudos pendientes de promocion.'}
+                />
               )}
             </div>
           </div>
