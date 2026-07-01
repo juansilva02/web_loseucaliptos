@@ -616,29 +616,6 @@ a,
 
 /* ── Quantity input ─────────────────────────────────────── */
 
-.mini-quantity-input {
-  width: 100%;
-  min-width: 0;
-  text-align: center;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #1a1410;
-  -moz-appearance: textfield;
-}
-
-.mini-quantity-input::-webkit-outer-spin-button,
-.mini-quantity-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.mini-quantity-input:focus {
-  outline: none;
-}
-
 /* ── Reduced motion ─────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
