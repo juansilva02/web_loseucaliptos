@@ -25,17 +25,18 @@ router.get('/:id', requireAuth, (req, res) => {
 })
 
 router.post('/', requireAuth, (req, res) => {
-  const { id, name, category, brand, unit, price, image_url, featured, active } = req.body
+  const { id, name, category, category_key, brand, unit, price, image_url, featured, active } = req.body
   if (!id || !name) return res.status(400).json({ error: 'id y name son requeridos' })
   const exists = db.prepare('SELECT id FROM products WHERE id = ?').get(id)
   if (exists) return res.status(409).json({ error: 'Ya existe un producto con ese id' })
   const maxSort = db.prepare('SELECT COALESCE(MAX(sort),0) + 1 AS next FROM products').get().next
+  const nextCategoryKey = category_key || category || ''
   db.prepare(`
     INSERT INTO products (id, name, category_key, brand, unit, price, image_url, featured, sort, active)
     VALUES (@id, @name, @category, @brand, @unit, @price, @image, @featured, @sort, @active)
   `).run({
     id, name,
-    category: category || '',
+    category: nextCategoryKey,
     brand: brand || '',
     unit: unit || '',
     price: price ?? 0,
@@ -51,6 +52,9 @@ router.post('/', requireAuth, (req, res) => {
 router.put('/:id', requireAuth, (req, res) => {
   const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
   if (!existing) return res.status(404).json({ error: 'Producto no encontrado' })
+  if (req.body.category !== undefined && req.body.category_key === undefined) {
+    req.body.category_key = req.body.category
+  }
   const fields = ['name', 'category_key', 'brand', 'unit', 'price', 'image_url', 'featured', 'sort', 'active']
   const sets = []
   const params = { id: req.params.id }

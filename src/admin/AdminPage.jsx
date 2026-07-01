@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { resolveImage } from '../lib/catalog'
 import { getCatalogQualitySummary } from '../lib/catalog-quality'
 import { api } from './api'
-import { extensionFromDataUrl, imagePath, slugify } from './catalogStore'
+import { slugify } from './catalogStore'
 import './AdminPage.css'
 
 const ADMIN_APPEARANCE_KEY = 'eucaliptus-admin-appearance'
@@ -256,13 +256,11 @@ export default function AdminPage() {
 
   const uploadProductImage = async (index, dataUrl) => {
     const item = products[index]
-    const ext = extensionFromDataUrl(dataUrl)
-    const base = item.id || slugify(item.name) || `producto-${index}`
-    const fileName = `${base}.${ext}`
+    const productId = item.id || slugify(item.name) || `producto-${index}`
     try {
-      await api.uploadImage(fileName, dataUrl)
-      updateProduct(index, { image_url: imagePath(fileName), _preview: dataUrl })
-      flash(`Imagen subida: ${fileName}`)
+      const uploaded = await api.uploadImage(productId, dataUrl, item.image_url || item.image || '')
+      updateProduct(index, { image_url: uploaded.url, _preview: dataUrl })
+      flash(`Imagen subida: ${uploaded.fileName}`)
     } catch (err) {
       flash(`Error al subir imagen: ${err.message}`)
     }
@@ -309,7 +307,7 @@ export default function AdminPage() {
       try {
         const body = {
           name: product.name,
-          category: product.category_key,
+          category_key: product.category_key,
           brand: product.brand || '',
           unit: product.unit || '',
           price: product.price ?? 0,

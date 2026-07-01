@@ -102,8 +102,11 @@ export const api = {
     return req(`/api/admin/raw-skus/${code}/promote`, { method: 'POST', body: JSON.stringify(data) })
   },
 
-  uploadImage(fileName, dataUrl) {
-    return req('/api/admin/upload', { method: 'POST', body: JSON.stringify({ fileName, dataUrl }) })
+  uploadImage(productId, dataUrl, currentImageUrl = '') {
+    return req('/api/admin/upload', {
+      method: 'POST',
+      body: JSON.stringify({ productId, dataUrl, currentImageUrl }),
+    })
   },
 
   getPublicFeatured() {
