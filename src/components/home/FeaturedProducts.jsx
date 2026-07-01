@@ -66,13 +66,22 @@ export default function FeaturedProducts({
             onMouseEnter={() => setActiveProduct(index)}
           >
             {imgSrc ? (
-              <div className="product-visual-large product-visual-image-frame">
+              <button
+                type="button"
+                className="product-visual-large product-visual-image-frame product-visual-open"
+                onClick={() => onOpenProduct(product)}
+              >
                 <img className="product-visual-image" src={imgSrc} alt={quality.displayName} />
-              </div>
+              </button>
             ) : (
-              <div className="product-visual-large" data-category={product.categoryKey}>
+              <button
+                type="button"
+                className="product-visual-large product-visual-open"
+                data-category={product.categoryKey}
+                onClick={() => onOpenProduct(product)}
+              >
                 <span>{quality.displayName}</span>
-              </div>
+              </button>
             )}
             <div className="product-copy">
               <h3>{quality.displayName}</h3>
@@ -94,7 +103,7 @@ export default function FeaturedProducts({
                   min="1"
                   value={getProductDraftQuantity(product.id)}
                   onChange={(event) => setProductDraftQuantity(product.id, event.target.value)}
-                  onBlur={(event) => setProductDraftQuantity(product.id, event.target.value)}
+                  onBlur={(event) => setProductDraftQuantity(product.id, event.target.value, true)}
                   aria-label="Cantidad"
                 />
                 <button type="button" aria-label="Aumentar cantidad" onClick={() => changeProductDraftQuantity(product.id, 1)}>

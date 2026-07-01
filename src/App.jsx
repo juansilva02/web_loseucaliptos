@@ -28,6 +28,17 @@ const Locations = lazy(() => import('./components/home/Locations'))
 const PromoCarousel = lazy(() => import('./components/home/PromoCarousel'))
 const FaqSection = lazy(() => import('./components/home/FaqSection'))
 
+function parseDraftQuantity(value) {
+  if (value === '') return ''
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
+}
+
+function normalizeDraftQuantity(value) {
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
 function buildWhatsappOrderMessage({ items, subtotal }) {
   const itemLines = items.map((item) => `- ${item.name} x${item.quantity} | ${formatPrice(item.price * item.quantity)}`)
 
@@ -136,26 +147,26 @@ function App() {
 
   const changeProductDraftQuantity = (productId, delta) => {
     setProductQuantities((current) => {
-      const next = Math.max(1, (current[productId] ?? 1) + delta)
+      const base = normalizeDraftQuantity(current[productId])
+      const next = Math.max(1, base + delta)
       return { ...current, [productId]: next }
     })
   }
 
-  const setProductDraftQuantity = (productId, value) => {
-    const parsed = parseInt(value, 10)
-    setProductQuantities((current) => ({ ...current, [productId]: parsed > 0 ? parsed : 1 }))
+  const setProductDraftQuantity = (productId, value, commit = false) => {
+    const nextValue = commit ? normalizeDraftQuantity(value) : parseDraftQuantity(value)
+    setProductQuantities((current) => ({ ...current, [productId]: nextValue }))
   }
 
   const getProductDraftQuantity = (productId) => productQuantities[productId] ?? 1
 
   const handleAddToCart = (product) => {
-    addItem(product, getProductDraftQuantity(product.id))
+    addItem(product, normalizeDraftQuantity(getProductDraftQuantity(product.id)))
     setProductQuantities((current) => ({ ...current, [product.id]: 1 }))
   }
 
   const handleQuickViewQuantity = (productId, value) => {
-    const parsed = parseInt(value, 10)
-    setProductQuantities((current) => ({ ...current, [productId]: parsed > 0 ? parsed : 1 }))
+    setProductDraftQuantity(productId, value)
   }
 
   const handleCoverageResult = (nextLocation) => {
@@ -261,6 +272,7 @@ function App() {
         quantity={quickViewProduct ? getProductDraftQuantity(quickViewProduct.id) : 1}
         onClose={() => setQuickViewProduct(null)}
         onChangeQuantity={(value) => quickViewProduct && handleQuickViewQuantity(quickViewProduct.id, value)}
+        onBlurQuantity={() => quickViewProduct && setProductDraftQuantity(quickViewProduct.id, getProductDraftQuantity(quickViewProduct.id), true)}
         onAddToCart={() => {
           if (!quickViewProduct) return
           handleAddToCart(quickViewProduct)

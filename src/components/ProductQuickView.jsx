@@ -23,6 +23,7 @@ export default function ProductQuickView({
   quantity,
   onClose,
   onChangeQuantity,
+  onBlurQuantity,
   onAddToCart,
 }) {
   if (!product) return null
@@ -100,7 +101,7 @@ export default function ProductQuickView({
               min="1"
               value={quantity}
               onChange={(event) => onChangeQuantity(event.target.value)}
-              onBlur={(event) => onChangeQuantity(event.target.value)}
+              onBlur={onBlurQuantity}
               aria-label="Cantidad"
             />
             <button type="button" aria-label="Aumentar cantidad" onClick={() => onChangeQuantity(quantity + 1)}>

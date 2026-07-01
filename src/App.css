@@ -702,6 +702,12 @@
   padding: 12px;
 }
 
+.product-visual-open {
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+}
+
 .product-visual-image-frame {
   padding: 0;
   overflow: hidden;
@@ -762,6 +768,16 @@
   display: grid;
   grid-template-columns: 96px 1fr;
   gap: 8px;
+}
+
+.product-actions .text-link-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.product-actions .add-cart-button {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .mini-quantity {

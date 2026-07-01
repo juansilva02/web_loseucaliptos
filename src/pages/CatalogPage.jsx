@@ -6,6 +6,17 @@ import { getCatalogQualitySummary } from '../lib/catalog-quality'
 import { getBundledProductImage } from '../lib/product-images'
 import './CatalogPage.css'
 
+function parseDraftQuantity(value) {
+  if (value === '') return ''
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
+}
+
+function normalizeDraftQuantity(value) {
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
 function toCatalogCardProduct(product, categoryMap) {
   return {
     id: product.id,
@@ -80,17 +91,17 @@ export default function CatalogPage({ onBack, onOpenCart }) {
 
   const getQty = (id) => quantities[id] ?? 1
 
-  const setQty = (id, value) => {
-    const parsed = parseInt(value, 10)
-    setQuantities((prev) => ({ ...prev, [id]: parsed > 0 ? parsed : 1 }))
+  const setQty = (id, value, commit = false) => {
+    const nextValue = commit ? normalizeDraftQuantity(value) : parseDraftQuantity(value)
+    setQuantities((prev) => ({ ...prev, [id]: nextValue }))
   }
 
   const changeQty = (id, delta) => {
-    setQuantities((prev) => ({ ...prev, [id]: Math.max(1, (prev[id] ?? 1) + delta) }))
+    setQuantities((prev) => ({ ...prev, [id]: Math.max(1, normalizeDraftQuantity(prev[id]) + delta) }))
   }
 
   const handleAdd = (product) => {
-    addItem(product, getQty(product.id))
+    addItem(product, normalizeDraftQuantity(getQty(product.id)))
     setQuantities((prev) => ({ ...prev, [product.id]: 1 }))
   }
 
@@ -248,7 +259,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                         min="1"
                         value={qty}
                         onChange={(e) => setQty(product.id, e.target.value)}
-                        onBlur={(e) => setQty(product.id, e.target.value)}
+                        onBlur={(e) => setQty(product.id, e.target.value, true)}
                         aria-label="Cantidad"
                       />
                       <button type="button" aria-label="Aumentar cantidad" onClick={() => changeQty(product.id, 1)}>
@@ -281,6 +292,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
         quantity={selectedProduct ? getQty(selectedProduct.id) : 1}
         onClose={() => setSelectedProduct(null)}
         onChangeQuantity={(value) => selectedProduct && setQty(selectedProduct.id, value)}
+        onBlurQuantity={() => selectedProduct && setQty(selectedProduct.id, getQty(selectedProduct.id), true)}
         onAddToCart={() => {
           if (!selectedProduct) return
           handleAdd(selectedProduct)
