@@ -46,6 +46,13 @@ const categoryDefinitions = [
     description: 'Cables, cajas, termicas, tornillos, tarugos y herramientas.',
     match: ['CABLE', 'CAJA ', 'TERMIC', 'TECLA', 'LLAVE', 'TOMAC', 'JELUZ', 'TORNIL', 'TARUGO', 'TENAZA', 'TIJERA', 'CANDAD', 'BARRET', 'BUSCAP', 'ATORNI'],
   },
+  {
+    key: 'otros-materiales',
+    name: 'Otros Materiales',
+    shortName: 'Otros',
+    description: 'Materiales y accesorios para distintas etapas de obra.',
+    match: [],
+  },
 ]
 
 const helperDictionary = {

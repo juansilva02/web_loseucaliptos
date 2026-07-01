@@ -50,9 +50,9 @@ ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"
 - Comandos útiles (en `server/`): `docker compose up -d --build`, `docker compose logs -f`,
   `docker compose exec api node src/seed.js` (re-seed idempotente).
 
-**Datos:** 64 productos curados (catálogo vivo) · 1756 SKUs crudos (pileta `raw_skus`,
-para agregar desde el admin) · 6 categorías. Todos los SKUs crudos tienen rubro vacío
-(la inferencia de categoría por nombre está implementada pero sin datos de rubro).
+**Datos:** 64 productos curados (catálogo vivo) · 1749 SKUs crudos (pileta `raw_skus`,
+con rubros normalizados desde CSV) · 7 categorías (se agregó `otros-materiales`).
+Los SKUs crudos ahora tienen rubro y precio real desde el Excel normalizado.
 
 ## 3. Cómo funciona el panel admin
 
