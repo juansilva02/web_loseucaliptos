@@ -35,5 +35,17 @@ nginx -t && systemctl reload nginx
 echo "==> verificacion (loopback)"
 R="--resolve corralonloseucaliptus.com:443:127.0.0.1"
 curl -s --max-time 10 $R -o /dev/null -w "    frontend  -> HTTP %{http_code}\n" https://corralonloseucaliptus.com/
-curl -s --max-time 10 $R -o /dev/null -w "    /api/catalog -> HTTP %{http_code}\n" https://corralonloseucaliptus.com/api/catalog
+# La API tarda unos segundos en aceptar conexiones tras el recreate del
+# container: reintentar antes de dar el veredicto.
+CODE=000
+for i in 1 2 3 4 5 6; do
+  CODE=$(curl -s --max-time 10 $R -o /dev/null -w "%{http_code}" https://corralonloseucaliptus.com/api/catalog || true)
+  [ "$CODE" = "200" ] && break
+  sleep 2
+done
+echo "    /api/catalog -> HTTP $CODE (intento $i)"
+if [ "$CODE" != "200" ]; then
+  echo "ERROR: /api/catalog no respondio 200; revisar: docker compose logs api"
+  exit 1
+fi
 echo "==> deploy OK"
