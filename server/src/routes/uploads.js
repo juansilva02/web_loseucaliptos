@@ -12,7 +12,7 @@ const UPLOADS_DIR = join(__dirname, '..', '..', 'uploads')
 const MAX_WIDTH = 800
 const QUALITY = 80
 const ALLOWED_EXTENSIONS = ['.webp', '.jpg', '.jpeg', '.png']
-const SAFE_NAME_RE = /^[\w.\-]+$/
+const SAFE_NAME_RE = /^[\w.-]+$/
 const SAFE_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 function sanitizeFileName(fileName) {
@@ -94,7 +94,7 @@ router.post('/', requireAuth, async (req, res) => {
       size: fileStats.size,
       originalSize: Math.round(base64.length * 0.75),
     })
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Error al procesar la imagen' })
   }
 })
