@@ -25,9 +25,9 @@ los bind mounts pertenecen a root y el container corre como uid 1001.
 
 - [x] Backup manual pre-cambios en `/opt/backups/corralon/` (DB + uploads + env)
 - [x] `deploy.sh` chownea `server/data` y `server/uploads` a 1001 en cada corrida
-- [ ] Aplicar en el VPS: `chown -R 1001:1001 server/data server/uploads` +
-  restart del container (o correr el proximo deploy, que ya lo hace)
-- [ ] Verificar: guardar un producto desde el panel sin error
+- [x] Aplicado en el VPS via deploy del 2026-07-02: data/uploads pertenecen a
+  1001 y el container los ve escribibles (verificado con `[ -w ... ]`)
+- [ ] Verificar: guardar un producto desde el panel sin error (requiere login)
 
 ## Fase 1 — Operacion urgente en el VPS (sin tocar codigo)
 
