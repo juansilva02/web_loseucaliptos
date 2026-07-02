@@ -76,24 +76,26 @@ Ningun paso de esta fase requiere build ni redeploy de la app.
 
 ## Fase 2 — Seguridad backend (local → deploy)
 
-### 2.1 Permisos de rutas (hallazgo 2)
+### 2.1 + 2.2 Gestion de roles de usuario (hallazgos 2 y 3) — HECHO 2026-07-02
 
-- [ ] `GET /api/admin/auth/users` pasa a `requireAdmin`
-- [ ] Rutas de escritura (products POST/PUT/DELETE, categories, raw-skus
-  promote, upload) pasan a `requireAdmin`; las de lectura pueden quedar en
-  `requireAuth`
-- [ ] Probar local: login, CRUD completo desde el panel
-- [ ] Commit: `fix(seguridad): requireAdmin en listado de usuarios y rutas de escritura`
-- [ ] Deploy + verificar CRUD en produccion
+Decision de diseño: en vez de poner `requireAdmin` en las rutas de catalogo,
+se formalizaron dos roles. `admin` gestiona usuarios; `editor` opera el
+catalogo (products/categories/raw-skus/upload quedan en `requireAuth`, que
+ahora relee el rol desde la DB en cada request).
 
-### 2.2 Reset de contrasena por admin (hallazgo 3)
-
-- [ ] Nuevo endpoint `PUT /api/admin/auth/users/:id/reset-password`
-  (`requireAdmin`, sin `currentPassword`, prohibido sobre uno mismo) y UI
-  minima en la pestana Usuarios
-- [ ] El endpoint viejo queda para cambio de la propia contrasena
-- [ ] Commit: `feat: reset de contrasena por admin sin clave actual`
-- [ ] Deploy + verificar reseteando la clave de un usuario de prueba
+- [x] `GET/POST /users`, cambio de rol, reset y delete pasan a `requireAdmin`
+- [x] Roles validados contra whitelist (`admin`, `editor`); default `editor`
+- [x] `PUT /users/:id/password` queda solo para la propia contrasena
+- [x] Nuevo `PUT /users/:id/reset-password` (admin, sin `currentPassword`,
+  prohibido sobre uno mismo)
+- [x] Nuevo `PUT /users/:id/role` y `DELETE /users/:id` con protecciones:
+  nunca sobre uno mismo, nunca dejar al sistema sin admins
+- [x] `requireAuth` relee el rol desde la DB: cambios de rol y bajas aplican
+  aunque el JWT viejo siga vigente
+- [x] UI: pestana Usuarios solo-admin, alta con rol, selector de rol por
+  usuario, reset de contrasena y eliminacion con confirmacion
+- [ ] Deploy + verificar en produccion (login admin: cambiar rol de un usuario
+  de prueba, resetear su clave, verificar que un editor no ve Usuarios)
 
 ### 2.3 Higiene menor (hallazgo 13 + logging)
 

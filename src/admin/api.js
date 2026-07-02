@@ -40,12 +40,28 @@ export const api = {
     }).then((data) => { storeToken(data.token); return data })
   },
 
+  me() {
+    return req('/api/admin/auth/me')
+  },
+
   getUsers() {
     return req('/api/admin/auth/users')
   },
 
   createUser(data) {
     return req('/api/admin/auth/users', { method: 'POST', body: JSON.stringify(data) })
+  },
+
+  updateUserRole(id, role) {
+    return req(`/api/admin/auth/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) })
+  },
+
+  resetUserPassword(id, newPassword) {
+    return req(`/api/admin/auth/users/${id}/reset-password`, { method: 'PUT', body: JSON.stringify({ newPassword }) })
+  },
+
+  deleteUser(id) {
+    return req(`/api/admin/auth/users/${id}`, { method: 'DELETE' })
   },
 
   logout() { clearToken() },

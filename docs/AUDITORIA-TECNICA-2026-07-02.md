@@ -26,6 +26,8 @@ Estado general:
 - Evidencia: `GET /api/admin/auth/users` usa `requireAuth`, no `requireAdmin`
 - Impacto: si en el futuro existen roles no admin, cualquier usuario valido
   podra enumerar emails, roles y fechas de alta
+- **RESUELTO 2026-07-02**: toda la gestion de usuarios (listar, crear, rol,
+  reset, delete) es `requireAdmin`; se formalizaron roles `admin`/`editor`
 
 ### 3. Reset de contrasena admin no coincide con la expectativa operativa
 
@@ -35,6 +37,9 @@ Estado general:
 - Impacto: un admin no puede resetear la contrasena de otro usuario sin conocer
   la contrasena actual
 - Nota: la documentacion anterior afirmaba lo contrario
+- **RESUELTO 2026-07-02**: nuevo `PUT /users/:id/reset-password` (solo admin,
+  sin `currentPassword`, prohibido sobre uno mismo); el endpoint viejo queda
+  para la propia contrasena
 
 ### 4. Seguridad de borde incompleta en frontend estatico
 

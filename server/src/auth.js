@@ -79,11 +79,13 @@ export function requireAuth(req, res, next) {
   if (!payload) {
     return res.status(401).json({ error: 'Token inválido o expirado' })
   }
-  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(payload.id)
+  const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(payload.id)
   if (!user) {
     return res.status(401).json({ error: 'Usuario no encontrado o eliminado' })
   }
-  req.user = payload
+  // El rol se lee de la DB, no del token: un cambio de rol o una baja
+  // aplican de inmediato aunque el JWT viejo siga vigente.
+  req.user = { ...payload, role: user.role }
   next()
 }
 

@@ -165,9 +165,11 @@ export default function AdminPage() {
   const [featuredStatusFilter, setFeaturedStatusFilter] = useState('all')
   const [categoryQuery, setCategoryQuery] = useState('')
   const [reviewQuery, setReviewQuery] = useState('')
+  const [me, setMe] = useState(null)
   const [users, setUsers] = useState([])
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
+  const [newUserRole, setNewUserRole] = useState('editor')
   const toastTimer = useRef(null)
 
   const [products, setProducts] = useState([])
@@ -188,16 +190,23 @@ export default function AdminPage() {
     window.localStorage.setItem(ADMIN_APPEARANCE_KEY, JSON.stringify(appearance))
   }, [appearance])
 
+  // El listado de usuarios es solo-admin (403 para editores): no debe tumbar
+  // la carga del resto del panel.
+  const loadPanelData = () =>
+    Promise.all([
+      api.getProducts({ all: '1' }),
+      api.getCategories(),
+      api.me().catch(() => ({ user: null })),
+      api.getUsers().catch(() => ({ users: [] })),
+    ])
+
   const syncFromServer = async () => {
     setLoading(true)
     try {
-      const [prodRes, catRes, usersRes] = await Promise.all([
-        api.getProducts({ all: '1' }),
-        api.getCategories(),
-        api.getUsers(),
-      ])
+      const [prodRes, catRes, meRes, usersRes] = await loadPanelData()
       setProducts(prodRes.products)
       setCategories(catRes.categories)
+      setMe(meRes.user)
       setUsers(usersRes.users || [])
       // La pileta (rawSkus) la maneja el efecto de busqueda debounced.
     } catch (err) {
@@ -210,11 +219,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return
     let cancelled = false
-    Promise.all([api.getProducts({ all: '1' }), api.getCategories(), api.getUsers()])
-      .then(([prodRes, catRes, usersRes]) => {
+    loadPanelData()
+      .then(([prodRes, catRes, meRes, usersRes]) => {
         if (!cancelled) {
           setProducts(prodRes.products)
           setCategories(catRes.categories)
+          setMe(meRes.user)
           setUsers(usersRes.users || [])
           setLoading(false)
         }
@@ -457,15 +467,48 @@ export default function AdminPage() {
 
     setSaving(true)
     try {
-      const response = await api.createUser({ email, password, role: 'admin' })
+      const response = await api.createUser({ email, password, role: newUserRole })
       setUsers((current) => [response.user, ...current])
       setNewUserEmail('')
       setNewUserPassword('')
-      flash(`Usuario creado: ${response.user.email}`)
+      setNewUserRole('editor')
+      flash(`Usuario creado: ${response.user.email} (${response.user.role})`)
     } catch (err) {
       flash(`Error al crear usuario: ${err.message}`)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const changeUserRole = async (user, role) => {
+    try {
+      const response = await api.updateUserRole(user.id, role)
+      setUsers((current) => current.map((item) => (item.id === user.id ? response.user : item)))
+      flash(`Rol de ${user.email}: ${response.user.role}`)
+    } catch (err) {
+      flash(`Error al cambiar rol: ${err.message}`)
+    }
+  }
+
+  const resetUserPassword = async (user) => {
+    const newPassword = prompt(`Nueva contraseña para ${user.email} (mínimo 6 caracteres):`)
+    if (newPassword === null) return
+    try {
+      await api.resetUserPassword(user.id, newPassword)
+      flash(`Contraseña de ${user.email} actualizada`)
+    } catch (err) {
+      flash(`Error al resetear contraseña: ${err.message}`)
+    }
+  }
+
+  const deleteUser = async (user) => {
+    if (!window.confirm(`Eliminar el usuario "${user.email}"? Esta acción no se puede deshacer.`)) return
+    try {
+      await api.deleteUser(user.id)
+      setUsers((current) => current.filter((item) => item.id !== user.id))
+      flash(`Usuario ${user.email} eliminado`)
+    } catch (err) {
+      flash(`Error al eliminar usuario: ${err.message}`)
     }
   }
 
@@ -567,9 +610,11 @@ export default function AdminPage() {
         <button className={tab === 'review' ? 'active' : ''} onClick={() => setTab('review')}>
           Revision <em>{reviewStats.flaggedProducts + reviewStats.pendingRaw}</em>
         </button>
-        <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>
-          Usuarios <em>{users.length}</em>
-        </button>
+        {me?.role === 'admin' ? (
+          <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>
+            Usuarios <em>{users.length}</em>
+          </button>
+        ) : null}
       </nav>
 
       {toast ? <div className="admin-toast">{toast}</div> : null}
@@ -900,10 +945,13 @@ export default function AdminPage() {
         </section>
       ) : null}
 
-      {tab === 'users' ? (
+      {tab === 'users' && me?.role === 'admin' ? (
         <section className="admin-section">
           <div className="admin-section-head">
-            <p>Crea accesos nuevos para administrativos. Se generan como usuarios admin y pueden entrar al panel con email y contraseña.</p>
+            <p>
+              Gestion de accesos al panel. Roles: <strong>admin</strong> (todo, incluida esta pantalla) y{' '}
+              <strong>editor</strong> (opera el catalogo pero no gestiona usuarios).
+            </p>
             <div className="admin-section-actions">
               <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading || saving}>
                 Recargar
@@ -919,7 +967,7 @@ export default function AdminPage() {
                   type="text"
                   value={newUserEmail}
                   onChange={(event) => setNewUserEmail(event.target.value)}
-                  placeholder="ej: ventas.solano"
+                  placeholder="ej: ventas@corralon.com"
                 />
               </label>
               <label>
@@ -931,6 +979,13 @@ export default function AdminPage() {
                   placeholder="Minimo 6 caracteres"
                 />
               </label>
+              <label>
+                Rol
+                <select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value)}>
+                  <option value="editor">editor</option>
+                  <option value="admin">admin</option>
+                </select>
+              </label>
             </div>
             <button className="admin-btn admin-btn-primary" type="button" onClick={createUser} disabled={saving}>
               {saving ? 'Creando...' : 'Crear usuario'}
@@ -941,9 +996,32 @@ export default function AdminPage() {
             <div className="admin-users-list">
               {users.map((user) => (
                 <article className="admin-user-card" key={user.id}>
-                  <strong>{user.email}</strong>
-                  <span>Rol: {user.role}</span>
+                  <strong>
+                    {user.email}
+                    {me && user.id === me.id ? ' (vos)' : ''}
+                  </strong>
+                  <span className="admin-user-role">
+                    Rol:{' '}
+                    {me && user.id === me.id ? (
+                      user.role
+                    ) : (
+                      <select value={user.role} onChange={(event) => changeUserRole(user, event.target.value)}>
+                        <option value="admin">admin</option>
+                        <option value="editor">editor</option>
+                      </select>
+                    )}
+                  </span>
                   <span>Alta: {String(user.created_at || '').replace('T', ' ').slice(0, 16) || 'sin fecha'}</span>
+                  {me && user.id !== me.id ? (
+                    <div className="admin-user-actions">
+                      <button type="button" className="admin-btn admin-btn-mini" onClick={() => resetUserPassword(user)}>
+                        Resetear contraseña
+                      </button>
+                      <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={() => deleteUser(user)}>
+                        Eliminar
+                      </button>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>

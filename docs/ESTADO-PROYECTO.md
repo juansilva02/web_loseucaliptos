@@ -104,9 +104,10 @@ Flujo:
 Huecos pendientes (verificados en codigo y VPS):
 - Nginx no agrega headers de seguridad al HTML estatico del frontend (el
   `curl -I /` no devuelve CSP, HSTS, X-Content-Type-Options ni X-Frame-Options)
-- `GET /api/admin/auth/users` requiere auth, pero no `requireAdmin`; de hecho
-  todas las rutas de productos, categorias, raw-skus y uploads usan solo
-  `requireAuth` (hoy es equivalente porque todos los usuarios son admin)
+- ~~`GET /api/admin/auth/users` sin `requireAdmin`~~ resuelto el 2026-07-02:
+  la gestion de usuarios es solo-admin y existen roles `admin`/`editor`; las
+  rutas de catalogo quedan en `requireAuth` a proposito (los editores operan
+  el catalogo)
 - Nginx no define `client_max_body_size` (default 1 MB): la subida de imagenes
   viaja como base64 dentro de JSON, asi que una foto mayor a ~750 KB reales
   devuelve 413 antes de llegar a Express (que si permite 10 MB)

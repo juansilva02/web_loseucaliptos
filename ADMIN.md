@@ -41,9 +41,12 @@ Pantallas principales:
 |---|---|
 | Login | `POST /api/admin/auth/login` |
 | Usuario actual | `GET /api/admin/auth/me` |
-| Listar usuarios | `GET /api/admin/auth/users` |
-| Crear usuario | `POST /api/admin/auth/users` |
-| Cambiar contrasena | `PUT /api/admin/auth/users/:id/password` |
+| Listar usuarios (solo admin) | `GET /api/admin/auth/users` |
+| Crear usuario (solo admin) | `POST /api/admin/auth/users` |
+| Cambiar contrasena propia | `PUT /api/admin/auth/users/:id/password` |
+| Resetear contrasena ajena (solo admin) | `PUT /api/admin/auth/users/:id/reset-password` |
+| Cambiar rol (solo admin) | `PUT /api/admin/auth/users/:id/role` |
+| Eliminar usuario (solo admin) | `DELETE /api/admin/auth/users/:id` |
 | Listar productos | `GET /api/admin/products` |
 | Crear producto | `POST /api/admin/products` |
 | Editar producto | `PUT /api/admin/products/:id` |
@@ -77,16 +80,23 @@ Comportamiento del boton X (quitar) en el catalogo:
   fila queda visible como inactiva y se puede reactivar
 - fila nueva sin guardar: se descarta solo del estado local
 
-## Usuarios
+## Usuarios y roles
 
-Estado real del sistema:
-- crear usuario requiere rol `admin`
-- listar usuarios hoy requiere solo autenticacion valida
-- el cambio de contrasena exige `currentPassword`
+Roles del sistema:
+- `admin`: todo, incluida la gestion de usuarios (crear, cambiar rol, resetear
+  contrasena, eliminar)
+- `editor`: opera el catalogo (productos, categorias, destacados, pileta,
+  imagenes) pero no ve ni gestiona usuarios
 
-Importante:
-- la documentacion anterior decia que un admin podia cambiar la contrasena de
-  cualquier usuario sin conocer la actual; eso no coincide con el codigo actual
+Reglas de la gestion de usuarios (todas solo-admin):
+- la pestana Usuarios solo aparece para admins; para editores el listado
+  devuelve 403 y el panel carga igual
+- un admin puede resetear la contrasena de otro usuario sin conocer la actual;
+  la propia se cambia con `currentPassword`
+- nadie puede cambiar su propio rol ni eliminarse a si mismo
+- no se puede degradar ni eliminar al ultimo admin del sistema
+- el rol se lee de la DB en cada request (no del token): un cambio de rol o una
+  baja aplican de inmediato aunque el JWT viejo siga vigente
 
 ## Seguridad actual
 
