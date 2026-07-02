@@ -3,49 +3,58 @@
 # Uso (en el VPS):  bash /opt/loseucaliptos/scripts/deploy.sh
 set -euo pipefail
 
-# Ir a la raiz del repo (este script vive en scripts/)
-cd "$(dirname "$0")/.."
-REPO="$(pwd)"
-echo "==> repo: $REPO"
+# Todo el deploy vive dentro de main() y se invoca en la ultima linea: asi
+# bash parsea el archivo completo antes de ejecutar nada. Sin esto, el
+# `git reset --hard` de abajo reescribe ESTE archivo a mitad de corrida y
+# bash puede terminar ejecutando bytes de la version nueva (corrupcion real
+# observada: el deploy del 2026-07-02 corrio la verificacion vieja).
+main() {
+  # Ir a la raiz del repo (este script vive en scripts/)
+  cd "$(dirname "$0")/.."
+  REPO="$(pwd)"
+  echo "==> repo: $REPO"
 
-echo "==> git sync origin/main"
-GIT_TERMINAL_PROMPT=0 git fetch origin main --prune
-git checkout main
-git reset --hard origin/main
+  echo "==> git sync origin/main"
+  GIT_TERMINAL_PROMPT=0 git fetch origin main --prune
+  git checkout main
+  git reset --hard origin/main
 
-echo "==> frontend: build"
-npm install --no-audit --no-fund
-npm run build
-chmod -R a+rX dist
-echo "    dist actualizado"
+  echo "==> frontend: build"
+  npm install --no-audit --no-fund
+  npm run build
+  chmod -R a+rX dist
+  echo "    dist actualizado"
 
-echo "==> backend: permisos de bind mounts (container corre como uid 1001)"
-# Sin esto SQLite queda en solo lectura y el admin no puede guardar.
-mkdir -p server/data server/uploads
-chown -R 1001:1001 server/data server/uploads
+  echo "==> backend: permisos de bind mounts (container corre como uid 1001)"
+  # Sin esto SQLite queda en solo lectura y el admin no puede guardar.
+  mkdir -p server/data server/uploads
+  chown -R 1001:1001 server/data server/uploads
 
-echo "==> backend: docker compose"
-# --force-recreate: garantiza que el container tome permisos/env frescos
-# aunque la imagen no haya cambiado (la conexion SQLite se abre al iniciar).
-( cd server && docker compose up -d --build --force-recreate )
+  echo "==> backend: docker compose"
+  # --force-recreate: garantiza que el container tome permisos/env frescos
+  # aunque la imagen no haya cambiado (la conexion SQLite se abre al iniciar).
+  ( cd server && docker compose up -d --build --force-recreate )
 
-echo "==> nginx: test + reload"
-nginx -t && systemctl reload nginx
+  echo "==> nginx: test + reload"
+  nginx -t && systemctl reload nginx
 
-echo "==> verificacion (loopback)"
-R="--resolve corralonloseucaliptus.com:443:127.0.0.1"
-curl -s --max-time 10 $R -o /dev/null -w "    frontend  -> HTTP %{http_code}\n" https://corralonloseucaliptus.com/
-# La API tarda unos segundos en aceptar conexiones tras el recreate del
-# container: reintentar antes de dar el veredicto.
-CODE=000
-for i in 1 2 3 4 5 6; do
-  CODE=$(curl -s --max-time 10 $R -o /dev/null -w "%{http_code}" https://corralonloseucaliptus.com/api/catalog || true)
-  [ "$CODE" = "200" ] && break
-  sleep 2
-done
-echo "    /api/catalog -> HTTP $CODE (intento $i)"
-if [ "$CODE" != "200" ]; then
-  echo "ERROR: /api/catalog no respondio 200; revisar: docker compose logs api"
-  exit 1
-fi
-echo "==> deploy OK"
+  echo "==> verificacion (loopback)"
+  R="--resolve corralonloseucaliptus.com:443:127.0.0.1"
+  curl -s --max-time 10 $R -o /dev/null -w "    frontend  -> HTTP %{http_code}\n" https://corralonloseucaliptus.com/
+  # La API tarda unos segundos en aceptar conexiones tras el recreate del
+  # container: reintentar antes de dar el veredicto.
+  CODE=000
+  for i in 1 2 3 4 5 6; do
+    CODE=$(curl -s --max-time 10 $R -o /dev/null -w "%{http_code}" https://corralonloseucaliptus.com/api/catalog || true)
+    [ "$CODE" = "200" ] && break
+    sleep 2
+  done
+  echo "    /api/catalog -> HTTP $CODE (intento $i)"
+  if [ "$CODE" != "200" ]; then
+    echo "ERROR: /api/catalog no respondio 200; revisar: docker compose logs api"
+    exit 1
+  fi
+  echo "==> deploy OK"
+}
+
+main "$@"
