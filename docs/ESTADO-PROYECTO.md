@@ -1,115 +1,177 @@
-# Estado del proyecto — Corralón Los Eucaliptus
+# Estado del proyecto
 
-> Referencia viva. Última actualización: 2026-07-01.
+Referencia viva del estado real del sistema. Actualizado al 2026-07-02, con
+verificacion en vivo del VPS por SSH (repo, Docker, Nginx, DB y cron).
 
-## 1. Arquitectura — dónde apunta cada cosa
+## 1. Topologia real
 
-**TODO corre en el VPS** (no hay Vercel). Frontend + backend bajo el mismo dominio, con Nginx adelante.
+Todo corre en el VPS `190.104.252.7`.
 
+```text
+Usuario
+  -> https://corralonloseucaliptus.com
+    -> Nginx
+      -> /                      -> /opt/loseucaliptos/dist
+      -> /catalogo             -> /opt/loseucaliptos/dist/catalogo/index.html
+      -> /api/*                -> 127.0.0.1:3001
+      -> /uploads/*            -> 127.0.0.1:3001
 ```
-Usuario → https://corralonloseucaliptus.com  (DNS A → 190.104.252.7)
-            │
-          NGINX (en el VPS)
-            ├── /            → frontend estático  /opt/loseucaliptos/dist  (SPA, fallback index.html)
-            ├── /api/*       → proxy → backend container 127.0.0.1:3001
-            └── /uploads/*   → proxy → backend container (imágenes subidas)
-```
 
-- **Dominio:** `corralonloseucaliptus.com` (registrado en **Hostinger**, DNS en Hostinger).
-  - `A @ → 190.104.252.7`, `CNAME www → corralonloseucaliptus.com`.
-  - El email (MX/SPF/DKIM/DMARC de Hostinger) **no se toca**.
-- **VPS:** `190.104.252.7`, Debian 12. SSH alias local `loseucaliptus`.
-- **TLS:** emitido con **acme.sh** (Let's Encrypt). Cert en `/etc/nginx/ssl/corralon/`. Auto-renueva y recarga Nginx solo.
+Piezas:
+- dominio: `corralonloseucaliptus.com`
+- frontend: React + Vite compilado en `dist/`
+- backend: Express en Docker
+- DB: SQLite persistida en `server/data/loseucaliptos.sqlite`
+- imagenes: `server/uploads/`
+- TLS: `acme.sh` + Nginx
 
-## 2. Configuración — para hacer una actualización
+## 2. Ubicaciones operativas
 
-**Flujo de update:** editás local → `git push` → en el VPS corrés el deploy.
+| Recurso | Ubicacion |
+|---|---|
+| Repo local | `E:\\Loseucaliptos2026` |
+| Repo en VPS | `/opt/loseucaliptos` |
+| Frontend build | `/opt/loseucaliptos/dist` |
+| Backend | `/opt/loseucaliptos/server` |
+| Nginx site | `/etc/nginx/sites-available/corralon` |
+| Certificados TLS | `/etc/nginx/ssl/corralon/fullchain.cer` + `private.key` |
+| DB | `/opt/loseucaliptos/server/data/loseucaliptos.sqlite` |
+| Uploads | `/opt/loseucaliptos/server/uploads` |
+| Deploy | `/opt/loseucaliptos/scripts/deploy.sh` |
+
+El VPS es compartido: Nginx tambien sirve los sites `n8n`, `chatwoot` y `acme`.
+Cualquier cambio de Nginx debe cuidar de no pisarlos.
+
+## 3. Estado de datos
+
+Conteos observados en el VPS (verificados 2026-07-02):
+- categorias: 7
+- productos totales en DB: 64
+- productos publicos activos: 62
+- `raw_skus`: 1749
+- usuarios: 3
+- `orders`: 0 y `leads`: 0 (las tablas existen en el esquema pero no hay
+  endpoints que escriban en ellas)
+- destacados legacy: 18 registros en tabla `featured`, pero el home publico usa
+  `products.featured = 1`; el seed sigue poblando esa tabla aunque ya no se lee
+- `server/uploads/` en el VPS tiene 1 solo archivo: casi todas las imagenes
+  publicadas salen de assets bundleados en el frontend, no de uploads
+
+Fuentes versionadas:
+- `server/seed-data/featured-catalog.json`
+- `server/seed-data/raw-catalog.json`
+
+Limitacion importante:
+- `server/src/seed.js` usa `INSERT OR IGNORE`
+- eso sirve para bootstrap, pero no vuelve a alinear la DB con el repo una vez
+  que la DB ya existe
+
+## 4. Como funciona el admin
+
+Entrada:
+- `/#admin`
+
+Frontend:
+- `src/admin/AdminPage.jsx`
+- `src/admin/api.js`
+
+Backend:
+- `server/src/routes/auth.js`
+- `server/src/routes/products.js`
+- `server/src/routes/categories.js`
+- `server/src/routes/raw-skus.js`
+- `server/src/routes/uploads.js`
+
+Flujo:
+1. login -> token JWT en `sessionStorage`
+2. el panel carga productos, categorias y usuarios
+3. los cambios se guardan por endpoint REST
+4. las imagenes van a `/api/admin/upload`
+5. el sitio publico consume `/api/catalog` y `/api/featured`
+
+## 5. Seguridad implementada hoy
+
+- `helmet()` en backend API
+- `trust proxy = 1`
+- rate limit global `500/15m`
+- rate limit de login `20/15m`
+- JWT propio con HMAC SHA-256
+- passwords con `scrypt`
+- validacion de `JWT_SECRET` en produccion
+- uploads con nombre canonico por producto y sanitizacion
+- backend Docker como usuario no root
+
+Huecos pendientes (verificados en codigo y VPS):
+- Nginx no agrega headers de seguridad al HTML estatico del frontend (el
+  `curl -I /` no devuelve CSP, HSTS, X-Content-Type-Options ni X-Frame-Options)
+- `GET /api/admin/auth/users` requiere auth, pero no `requireAdmin`; de hecho
+  todas las rutas de productos, categorias, raw-skus y uploads usan solo
+  `requireAuth` (hoy es equivalente porque todos los usuarios son admin)
+- Nginx no define `client_max_body_size` (default 1 MB): la subida de imagenes
+  viaja como base64 dentro de JSON, asi que una foto mayor a ~750 KB reales
+  devuelve 413 antes de llegar a Express (que si permite 10 MB)
+- `gzip on` esta activo pero `gzip_types` esta comentado en `nginx.conf`: los
+  bundles JS/CSS se sirven sin comprimir (solo se comprime text/html)
+- el `.env` del VPS define `ADMIN_EMAIL`/`ADMIN_PASSWORD`, pero `seed.js` lee
+  `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`: en una reconstruccion desde cero el
+  seed NO crearia el usuario admin con ese `.env`
+
+## 6. SEO y publicacion
+
+Implementado:
+- `robots.txt`
+- `sitemap.xml`
+- canonical y meta tags en `index.html`
+- JSON-LD de Organization, WebSite y FAQ en home
+- prerender de `/catalogo` con Breadcrumb + ItemList
+
+Riesgos actuales:
+- `sitemap.xml` tiene `lastmod` manual y fijo
+- el prerender depende de la API viva o cae al JSON estatico
+- hay deuda de calidad y normalizacion de nombres del catalogo, aunque la salida
+  publica validada en UTF-8 no mostro un problema real de encoding
+
+## 7. Deploy
+
+Comando:
 
 ```bash
 ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"
 ```
 
-| Qué | Dónde |
-|---|---|
-| Repo (GitHub) | https://github.com/juansilva02/web_loseucaliptos (rama `main`) |
-| Repo en el VPS | `/opt/loseucaliptos` |
-| Frontend (código) | `src/` (React + Vite). Build → `dist/` (lo sirve Nginx) |
-| Backend (código) | `server/` (Express + SQLite, en Docker) |
-| Nginx site | `/etc/nginx/sites-available/corralon` |
-| Cert TLS | `/etc/nginx/ssl/corralon/` (acme.sh) |
-| Script de deploy | `scripts/deploy.sh` |
-| Backup del backend | rama `backend-vps-backup` en GitHub |
+El script:
+1. `git fetch origin main --prune`
+2. `git checkout main`
+3. `git reset --hard origin/main`
+4. `npm install`
+5. `npm run build`
+6. `docker compose up -d --build`
+7. `nginx -t && systemctl reload nginx`
+8. verifica `/` y `/api/catalog`
 
-**Backend (container `loseucaliptos-api`):**
-- Definido en `server/docker-compose.yml` + `server/Dockerfile`. Escucha en `127.0.0.1:3001`.
-- DB SQLite: `server/data/loseucaliptos.sqlite` (bind-mount, persistente, NO en git).
-- Imágenes subidas: `server/uploads/` (bind-mount, NO en git).
-- Variables: `server/.env` (NO en git). Claves: `JWT_SECRET`, `CORS_ORIGINS`, `PORT=3001`,
-  `N8N_WEBHOOK_URL`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`.
-- Stack: `better-sqlite3`, auth JWT propia con `node:crypto` (`server/src/auth.js`), `sharp` para imágenes.
-- Comandos útiles (en `server/`): `docker compose up -d --build`, `docker compose logs -f`,
-  `docker compose exec api node src/seed.js` (re-seed idempotente).
+## 8. Estado operativo del VPS (verificado 2026-07-02)
 
-**Datos:** 64 productos curados (catálogo vivo) · 1749 SKUs crudos (pileta `raw_skus`,
-curados y versionados en `server/seed-data/raw-catalog.json`) · 7 categorías
-(se agregó `otros-materiales`).
+- container `loseucaliptos-api`: Up, `/health` responde OK
+- repo en VPS: `be1b782`, working tree limpio, alineado con `origin/main`
+- **no existe ningun backup**: el unico cron es la renovacion de acme.sh; no
+  hay `/opt/backups` ni copia del `.sqlite` fuera del VPS
+- **disco al 78%**: 4,1 GB libres de 19 GB (el VPS comparte espacio con n8n,
+  chatwoot, portainer y sus imagenes Docker)
+- DB en modo WAL (`.sqlite` + `-shm` + `-wal`), ~800 KB total
 
-## 3. Cómo funciona el panel admin
+## 9. Pendientes estrategicos
 
-- **Acceso:** `https://corralonloseucaliptus.com/#admin` (ruta por hash).
-- **Login:** usuario y contraseña definidos por `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
-  (variables de entorno). Rate limit: 20 intentos cada 15 minutos.
-- **Frontend admin:** `src/admin/` (`AdminPage.jsx`, `api.js`). `api.js` pega a `/api` relativo (mismo origen).
-- **Roles:** existe el campo `role` en la tabla `users`. Solo usuarios con `role='admin'`
-  pueden crear otros usuarios. El middleware `requireAdmin` verifica esto.
-- **Endpoints (backend, protegidos con JWT salvo login):**
-  - `POST /api/admin/auth/login` → devuelve token. `GET /api/admin/auth/me`.
-  - `GET/POST/PUT /api/admin/products` → CRUD del catálogo.
-  - `POST /api/admin/products/:id/deactivate` y `.../activate` → soft delete/reactivar.
-  - `GET /api/admin/raw-skus?search=` → pileta de SKUs para agregar.
-  - `POST /api/admin/raw-skus/:code/promote` → promover SKU a producto (valida que la categoría exista).
-  - `GET/POST/PUT/DELETE /api/admin/categories` → CRUD de categorías.
-  - `POST /api/admin/upload` → subir imagen (solo webp/jpg/png, sanitiza path, convierte a WebP).
-  - `PUT /api/admin/auth/users/:id/password` → cambiar contraseña.
-- **Público:** `GET /api/catalog` (categorías + productos activos), `GET /api/featured` (destacados).
-- **Imágenes:** resolución en cadena: 1) image_url de la DB, 2) asset bundleado por ID, 3) asset bundleado
-  por nombre, 4) fallback texto.
+- backups automaticos del `.sqlite` y de `uploads/` (hoy: cero backups)
+- vigilar espacio en disco (78% usado; limpiar imagenes Docker huerfanas)
+- alinear nombres de variables del `.env` del VPS con lo que lee `seed.js`
+- `client_max_body_size` en Nginx para que la subida de imagenes reales funcione
+- reconciliacion real entre seed versionado y DB viva
+- headers de seguridad en Nginx para frontend
+- corregir permisos de usuarios admin (`requireAdmin` en rutas de escritura)
+- endpoint real para reset admin de contrasenas
+- endpoints `orders` y `leads` (las tablas ya existen vacias)
+- observabilidad y alertas basicas del backend (hoy no hay logging de requests)
 
-## 4. Seguridad implementada
-
-| Medida | Detalle |
-|---|---|
-| Path traversal en uploads | `sanitizeFileName()` elimina `../` y solo permite `[\w.\-]+` |
-| Solo imágenes en upload | Se rechazan formatos no soportados; sharp procesa todo |
-| Error details ocultos | No se expone `err.message` al cliente |
-| Rate limit en login | 20 intentos / 15 min por IP |
-| Rate limit global | 500 req / 15 min |
-| CORS restrictivo | En producción requiere `CORS_ORIGINS` configurado |
-| JWT_SECRET | Falla en producción si no está configurado |
-| Token revocado si user eliminado | `requireAuth` verifica existencia en DB |
-| Creación de usuarios | Solo usuarios con `role='admin'` |
-| Cambio de contraseña | Endpoint protegido, requiere contraseña actual |
-| Contenedor no-root | Docker corre como `appuser` (uid 1001) |
-| LIKE wildcards escapados | Búsquedas escapan `%` y `_` |
-| Validación de parámetros | `req.params.code` validado como entero positivo |
-
-## 5. Pasos restantes — automatización con n8n
-
-1. **Backend (falta):** crear `POST /api/orders` y `POST /api/leads` que:
-   - guarden en las tablas `orders` / `leads` (ya existen en el esquema),
-   - disparen un webhook a n8n, best-effort (no bloquear la respuesta).
-2. **n8n:** crear un workflow con nodo **Webhook** (trigger) → copiar la URL →
-   ponerla en `server/.env` como `N8N_WEBHOOK_URL` → conectar un nodo de **WhatsApp**
-   para mandar el mensaje automático.
-3. **Frontend (falta):** que el carrito (al "Enviar pedido") y el verificador de
-   cobertura (lead) hagan el `POST` además del WhatsApp actual.
-4. **Probar** end-to-end: pedido en la web → guardado en DB → n8n recibe → WhatsApp sale.
-
-## 6. Mejoras a futuro
-
-- Dashboard de orders/leads cuando esté la automatización.
-- Edición inline de precio/stock; acciones masivas (actualizar precios por %).
-- Unificar las dos fuentes de categorías (`featured-catalog.json` vs `lib/catalog.js`).
-- Google Business Profile de las 2 sucursales.
-- Backup automático del `.sqlite` (cron).
-- Inferir categoría desde el nombre del producto en raw SKUs (fallback cuando el rubro está vacío).
+Ver tambien:
+- [Auditoria tecnica 2026-07-02](AUDITORIA-TECNICA-2026-07-02.md)
+- [Reconstruccion de arquitectura](RECONSTRUCCION-ARQUITECTURA.md)

@@ -1,79 +1,115 @@
-# Panel de administracion del catalogo
+# Panel admin
 
-Seccion privada para cambiar precios, agregar/editar/borrar productos, elegir
-destacados y subir imagenes en vivo, sin tocar codigo ni redeployar.
+Panel privado del catalogo. Guarda cambios directo en la DB del VPS; no exporta
+JSON ni requiere redeploy para reflejar cambios de productos/categorias.
 
-Los cambios se guardan en la base de datos del backend (SQLite en el VPS) y se
-reflejan en la web al instante (el catalogo y los destacados leen de la API).
+Acceso:
+- `https://corralonloseucaliptus.com/#admin`
 
-## Como entrar
+## Que hace hoy
 
-- Agrega `#admin` a la URL: `https://corralonloseucaliptus.com/#admin`
-- Login por usuario + contrasena (validado en el servidor, JWT).
+- CRUD de productos del catalogo
+- activacion y desactivacion logica (`active`)
+- seleccion de destacados (`featured`)
+- CRUD de categorias
+- promocion de `raw_skus` al catalogo real
+- subida y reemplazo de imagenes por producto
+- creacion de usuarios admin
+- tema y wallpaper local del panel
 
-### Credenciales por defecto
+## Flujo de datos
 
-Definidas por las variables de entorno `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`
-(ver `.env` del backend). Si no estan configuradas, el seed salta la creacion
-del usuario administrador.
+```text
+AdminPage.jsx
+  -> src/admin/api.js
+    -> /api/admin/*
+      -> Express
+        -> SQLite
+        -> uploads/
+```
 
-## Que se puede hacer
+Pantallas principales:
+- `Catalogo completo`
+- `Categorias`
+- `Destacados`
+- `Usuarios`
+- `Revision`
 
-- **Catalogo:** agregar, editar (nombre, marca, categoria, unidad, precio, imagen)
-  y borrar productos. El borrado es soft (el producto se desactiva, no se pierde
-  el dato). Precio vacio / 0 -> se muestra como "A consultar".
-- **Agregar desde la pileta:** hay SKUs curados y versionados en el repo disponibles
-  para sumar al catalogo desde una busqueda; al agregarlos pasan a ser productos del sitio.
-- **Destacados (home):** marcar/desmarcar productos como `featured`. Lo marcado
-  aparece en la grilla de "Productos destacados" del home (via `/api/featured`).
-- **Imagenes:** subir por producto; el backend las comprime a WebP (`sharp`) y las
-  sirve desde `/uploads/`. Solo se aceptan formatos webp, jpg y png.
-- **Apariencia del panel:** cada administrador puede elegir un tema visual y subir
-  un wallpaper local para su navegador. Esto no toca el servidor ni afecta al
-  sitio publico.
-
-## Como funciona por detras
+## Endpoints usados
 
 | Accion | Endpoint |
 |---|---|
-| Login (con rate limit: 20 intentos / 15 min) | `POST /api/admin/auth/login` |
-| Ver mi usuario | `GET /api/admin/auth/me` |
+| Login | `POST /api/admin/auth/login` |
+| Usuario actual | `GET /api/admin/auth/me` |
 | Listar usuarios | `GET /api/admin/auth/users` |
-| Crear usuario (solo admin) | `POST /api/admin/auth/users` |
+| Crear usuario | `POST /api/admin/auth/users` |
 | Cambiar contrasena | `PUT /api/admin/auth/users/:id/password` |
-| Listar/crear/editar producto | `GET/POST/PUT /api/admin/products` |
-| Desactivar/reactivar producto | `POST /api/admin/products/:id/deactivate` / `activate` |
-| Pileta de SKUs | `GET /api/admin/raw-skus?search=` |
-| Promover SKU a catalogo | `POST /api/admin/raw-skus/:code/promote` |
-| Categorias | `GET/POST/PUT/DELETE /api/admin/categories` |
+| Listar productos | `GET /api/admin/products` |
+| Crear producto | `POST /api/admin/products` |
+| Editar producto | `PUT /api/admin/products/:id` |
+| Desactivar producto | `POST /api/admin/products/:id/deactivate` |
+| Reactivar producto | `POST /api/admin/products/:id/activate` |
+| Listar categorias | `GET /api/admin/categories` |
+| Crear categoria | `POST /api/admin/categories` |
+| Editar categoria | `PUT /api/admin/categories/:key` |
+| Eliminar categoria | `DELETE /api/admin/categories/:key` |
+| Pileta de SKUs | `GET /api/admin/raw-skus` |
+| Promover SKU | `POST /api/admin/raw-skus/:code/promote` |
 | Subir imagen | `POST /api/admin/upload` |
-| (Publico) catalogo / destacados | `GET /api/catalog`, `GET /api/featured` |
 
-Todo lo de `/api/admin/*` requiere el token JWT del login.
+## Imagenes
 
-## Cambiar la contrasena
+Funcionamiento actual:
+- el frontend envia `productId`, `dataUrl` y `currentImageUrl`
+- el backend normaliza el nombre
+- la imagen final se guarda como `/uploads/<product-id>.webp`
+- si la imagen previa tenia otro nombre bajo `/uploads/`, se elimina
 
-Desde el panel no hay opcion todavia, pero la API tiene el endpoint:
+Limites actuales:
+- si se quita una imagen desde admin sin subir otra, se limpia `image_url` pero
+  no se borra el archivo huerfano del disco
+- Nginx no define `client_max_body_size` (default 1 MB) y la imagen viaja como
+  base64 dentro de JSON: fotos mayores a ~750 KB reales fallan con 413 antes de
+  llegar al backend
+- el boton "Quitar" de un producto solo lo saca de la tabla en pantalla; no
+  borra ni desactiva nada en la DB (el producto reaparece al recargar)
 
-```bash
-curl -X PUT https://corralonloseucaliptus.com/api/admin/auth/users/1/password \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"currentPassword":"actual","newPassword":"nueva"}'
-```
+## Usuarios
 
-Cualquier usuario puede cambiar su propia contrasena. Un admin puede cambiar
-la de cualquier usuario.
+Estado real del sistema:
+- crear usuario requiere rol `admin`
+- listar usuarios hoy requiere solo autenticacion valida
+- el cambio de contrasena exige `currentPassword`
 
-## Seguridad
+Importante:
+- la documentacion anterior decia que un admin podia cambiar la contrasena de
+  cualquier usuario sin conocer la actual; eso no coincide con el codigo actual
 
-- Auth real de servidor: contrasena con scrypt + login que emite JWT (7 dias).
-- Las rutas de administracion estan protegidas; sin token valido devuelven 401.
-- Crear usuarios requiere rol `admin` (no cualquier usuario autenticado).
-- Login con rate limit: 20 intentos cada 15 minutos por IP.
-- Las rutas `/api/admin/products`, `/api/admin/categories`, `/api/admin/raw-skus`
-  requieren autenticacion.
-- El panel `#admin` no aparece en la navegacion del sitio.
-- Subida de imagenes: se sanitiza el nombre de archivo (no permite path traversal),
-  solo se aceptan formatos webp/jpg/png, y se procesan con sharp (redimensiona y
-  convierte a WebP). Los errores no exponen detalles internos.
+## Seguridad actual
+
+- JWT firmado con `node:crypto`
+- passwords con `scrypt`
+- rate limit especifico para login
+- rate limit global
+- `trust proxy = 1`
+- upload con nombre canonico y sanitizacion
+- conversion de imagenes a WebP con `sharp`
+- backend corriendo como usuario no root en Docker
+
+## Limitaciones operativas
+
+- el guardado de productos es secuencial y reenvia toda la tabla desde el panel
+- no hay dirty tracking por fila
+- no hay endpoint bulk ni transaccion por lote para la edicion masiva
+- `raw_skus` se consulta server-side, pero el catalogo editable completo se baja
+  entero
+
+## Archivos clave
+
+- `src/admin/AdminPage.jsx`
+- `src/admin/api.js`
+- `server/src/routes/auth.js`
+- `server/src/routes/products.js`
+- `server/src/routes/categories.js`
+- `server/src/routes/raw-skus.js`
+- `server/src/routes/uploads.js`

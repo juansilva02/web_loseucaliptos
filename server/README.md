@@ -1,38 +1,104 @@
-# Los Eucaliptus — API (backend)
+# Backend API
 
-Backend del corralón: catálogo, pedidos, leads y panel admin. Node + Express + SQLite, en Docker.
+Backend actual del corralon. Expone catalogo publico, panel admin, uploads y
+seed inicial.
 
-Corre en el VPS detrás de Nginx (`api.loseucaliptus.zuzudev.pro` → `127.0.0.1:3001`). El frontend (Vercel) le consume la API.
+## Stack real
 
-## Stack
+- Node 22
+- Express
+- SQLite con `better-sqlite3`
+- auth propia con `node:crypto`
+- `sharp` para imagenes
+- Docker Compose
 
-- Node 22 + Express
-- SQLite (`better-sqlite3`) — se agrega en el paso de esquema
-- Auth admin con bcrypt + JWT — se agrega en el paso de auth
-- Docker + docker compose
+## Rutas principales
 
-## Desarrollo
+Publicas:
+- `GET /health`
+- `GET /api/catalog`
+- `GET /api/featured`
 
-El código vive en este repo (`/server`). Flujo: editar local → `git push` → en el VPS `git pull` + `docker compose up -d --build`.
+Admin:
+- `POST /api/admin/auth/login`
+- `GET /api/admin/auth/me`
+- `GET /api/admin/auth/users`
+- `POST /api/admin/auth/users`
+- `PUT /api/admin/auth/users/:id/password`
+- `GET/POST/PUT /api/admin/products`
+- `POST /api/admin/products/:id/deactivate`
+- `POST /api/admin/products/:id/activate`
+- `GET/POST/PUT/DELETE /api/admin/categories`
+- `GET /api/admin/raw-skus`
+- `POST /api/admin/raw-skus/:code/promote`
+- `POST /api/admin/upload`
 
-## Levantar en el VPS
+## Persistencia
+
+Bind mounts:
+- `./data` -> `/app/data`
+- `./uploads` -> `/app/uploads`
+
+Archivos principales:
+- DB: `server/data/loseucaliptos.sqlite`
+- uploads: `server/uploads/`
+- seed versionado:
+  - `server/seed-data/featured-catalog.json`
+  - `server/seed-data/raw-catalog.json`
+
+## Docker
+
+Levantar:
 
 ```bash
-cd /opt/loseucaliptos/server
-cp .env.example .env        # y completar JWT_SECRET, etc.
+cd server
 docker compose up -d --build
-curl -s localhost:3001/health
 ```
 
-## Endpoints (estado actual)
+Ver estado:
 
-| Método | Ruta       | Estado |
-|--------|------------|--------|
-| GET    | `/health`  | ✅ esqueleto |
+```bash
+docker compose ps
+docker compose logs -f api
+```
 
-Próximos: `/api/catalog`, `/api/featured` (públicos), CRUD admin (JWT), `/api/orders`, `/api/leads`, subida de imágenes.
+## Variables de entorno
 
-## Datos persistentes (bind-mounts, no van al repo)
+- `PORT`
+- `DB_PATH` opcional
+- `JWT_SECRET`
+- `CORS_ORIGINS`
+- `SEED_ADMIN_EMAIL`
+- `SEED_ADMIN_PASSWORD`
+- `N8N_WEBHOOK_URL` reservado para integraciones futuras
 
-- `./data` → archivo SQLite
-- `./uploads` → imágenes de productos (las sirve Nginx)
+Atencion: el `.env` historico del VPS usa `ADMIN_EMAIL`/`ADMIN_PASSWORD`, pero
+`seed.js` solo lee los nombres `SEED_ADMIN_*`. En una DB nueva, con los nombres
+viejos el seed no crea ningun usuario admin.
+
+## Seed
+
+El seed vive en `server/src/seed.js`.
+
+Importante:
+- es util para bootstrap
+- usa `INSERT OR IGNORE`
+- no debe considerarse una sincronizacion bidireccional ni una reconciliacion
+  completa de la DB viva
+
+## Seguridad actual
+
+- `helmet`
+- `trust proxy = 1`
+- rate limits
+- auth JWT
+- passwords con `scrypt`
+- uploads con sanitizacion y conversion a WebP
+- contenedor no root
+
+## Observaciones
+
+- La documentacion historica que hablaba de Vercel, bcrypt o rutas antiguas ya
+  no aplica.
+- El frontend sirve HTML estatico desde Nginx; por eso los headers de `helmet`
+  solo cubren la API, no el borde completo.
