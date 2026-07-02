@@ -25,7 +25,9 @@ mkdir -p server/data server/uploads
 chown -R 1001:1001 server/data server/uploads
 
 echo "==> backend: docker compose"
-( cd server && docker compose up -d --build )
+# --force-recreate: garantiza que el container tome permisos/env frescos
+# aunque la imagen no haya cambiado (la conexion SQLite se abre al iniciar).
+( cd server && docker compose up -d --build --force-recreate )
 
 echo "==> nginx: test + reload"
 nginx -t && systemctl reload nginx
