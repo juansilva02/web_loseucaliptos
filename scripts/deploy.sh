@@ -8,8 +8,10 @@ cd "$(dirname "$0")/.."
 REPO="$(pwd)"
 echo "==> repo: $REPO"
 
-echo "==> git pull"
-GIT_TERMINAL_PROMPT=0 git pull --ff-only
+echo "==> git sync origin/main"
+GIT_TERMINAL_PROMPT=0 git fetch origin main --prune
+git checkout main
+git reset --hard origin/main
 
 echo "==> frontend: build"
 npm install --no-audit --no-fund
