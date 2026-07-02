@@ -19,6 +19,11 @@ npm run build
 chmod -R a+rX dist
 echo "    dist actualizado"
 
+echo "==> backend: permisos de bind mounts (container corre como uid 1001)"
+# Sin esto SQLite queda en solo lectura y el admin no puede guardar.
+mkdir -p server/data server/uploads
+chown -R 1001:1001 server/data server/uploads
+
 echo "==> backend: docker compose"
 ( cd server && docker compose up -d --build )
 
