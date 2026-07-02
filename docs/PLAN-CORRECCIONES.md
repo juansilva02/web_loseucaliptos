@@ -12,11 +12,22 @@ Regla general del flujo:
 
 ---
 
-## Fase 0 — Commit de la documentacion (local, hoy)
+## Fase 0 — Commit de la documentacion (local, hoy) — HECHO 2026-07-02
 
-- [ ] Commit unico con los `.md` actualizados y `.env.example`:
-  `docs: auditoria 2026-07-02, informe de reconstruccion y estado verificado del VPS`
-- [ ] Push a `main` (no requiere deploy: los docs no afectan el build)
+- [x] Commit unico con los `.md` actualizados y `.env.example`
+- [x] Push a `main` (no requiere deploy: los docs no afectan el build)
+
+## Fase 0.5 — Hotfix DB readonly (hallazgo 16) — EN CURSO
+
+Descubierto al ejecutar este plan: desde el deploy del 2026-07-01 ~21:30 el
+panel admin no puede guardar (`attempt to write a readonly database`), porque
+los bind mounts pertenecen a root y el container corre como uid 1001.
+
+- [x] Backup manual pre-cambios en `/opt/backups/corralon/` (DB + uploads + env)
+- [x] `deploy.sh` chownea `server/data` y `server/uploads` a 1001 en cada corrida
+- [ ] Aplicar en el VPS: `chown -R 1001:1001 server/data server/uploads` +
+  restart del container (o correr el proximo deploy, que ya lo hace)
+- [ ] Verificar: guardar un producto desde el panel sin error
 
 ## Fase 1 — Operacion urgente en el VPS (sin tocar codigo)
 
@@ -96,11 +107,11 @@ Ningun paso de esta fase requiere build ni redeploy de la app.
 
 ## Fase 3 — Admin frontend (local → deploy)
 
-### 3.1 "Quitar" producto honesto (hallazgo 14)
+### 3.1 "Quitar" producto honesto (hallazgo 14) — HECHO 2026-07-02
 
-- [ ] `removeProduct` deja de filtrar estado local: pasa a llamar
-  `deactivateProduct` (o se elimina el boton y queda solo activar/desactivar)
-- [ ] Commit: `fix: quitar producto desactiva en DB en vez de ocultar local`
+- [x] `removeProduct` llama a `deactivateProduct` para filas ya guardadas y
+  solo descarta localmente las filas nuevas sin guardar
+- [x] Commit: `fix: quitar producto desactiva en DB en vez de ocultar local`
 
 ### 3.2 Guardado por fila / dirty tracking (hallazgo 7)
 

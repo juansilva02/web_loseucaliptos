@@ -246,8 +246,22 @@ export default function AdminPage() {
   const updateProduct = (index, patch) =>
     setProducts((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
 
-  const removeProduct = (index) =>
-    setProducts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+  const removeProduct = async (index) => {
+    const product = products[index]
+    if (!product) return
+    // Fila nueva sin guardar: solo existe en el estado local.
+    if (!product.id || product.id.startsWith('nuevo-')) {
+      setProducts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+      return
+    }
+    try {
+      await api.deactivateProduct(product.id)
+      updateProduct(index, { active: 0 })
+      flash(`"${product.name}" desactivado`)
+    } catch (err) {
+      flash(`Error al desactivar: ${err.message}`)
+    }
+  }
 
   const addProduct = () => {
     const key = categories[0]?.key || ''

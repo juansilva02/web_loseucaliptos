@@ -71,8 +71,11 @@ Limites actuales:
 - Nginx no define `client_max_body_size` (default 1 MB) y la imagen viaja como
   base64 dentro de JSON: fotos mayores a ~750 KB reales fallan con 413 antes de
   llegar al backend
-- el boton "Quitar" de un producto solo lo saca de la tabla en pantalla; no
-  borra ni desactiva nada en la DB (el producto reaparece al recargar)
+
+Comportamiento del boton X (quitar) en el catalogo:
+- producto ya guardado: desactiva en la DB (borrado logico, `active = 0`); la
+  fila queda visible como inactiva y se puede reactivar
+- fila nueva sin guardar: se descarta solo del estado local
 
 ## Usuarios
 
