@@ -22,8 +22,8 @@ del usuario administrador.
 - **Catalogo:** agregar, editar (nombre, marca, categoria, unidad, precio, imagen)
   y borrar productos. El borrado es soft (el producto se desactiva, no se pierde
   el dato). Precio vacio / 0 -> se muestra como "A consultar".
-- **Agregar desde la pileta:** hay 1756 SKUs del Excel disponibles para sumar al
-  catalogo desde una busqueda; al agregarlos pasan a ser productos del sitio.
+- **Agregar desde la pileta:** hay SKUs curados y versionados en el repo disponibles
+  para sumar al catalogo desde una busqueda; al agregarlos pasan a ser productos del sitio.
 - **Destacados (home):** marcar/desmarcar productos como `featured`. Lo marcado
   aparece en la grilla de "Productos destacados" del home (via `/api/featured`).
 - **Imagenes:** subir por producto; el backend las comprime a WebP (`sharp`) y las

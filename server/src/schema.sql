@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at   TEXT DEFAULT (datetime('now'))
 );
 
--- Pileta de SKUs crudos del Excel (1756). El admin agrega de aca al catalogo.
+-- Pileta de SKUs crudos curados y versionados en el repo. El admin agrega de aca al catalogo.
 CREATE TABLE IF NOT EXISTS raw_skus (
   code       INTEGER PRIMARY KEY,
   name       TEXT NOT NULL,

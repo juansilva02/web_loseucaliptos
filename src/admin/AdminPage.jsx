@@ -942,7 +942,7 @@ export default function AdminPage() {
       {tab === 'review' ? (
         <section className="admin-section">
           <div className="admin-section-head">
-            <p>Cola de revision automatica para nombres sucios, productos no disponibles y altas nuevas desde el Excel.</p>
+            <p>Cola de revision automatica para nombres sucios, productos no disponibles y altas nuevas desde la base curada.</p>
             <div className="admin-section-actions">
               <button className="admin-btn admin-btn-ghost" onClick={syncFromServer} disabled={loading || saving}>
                 Recargar

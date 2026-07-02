@@ -51,8 +51,8 @@ ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"
   `docker compose exec api node src/seed.js` (re-seed idempotente).
 
 **Datos:** 64 productos curados (catálogo vivo) · 1749 SKUs crudos (pileta `raw_skus`,
-con rubros normalizados desde CSV) · 7 categorías (se agregó `otros-materiales`).
-Los SKUs crudos ahora tienen rubro y precio real desde el Excel normalizado.
+curados y versionados en `server/seed-data/raw-catalog.json`) · 7 categorías
+(se agregó `otros-materiales`).
 
 ## 3. Cómo funciona el panel admin
 
