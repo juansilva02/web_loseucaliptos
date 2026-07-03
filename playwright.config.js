@@ -6,6 +6,7 @@ const e2eDbPath = join(process.cwd(), '.e2e', 'loseucaliptos.sqlite')
 const sharedEnv = {
   ...process.env,
   DB_PATH: e2eDbPath,
+  UPLOADS_DIR: join(process.cwd(), '.e2e', 'uploads'),
   JWT_SECRET: 'e2e-secret-with-enough-entropy-for-tests',
   SEED_ADMIN_EMAIL: 'admin@e2e.local',
   SEED_ADMIN_PASSWORD: 'Admin-e2e-123',

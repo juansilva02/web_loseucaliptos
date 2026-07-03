@@ -288,6 +288,7 @@
 .admin-image-actions { display: flex; gap: 4px; }
 .admin-image-path { font-size: 10px; color: #7a867300; color: #7a8673; word-break: break-all; max-width: 110px; }
 .admin-image-help { max-width: 110px; color: var(--admin-text-soft); font-size: 10px; text-align: center; }
+.admin-image-pending { max-width: 120px; color: #8a4b08; font-size: 10px; font-weight: 700; text-align: center; }
 
 .admin-conflict-panel {
   display: grid;

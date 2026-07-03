@@ -84,4 +84,13 @@ test('admin guarda solo la fila editada', async ({ page }, testInfo) => {
   await firstProductName.fill(`${await firstProductName.inputValue()} E2E`)
   await page.getByRole('button', { name: 'Guardar cambios' }).first().click()
   await expect(page.getByText('1 cambio(s) guardado(s)')).toBeVisible()
+
+  const firstProductRow = page.locator('.admin-table tbody tr').first()
+  await firstProductRow.locator('input[type="file"]').setInputFiles('src/assets/logo-header-los-eucaliptos.webp')
+  await expect(firstProductRow.locator('.admin-image-pending')).toContainText('pendiente de guardar')
+  await expect(firstProductRow.locator('.admin-image-preview img')).toHaveAttribute('src', /^data:image\/webp/)
+
+  await page.getByRole('button', { name: 'Guardar cambios' }).first().click()
+  await expect(firstProductRow.locator('.admin-image-pending')).toHaveCount(0)
+  await expect(firstProductRow.locator('.admin-image-preview img')).toHaveAttribute('src', /\/uploads\//)
 })

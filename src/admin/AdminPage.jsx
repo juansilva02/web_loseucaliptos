@@ -50,6 +50,20 @@ function changedFields(product, original) {
   )
 }
 
+function hasPendingImageChange(product) {
+  return Boolean(product._pendingImageFile || product._removeImage)
+}
+
+function mergeSavedProduct(saved, local) {
+  if (!hasPendingImageChange(local)) return saved
+  return {
+    ...saved,
+    _pendingImageFile: local._pendingImageFile,
+    _pendingImagePreview: local._pendingImagePreview,
+    _removeImage: local._removeImage,
+  }
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -141,6 +155,11 @@ function PriceField({ value, onChange, consultLabel = 'Consultar' }) {
 
 function ImageCell({ item, currentSrc, onUpload, onRemove, disabled = false }) {
   const inputRef = useRef(null)
+  const pendingLabel = item._pendingImageFile
+    ? 'Nueva imagen pendiente de guardar'
+    : item._removeImage
+      ? 'La imagen se quitara al guardar'
+      : ''
 
   return (
     <div className="admin-image-cell">
@@ -157,9 +176,9 @@ function ImageCell({ item, currentSrc, onUpload, onRemove, disabled = false }) {
         >
           {currentSrc ? 'Cambiar' : 'Subir'}
         </button>
-        {currentSrc ? (
+        {currentSrc || item._removeImage ? (
           <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={onRemove} disabled={disabled}>
-            Quitar
+            {item._pendingImageFile ? 'Descartar' : item._removeImage ? 'Deshacer' : 'Quitar'}
           </button>
         ) : null}
         <input
@@ -175,7 +194,8 @@ function ImageCell({ item, currentSrc, onUpload, onRemove, disabled = false }) {
         />
       </div>
       {disabled ? <small className="admin-image-help">Guarda el producto antes de subir una imagen.</small> : null}
-      {item.image ? <code className="admin-image-path">{item.image}</code> : null}
+      {pendingLabel ? <small className="admin-image-pending">{pendingLabel}</small> : null}
+      {item.image_url || item.image ? <code className="admin-image-path">{item.image_url || item.image}</code> : null}
     </div>
   )
 }
@@ -341,39 +361,51 @@ export default function AdminPage() {
     }, ...prev])
   }
 
-  const uploadProductImage = async (index, file) => {
+  const stageProductImage = async (index, file) => {
     const item = products[index]
     if (!item?.id) {
       flash('Guarda primero el producto y luego sube la imagen')
       return
     }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      flash('Usa una imagen JPG, PNG o WebP')
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      flash('La imagen debe pesar menos de 8 MB')
+      return
+    }
     try {
-      const uploaded = await api.uploadProductImage(item.id, item.version, file)
-      setProducts((current) => current.map((product) => (
-        product.id === item.id ? uploaded.product : product
-      )))
-      originalProducts.current.set(item.id, structuredClone(uploaded.product))
-      flash(`Imagen subida: ${uploaded.fileName}`)
+      const preview = await readFileAsDataUrl(file)
+      updateProduct(index, {
+        _pendingImageFile: file,
+        _pendingImagePreview: preview,
+        _removeImage: false,
+      })
+      flash('Imagen lista. Pulsa "Guardar cambios" para publicarla.')
     } catch (err) {
-      if (err.status === 409) setProductConflicts(err.details?.conflicts || [])
-      flash(`Error al subir imagen: ${err.message}`)
+      flash(`No se pudo preparar la imagen: ${err.message}`)
     }
   }
 
-  const removeProductImage = async (index) => {
+  const toggleProductImageRemoval = (index) => {
     const item = products[index]
     if (!item?.id) return
-    try {
-      const response = await api.removeProductImage(item.id, item.version)
-      setProducts((current) => current.map((product) => (
-        product.id === item.id ? response.product : product
-      )))
-      originalProducts.current.set(item.id, structuredClone(response.product))
-      flash('Imagen eliminada')
-    } catch (err) {
-      if (err.status === 409) setProductConflicts(err.details?.conflicts || [])
-      flash(`Error al quitar imagen: ${err.message}`)
+    if (item._pendingImageFile || item._removeImage) {
+      updateProduct(index, {
+        _pendingImageFile: null,
+        _pendingImagePreview: '',
+        _removeImage: false,
+      })
+      flash('Cambio de imagen descartado')
+      return
     }
+    updateProduct(index, {
+      _pendingImageFile: null,
+      _pendingImagePreview: '',
+      _removeImage: true,
+    })
+    flash('La imagen se quitara al guardar los cambios')
   }
 
   const updateCategory = (index, patch) =>
@@ -427,25 +459,52 @@ export default function AdminPage() {
             id: makeUniqueSlug(product.name, occupiedIds),
           },
         }))
+      const pendingImages = products.filter((product) => product.id && hasPendingImageChange(product))
 
-      if (!updates.length && !creates.length) {
+      if (!updates.length && !creates.length && !pendingImages.length) {
         flash('No hay cambios pendientes')
         return
       }
 
-      const response = await api.saveProductsBulk({ updates, creates })
-      const savedById = new Map((response.products || []).map((product) => [product.id, product]))
-      const createdByClient = new Map((response.created || []).map((entry) => [entry.clientId, entry.product]))
-      const merged = products.map((product) => (
-        product.id
-          ? savedById.get(product.id) || product
-          : createdByClient.get(product._clientId) || product
-      ))
-      setProducts(merged)
-      for (const product of [...(response.products || []), ...(response.created || []).map((entry) => entry.product)]) {
-        originalProducts.current.set(product.id, structuredClone(product))
+      let merged = products
+      if (updates.length || creates.length) {
+        const response = await api.saveProductsBulk({ updates, creates })
+        const savedById = new Map((response.products || []).map((product) => [product.id, product]))
+        const createdByClient = new Map((response.created || []).map((entry) => [entry.clientId, entry.product]))
+        merged = products.map((product) => {
+          const saved = product.id
+            ? savedById.get(product.id)
+            : createdByClient.get(product._clientId)
+          return saved ? mergeSavedProduct(saved, product) : product
+        })
+        for (const product of [...(response.products || []), ...(response.created || []).map((entry) => entry.product)]) {
+          originalProducts.current.set(product.id, structuredClone(product))
+        }
       }
-      flash(`${updates.length + creates.length} cambio(s) guardado(s)`)
+
+      const imageErrors = []
+      let savedImages = 0
+      for (const product of merged.filter(hasPendingImageChange)) {
+        try {
+          const response = product._pendingImageFile
+            ? await api.uploadProductImage(product.id, product.version, product._pendingImageFile)
+            : await api.removeProductImage(product.id, product.version)
+          merged = merged.map((item) => (item.id === product.id ? response.product : item))
+          originalProducts.current.set(product.id, structuredClone(response.product))
+          savedImages += 1
+        } catch (err) {
+          if (err.status === 409) setProductConflicts(err.details?.conflicts || [])
+          imageErrors.push(`${product.name}: ${err.message}`)
+        }
+      }
+
+      setProducts(merged)
+      const savedChanges = updates.length + creates.length + savedImages
+      if (imageErrors.length) {
+        flash(`${savedChanges} cambio(s) guardado(s). Error en imagen: ${imageErrors.join(', ')}`)
+      } else {
+        flash(`${savedChanges} cambio(s) guardado(s)`)
+      }
     } catch (err) {
       if (err.status === 409) {
         setProductConflicts(err.details?.conflicts || [])
@@ -891,9 +950,9 @@ export default function AdminPage() {
                         <td>
                           <ImageCell
                             item={product}
-                            currentSrc={product._preview || resolveImage(product.image_url || product.image)}
-                            onUpload={(file) => uploadProductImage(index, file)}
-                            onRemove={() => removeProductImage(index)}
+                            currentSrc={product._removeImage ? '' : product._pendingImagePreview || resolveImage(product.image_url || product.image)}
+                            onUpload={(file) => stageProductImage(index, file)}
+                            onRemove={() => toggleProductImageRemoval(index)}
                             disabled={!product.id}
                           />
                         </td>
@@ -1083,9 +1142,9 @@ export default function AdminPage() {
                         <td>
                           <ImageCell
                             item={item}
-                            currentSrc={item._preview || resolveImage(item.image_url || item.image)}
-                            onUpload={(file) => uploadProductImage(index, file)}
-                            onRemove={() => removeProductImage(index)}
+                            currentSrc={item._removeImage ? '' : item._pendingImagePreview || resolveImage(item.image_url || item.image)}
+                            onUpload={(file) => stageProductImage(index, file)}
+                            onRemove={() => toggleProductImageRemoval(index)}
                             disabled={!item.id}
                           />
                         </td>
