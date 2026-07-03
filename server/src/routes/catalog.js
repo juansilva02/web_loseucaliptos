@@ -1,19 +1,34 @@
 import { Router } from 'express'
 import { db } from '../db.js'
+import { getCatalogCache } from '../catalog-cache.js'
 import { isUnavailableName } from '../catalog-quality.js'
 import { validationError } from '../validation.js'
 
 const router = Router()
 
+// Preparacion perezosa: al importar el modulo el esquema todavia no existe.
+let statements = null
+function stmts() {
+  statements ??= {
+    categories: db.prepare('SELECT key, name FROM categories ORDER BY sort'),
+    publicProducts: db.prepare(`
+      SELECT id, name, category_key AS category, brand, unit, price,
+             image_url AS image, featured, version
+      FROM products
+      WHERE active = 1
+      ORDER BY sort, name
+    `),
+    quoteProduct: db.prepare(`
+      SELECT id, name, category_key, brand, unit, price, image_url, featured, active, version
+      FROM products WHERE id = ?
+    `),
+  }
+  return statements
+}
+
 function publicCatalog() {
-  const categories = db.prepare('SELECT key, name FROM categories ORDER BY sort').all()
-  const products = db.prepare(`
-    SELECT id, name, category_key AS category, brand, unit, price,
-           image_url AS image, featured, version
-    FROM products
-    WHERE active = 1
-    ORDER BY sort, name
-  `).all()
+  const categories = stmts().categories.all()
+  const products = stmts().publicProducts.all()
   return { categories, products, count: products.length }
 }
 
@@ -33,16 +48,12 @@ router.post('/quote', (req, res) => {
     return { id, quantity, seenPrice: Number.isFinite(seenPrice) ? seenPrice : null }
   })
 
-  const getProduct = db.prepare(`
-    SELECT id, name, category_key, brand, unit, price, image_url, featured, active, version
-    FROM products WHERE id = ?
-  `)
   const items = []
   const changes = []
   const blocked = []
 
   for (const requested of normalized) {
-    const product = getProduct.get(requested.id)
+    const product = stmts().quoteProduct.get(requested.id)
     if (!product || product.active !== 1) {
       blocked.push({ id: requested.id, reason: 'inactive_or_missing' })
       continue
@@ -77,9 +88,15 @@ router.post('/quote', (req, res) => {
   res.json({ items, subtotal, changes, blocked })
 })
 
-router.get('/', (_req, res) => {
+router.get('/', (req, res) => {
+  const { body, etag } = getCatalogCache(publicCatalog)
   res.set('Cache-Control', 'no-cache')
-  res.json(publicCatalog())
+  res.set('ETag', etag)
+  if (req.headers['if-none-match'] === etag) {
+    res.status(304).end()
+    return
+  }
+  res.type('application/json').send(body)
 })
 
 export default router

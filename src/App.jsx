@@ -95,9 +95,8 @@ function App() {
     window.scrollTo(0, 0)
   }, [location.pathname])
 
-  const loadCatalog = () => {
-    setCatalogStatus('loading')
-    return api.getPublicCatalog()
+  const fetchCatalog = () =>
+    api.getPublicCatalog()
       .then((response) => {
         setCatalog({
           categories: response.categories || [],
@@ -108,25 +107,14 @@ function App() {
       .catch(() => {
         setCatalogStatus('error')
       })
+
+  const loadCatalog = () => {
+    setCatalogStatus('loading')
+    return fetchCatalog()
   }
 
   useEffect(() => {
-    let cancelled = false
-    api.getPublicCatalog()
-      .then((response) => {
-        if (cancelled) return
-        setCatalog({
-          categories: response.categories || [],
-          products: response.products || [],
-        })
-        setCatalogStatus('ok')
-      })
-      .catch(() => {
-        if (!cancelled) setCatalogStatus('error')
-      })
-    return () => {
-      cancelled = true
-    }
+    fetchCatalog()
   }, [])
 
   const categoryNameByKey = useMemo(

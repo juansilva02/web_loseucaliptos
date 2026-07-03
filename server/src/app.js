@@ -12,6 +12,7 @@ import uploadRoutes from './routes/uploads.js'
 import featuredRoutes from './routes/featured.js'
 import catalogRoutes from './routes/catalog.js'
 import deliveryRoutes from './routes/delivery.js'
+import { invalidateCatalogOnWrite } from './catalog-cache.js'
 
 function requestLogger(req, res, next) {
   const startedAt = Date.now()
@@ -79,9 +80,9 @@ export function createApp() {
   app.use('/api/featured', featuredRoutes)
   app.use('/api/delivery', deliveryRoutes)
   app.use('/api/admin/auth', authRoutes)
-  app.use('/api/admin/products', productRoutes)
-  app.use('/api/admin/categories', categoryRoutes)
-  app.use('/api/admin/raw-skus', rawSkuRoutes)
+  app.use('/api/admin/products', invalidateCatalogOnWrite, productRoutes)
+  app.use('/api/admin/categories', invalidateCatalogOnWrite, categoryRoutes)
+  app.use('/api/admin/raw-skus', invalidateCatalogOnWrite, rawSkuRoutes)
   app.use('/api/admin/upload', uploadRoutes)
 
   app.use((req, res) => {
