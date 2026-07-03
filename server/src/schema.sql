@@ -3,7 +3,8 @@
 CREATE TABLE IF NOT EXISTS categories (
   key  TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  sort INTEGER DEFAULT 0
+  sort INTEGER DEFAULT 0,
+  version INTEGER NOT NULL DEFAULT 1
 );
 
 -- Catalogo vivo: lo que ve el cliente. Arranca con los 64 curados.
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS products (
   sort         INTEGER DEFAULT 0,
   active       INTEGER DEFAULT 1,
   source_code  INTEGER,                 -- code del raw_sku si vino de la pileta
+  version      INTEGER NOT NULL DEFAULT 1,
   created_at   TEXT DEFAULT (datetime('now')),
   updated_at   TEXT DEFAULT (datetime('now'))
 );
@@ -40,6 +42,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role          TEXT DEFAULT 'admin',
+  token_version INTEGER NOT NULL DEFAULT 1,
   created_at    TEXT DEFAULT (datetime('now'))
 );
 
@@ -67,7 +70,7 @@ CREATE TABLE IF NOT EXISTS leads (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
--- Destacados: admin los edita desde el panel y se sirven por API (ya no requiere export/commit)
+-- Tabla legacy: se conserva hasta completar backup y limpieza de segunda fase.
 CREATE TABLE IF NOT EXISTS featured (
   id             TEXT PRIMARY KEY,
   title          TEXT NOT NULL,

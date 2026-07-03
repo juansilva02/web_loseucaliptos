@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { runMigrations } from './migrations.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -12,17 +13,16 @@ export const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
-function ensureColumn(table, column, definition) {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all()
-  if (!columns.some((entry) => entry.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
-  }
-}
-
 // Aplica el esquema (idempotente) al iniciar.
 export function initSchema() {
   const sql = readFileSync(join(__dirname, 'schema.sql'), 'utf8')
   db.exec(sql)
-  ensureColumn('raw_skus', 'rubro', "TEXT DEFAULT ''")
-  ensureColumn('raw_skus', 'cost', 'INTEGER')
+  const rawColumns = db.prepare('PRAGMA table_info(raw_skus)').all()
+  if (!rawColumns.some((entry) => entry.name === 'rubro')) {
+    db.exec("ALTER TABLE raw_skus ADD COLUMN rubro TEXT DEFAULT ''")
+  }
+  if (!rawColumns.some((entry) => entry.name === 'cost')) {
+    db.exec('ALTER TABLE raw_skus ADD COLUMN cost INTEGER')
+  }
+  runMigrations(db)
 }

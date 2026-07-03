@@ -1,19 +1,30 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { db } from '../db.js'
+import { writeAudit } from '../audit.js'
 import { hashPassword, verifyPassword, signToken, requireAuth, requireAdmin } from '../auth.js'
 
 const router = Router()
-
-// Roles del sistema:
-// - admin : todo, incluida la gestion de usuarios
-// - editor: opera el catalogo (productos, categorias, pileta, imagenes)
 const VALID_ROLES = ['admin', 'editor']
+const MIN_PASSWORD_LENGTH = 8
 
 function countOtherAdmins(excludeUserId) {
-  return db
-    .prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND id != ?")
+  return db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND id != ?")
     .get(excludeUserId).n
+}
+
+function validUserId(value) {
+  const id = Number(value)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
+function tokenFor(user) {
+  return signToken({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    ver: user.token_version,
+  })
 }
 
 const loginLimiter = rateLimit({
@@ -24,17 +35,26 @@ const loginLimiter = rateLimit({
   message: { error: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.' },
 })
 
-router.post('/login', loginLimiter, (req, res) => {
-  const { email, password } = req.body
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email y contraseña requeridos' })
+router.post('/login', loginLimiter, async (req, res, next) => {
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const password = String(req.body?.password || '')
+  if (!email || !password) return res.status(400).json({ error: 'Email y contrasena requeridos' })
+
+  try {
+    const user = db.prepare(`
+      SELECT id, email, role, password_hash, token_version
+      FROM users WHERE lower(email) = ?
+    `).get(email)
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ error: 'Email o contrasena incorrectos' })
+    }
+    res.json({
+      token: tokenFor(user),
+      user: { id: user.id, email: user.email, role: user.role },
+    })
+  } catch (error) {
+    next(error)
   }
-  const user = db.prepare('SELECT id, email, role, password_hash FROM users WHERE email = ?').get(email)
-  if (!user || !verifyPassword(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Email o contraseña incorrectos' })
-  }
-  const token = signToken({ id: user.id, email: user.email, role: user.role })
-  res.json({ token, user: { id: user.id, email: user.email, role: user.role } })
 })
 
 router.get('/me', requireAuth, (req, res) => {
@@ -44,166 +64,162 @@ router.get('/me', requireAuth, (req, res) => {
 })
 
 router.get('/users', requireAdmin, (_req, res) => {
-  const users = db
-    .prepare('SELECT id, email, role, created_at FROM users ORDER BY created_at DESC, id DESC')
-    .all()
+  const users = db.prepare(`
+    SELECT id, email, role, created_at
+    FROM users ORDER BY created_at DESC, id DESC
+  `).all()
   res.json({ users })
 })
 
-router.post('/users', requireAdmin, (req, res) => {
+router.post('/users', requireAdmin, async (req, res, next) => {
   const email = String(req.body?.email || '').trim().toLowerCase()
   const password = String(req.body?.password || '')
   const role = String(req.body?.role || 'editor').trim()
 
-  if (!VALID_ROLES.includes(role)) {
-    return res.status(400).json({ error: `Rol inválido. Permitidos: ${VALID_ROLES.join(', ')}` })
-  }
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email y contraseña requeridos' })
-  }
-
+  if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: 'Rol invalido' })
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'Email inválido' })
+    return res.status(400).json({ error: 'Email invalido' })
   }
-
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' })
+  if (password.length < MIN_PASSWORD_LENGTH || password.length > 128) {
+    return res.status(400).json({ error: `La contrasena debe tener entre ${MIN_PASSWORD_LENGTH} y 128 caracteres` })
   }
-
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
-  if (existing) {
+  if (db.prepare('SELECT id FROM users WHERE lower(email) = ?').get(email)) {
     return res.status(409).json({ error: 'Ya existe un usuario con ese email' })
   }
 
-  const passwordHash = hashPassword(password)
-  const created = db
-    .prepare('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)')
-    .run(email, passwordHash, role)
-
-  const user = db.prepare('SELECT id, email, role, created_at FROM users WHERE id = ?').get(created.lastInsertRowid)
-  res.status(201).json({ user })
+  try {
+    const passwordHash = await hashPassword(password)
+    const created = db.prepare(
+      'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
+    ).run(email, passwordHash, role)
+    const user = db.prepare('SELECT id, email, role, created_at FROM users WHERE id = ?')
+      .get(created.lastInsertRowid)
+    writeAudit({
+      actor: req.user,
+      action: 'create',
+      entityType: 'user',
+      entityId: user.id,
+      after: user,
+    })
+    res.status(201).json({ user })
+  } catch (error) {
+    next(error)
+  }
 })
 
-// Cambio de la PROPIA contraseña: exige conocer la actual.
-// Para resetear la de otro usuario, un admin usa /users/:id/reset-password.
-router.put('/users/:id/password', requireAuth, (req, res) => {
-  const { currentPassword, newPassword } = req.body
-  const userId = Number(req.params.id)
-
-  if (!userId || !Number.isInteger(userId)) {
-    return res.status(400).json({ error: 'ID de usuario inválido' })
-  }
-
-  if (req.user.id !== userId) {
-    return res.status(403).json({ error: 'Solo puedes cambiar tu propia contraseña. Un admin puede resetear la de otros.' })
-  }
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Contraseña actual y nueva son requeridas' })
-  }
-
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' })
-  }
-
-  const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(userId)
-  if (!user) {
-    return res.status(404).json({ error: 'Usuario no encontrado' })
-  }
-
-  if (!verifyPassword(currentPassword, user.password_hash)) {
-    return res.status(401).json({ error: 'Contraseña actual incorrecta' })
-  }
-
-  const newHash = hashPassword(newPassword)
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, userId)
-  res.json({ success: true })
-})
-
-// Reset de contraseña por admin: no requiere la contraseña actual.
-// No aplica sobre uno mismo (para eso esta el cambio con contraseña actual).
-router.put('/users/:id/reset-password', requireAdmin, (req, res) => {
-  const userId = Number(req.params.id)
+router.put('/users/:id/password', requireAuth, async (req, res, next) => {
+  const userId = validUserId(req.params.id)
+  const currentPassword = String(req.body?.currentPassword || '')
   const newPassword = String(req.body?.newPassword || '')
-
-  if (!userId || !Number.isInteger(userId)) {
-    return res.status(400).json({ error: 'ID de usuario inválido' })
+  if (!userId) return res.status(400).json({ error: 'ID de usuario invalido' })
+  if (req.user.id !== userId) return res.status(403).json({ error: 'Solo puedes cambiar tu propia contrasena' })
+  if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > 128) {
+    return res.status(400).json({ error: `La nueva contrasena debe tener entre ${MIN_PASSWORD_LENGTH} y 128 caracteres` })
   }
 
-  if (req.user.id === userId) {
-    return res.status(400).json({ error: 'Para tu propia contraseña usa el cambio con contraseña actual' })
+  try {
+    const user = db.prepare(
+      'SELECT id, email, role, password_hash, token_version FROM users WHERE id = ?',
+    ).get(userId)
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+    if (!(await verifyPassword(currentPassword, user.password_hash))) {
+      return res.status(401).json({ error: 'Contrasena actual incorrecta' })
+    }
+    const newHash = await hashPassword(newPassword)
+    db.prepare(`
+      UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?
+    `).run(newHash, userId)
+    const updated = db.prepare(
+      'SELECT id, email, role, token_version FROM users WHERE id = ?',
+    ).get(userId)
+    writeAudit({
+      actor: req.user,
+      action: 'change_own_password',
+      entityType: 'user',
+      entityId: userId,
+    })
+    res.json({ success: true, token: tokenFor(updated) })
+  } catch (error) {
+    next(error)
   }
-
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' })
-  }
-
-  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId)
-  if (!user) {
-    return res.status(404).json({ error: 'Usuario no encontrado' })
-  }
-
-  const newHash = hashPassword(newPassword)
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, userId)
-  res.json({ success: true })
 })
 
-// Cambio de rol: solo admin, nunca sobre uno mismo, y sin dejar al sistema
-// sin administradores.
-router.put('/users/:id/role', requireAdmin, (req, res) => {
-  const userId = Number(req.params.id)
-  const role = String(req.body?.role || '').trim()
-
-  if (!userId || !Number.isInteger(userId)) {
-    return res.status(400).json({ error: 'ID de usuario inválido' })
-  }
-
-  if (!VALID_ROLES.includes(role)) {
-    return res.status(400).json({ error: `Rol inválido. Permitidos: ${VALID_ROLES.join(', ')}` })
-  }
-
+router.put('/users/:id/reset-password', requireAdmin, async (req, res, next) => {
+  const userId = validUserId(req.params.id)
+  const newPassword = String(req.body?.newPassword || '')
+  if (!userId) return res.status(400).json({ error: 'ID de usuario invalido' })
   if (req.user.id === userId) {
-    return res.status(400).json({ error: 'No puedes cambiar tu propio rol' })
+    return res.status(400).json({ error: 'Para tu propia contrasena usa el cambio con contrasena actual' })
   }
-
-  const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(userId)
-  if (!user) {
+  if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > 128) {
+    return res.status(400).json({ error: `La nueva contrasena debe tener entre ${MIN_PASSWORD_LENGTH} y 128 caracteres` })
+  }
+  if (!db.prepare('SELECT id FROM users WHERE id = ?').get(userId)) {
     return res.status(404).json({ error: 'Usuario no encontrado' })
   }
 
-  if (user.role === 'admin' && role !== 'admin' && countOtherAdmins(userId) === 0) {
-    return res.status(400).json({ error: 'No se puede degradar al último admin del sistema' })
+  try {
+    const newHash = await hashPassword(newPassword)
+    db.prepare(`
+      UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?
+    `).run(newHash, userId)
+    writeAudit({
+      actor: req.user,
+      action: 'reset_password',
+      entityType: 'user',
+      entityId: userId,
+    })
+    res.json({ success: true })
+  } catch (error) {
+    next(error)
   }
+})
 
+router.put('/users/:id/role', requireAdmin, (req, res) => {
+  const userId = validUserId(req.params.id)
+  const role = String(req.body?.role || '').trim()
+  if (!userId) return res.status(400).json({ error: 'ID de usuario invalido' })
+  if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: 'Rol invalido' })
+  if (req.user.id === userId) return res.status(400).json({ error: 'No puedes cambiar tu propio rol' })
+
+  const user = db.prepare('SELECT id, email, role FROM users WHERE id = ?').get(userId)
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
+  if (user.role === 'admin' && role !== 'admin' && countOtherAdmins(userId) === 0) {
+    return res.status(400).json({ error: 'No se puede degradar al ultimo admin del sistema' })
+  }
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId)
   const updated = db.prepare('SELECT id, email, role, created_at FROM users WHERE id = ?').get(userId)
+  writeAudit({
+    actor: req.user,
+    action: 'change_role',
+    entityType: 'user',
+    entityId: userId,
+    before: { role: user.role },
+    after: { role: updated.role },
+  })
   res.json({ user: updated })
 })
 
-// Baja de usuario: solo admin, nunca sobre uno mismo, y sin dejar al sistema
-// sin administradores.
 router.delete('/users/:id', requireAdmin, (req, res) => {
-  const userId = Number(req.params.id)
-
-  if (!userId || !Number.isInteger(userId)) {
-    return res.status(400).json({ error: 'ID de usuario inválido' })
-  }
-
-  if (req.user.id === userId) {
-    return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' })
-  }
+  const userId = validUserId(req.params.id)
+  if (!userId) return res.status(400).json({ error: 'ID de usuario invalido' })
+  if (req.user.id === userId) return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' })
 
   const user = db.prepare('SELECT id, email, role FROM users WHERE id = ?').get(userId)
-  if (!user) {
-    return res.status(404).json({ error: 'Usuario no encontrado' })
-  }
-
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
   if (user.role === 'admin' && countOtherAdmins(userId) === 0) {
-    return res.status(400).json({ error: 'No se puede eliminar al último admin del sistema' })
+    return res.status(400).json({ error: 'No se puede eliminar al ultimo admin del sistema' })
   }
-
-  db.prepare('DELETE FROM users WHERE id = ?').run(userId)
+  db.transaction(() => {
+    writeAudit({
+      actor: req.user,
+      action: 'delete',
+      entityType: 'user',
+      entityId: userId,
+      before: user,
+    })
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId)
+  })()
   res.json({ success: true })
 })
 

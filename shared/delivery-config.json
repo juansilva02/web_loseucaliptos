@@ -1,0 +1,36 @@
+{
+  "timezone": "America/Argentina/Buenos_Aires",
+  "windowCalendarDays": 7,
+  "weekdaySlots": [
+    { "key": "08-12", "label": "08:00 a 12:00" },
+    { "key": "14-19", "label": "14:00 a 19:00" }
+  ],
+  "saturdaySlots": [
+    { "key": "08-14", "label": "08:00 a 14:00" }
+  ],
+  "deliveryFees": {},
+  "branches": [
+    {
+      "key": "solano",
+      "label": "Solano",
+      "name": "Corralon Los Eucaliptus \"Solano\"",
+      "kicker": "Sucursal Solano",
+      "address": "Av. Monteverde 2766, San Francisco Solano, Buenos Aires",
+      "lat": -34.7904685,
+      "lng": -58.3096963,
+      "coverageRadius": 5000,
+      "whatsappUrl": "https://wa.me/5491159748316"
+    },
+    {
+      "key": "bosques",
+      "label": "Bosques",
+      "name": "Corralon Los Eucaliptus \"Bosques\"",
+      "kicker": "Sucursal Bosques",
+      "address": "Av. Guillermo Hudson 2855, Bosques, Buenos Aires",
+      "lat": -34.8315412,
+      "lng": -58.2423633,
+      "coverageRadius": 5000,
+      "whatsappUrl": "https://wa.me/5491130623113"
+    }
+  ]
+}

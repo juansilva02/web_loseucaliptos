@@ -3,16 +3,19 @@ FROM node:22-bookworm-slim AS build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY package*.json ./
+COPY server/package*.json ./
 RUN npm ci --omit=dev
-COPY . .
+COPY server/ ./
+COPY shared/ /shared/
 
 # --- Runtime: imagen liviana, reutiliza node_modules ya compilados ---
 FROM node:22-bookworm-slim
 RUN groupadd --system --gid 1001 appuser && useradd --system --uid 1001 --gid 1001 appuser
 WORKDIR /app
 COPY --from=build /app /app
-RUN mkdir -p /app/data /app/uploads && chown -R appuser:appuser /app/data /app/uploads
+COPY --from=build /shared /shared
+RUN mkdir -p /app/data /app/uploads \
+    && chown -R appuser:appuser /app/data /app/uploads
 ENV NODE_ENV=production
 EXPOSE 3001
 USER appuser
