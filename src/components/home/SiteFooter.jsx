@@ -20,22 +20,6 @@ export default function SiteFooter({
   return (
     <footer className="site-footer">
       <div className="site-footer-grid">
-        <div className="site-footer-brand">
-          <strong>Los Eucaliptus Corralon</strong>
-          <p>
-            Materiales de construccion a los mejores precios de Zona Sur. Stock permanente y
-            envio propio desde 1954.
-          </p>
-          <div className="site-footer-actions">
-            <a className="footer-chip footer-chip-wa" href={whatsappBase} target="_blank" rel="noreferrer">
-              WhatsApp
-            </a>
-            <a className="footer-chip" href="tel:+5491159748316">
-              Llamar
-            </a>
-          </div>
-        </div>
-
         <div className="site-footer-block">
           <strong>Navegacion</strong>
           <button type="button" onClick={scrollToProducts}>Productos destacados</button>

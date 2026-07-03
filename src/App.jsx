@@ -5,6 +5,7 @@ import CartDrawer from './components/home/CartDrawer'
 import FeaturedProducts from './components/home/FeaturedProducts'
 import FloatingCartButton from './components/home/FloatingCartButton'
 import Hero from './components/home/Hero'
+import PreFaqContact from './components/home/PreFaqContact'
 import PurchaseSteps from './components/home/PurchaseSteps'
 import SiteFooter from './components/home/SiteFooter'
 import SiteHeader from './components/home/SiteHeader'
@@ -316,6 +317,7 @@ function App() {
           activePromo={activePromo}
           setActivePromo={setActivePromo}
         />
+        <PreFaqContact whatsappBase={whatsappBase} />
         <FaqSection faqs={faqs} />
       </Suspense>
       <SiteFooter

@@ -33,6 +33,11 @@ test('home, catalogo canonico y checkout completo', async ({ page }, testInfo) =
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Corralon')
   const primaryCta = page.getByRole('button', { name: 'Compra online' })
   await expect(primaryCta).toBeVisible()
+  const preFaqContact = page.locator('.pre-faq-contact')
+  await expect(preFaqContact).toBeVisible()
+  expect(await preFaqContact.evaluate((element) => element.nextElementSibling?.id))
+    .toBe('preguntas-frecuentes')
+  await expect(page.locator('.site-footer .site-footer-brand')).toHaveCount(0)
   if (testInfo.project.name === 'mobile-375') {
     const ctaBox = await primaryCta.boundingBox()
     expect(ctaBox?.y).toBeLessThan(812)
