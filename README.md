@@ -41,6 +41,9 @@ deriva destacados desde `GET /api/catalog`.
 
 ## Flujos principales
 
+- `GET /api/catalog` se sirve desde una cache en memoria con ETag: las visitas
+  repetidas reciben `304` sin cuerpo. Las escrituras del admin invalidan la
+  cache automaticamente.
 - El carrito valida precios y disponibilidad con `POST /api/catalog/quote`
   antes de iniciar el checkout.
 - El checkout guarda su borrador privado dos horas en `sessionStorage` y
@@ -48,9 +51,12 @@ deriva destacados desde `GET /api/catalog`.
 - La cobertura se resuelve mediante `/api/delivery/*`; el navegador no consulta
   Nominatim directamente.
 - El admin guarda solo filas modificadas mediante un bulk transaccional con
-  control de versiones.
+  control de versiones. Las imagenes y el orden de destacados tambien se
+  publican al guardar.
 - Las imagenes se convierten a WebP y se guardan como
   `<product-id>-<hash>.webp`.
+- Los usuarios del panel ingresan con nombre de usuario o email; el email es
+  opcional y sirve como contacto de recuperacion.
 
 ## Desarrollo
 
@@ -71,7 +77,9 @@ npm --prefix server test
 npm run test:e2e
 ```
 
-Las pruebas del backend requieren Node 22 por el modulo nativo de SQLite.
+Las pruebas del backend corren en Node 22+ (`better-sqlite3` v12 trae binarios
+precompilados; en Windows sin toolchain C++, usar `npm rebuild better-sqlite3`
+si el binario falta).
 
 ## Deploy
 

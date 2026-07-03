@@ -4,21 +4,26 @@ Actualizado: 2026-07-03.
 
 ## Estado desplegado
 
-La estabilizacion fue integrada a `main` y desplegada en produccion el
-2026-07-03. Commit de aplicacion desplegado: `49263d6`.
+Commit de aplicacion desplegado: `b6e77e2` (2026-07-03). Incluye la
+estabilizacion previa mas: cache del catalogo publico con ETag/304, publicacion
+diferida de imagenes, usuarios sin correo obligatorio con perfil editable,
+orden de destacados desde el admin y SKUs descartables.
 
 Verificaciones realizadas:
 
 - lint sin errores;
 - 4 pruebas unitarias frontend;
-- 8 pruebas de integracion backend en Node 22;
+- 11 pruebas de integracion backend;
 - 3 flujos E2E aprobados: storefront/checkout desktop, storefront/checkout
-  375 px y guardado admin;
+  375 px y guardado admin (incluye imagen diferida);
 - build de produccion correcto;
-- chunk principal de 266,67 kB minificado;
 - auditorias npm de frontend y backend sin vulnerabilidades conocidas;
-- workflow `quality` de GitHub finalizado en `success`;
-- smoke test real de home, catalogo y login admin en desktop y 375 px.
+- smoke test real de home, catalogo y login admin en desktop y 375 px;
+- en produccion: `GET /api/catalog` condicional responde `304`, login con
+  credenciales invalidas responde `401`, migraciones 1-3 aplicadas y los 3
+  usuarios existentes conservaron su nombre de login tras la migracion;
+- backup de DB, uploads y `.env` tomado antes de la migracion de usuarios
+  (`/opt/backups/corralon/db-2026-07-03.sqlite`).
 
 ## Topologia actual
 
@@ -59,7 +64,14 @@ Internet
 - rutas declarativas y admin lazy;
 - modales accesibles, controles tactiles y reduced motion;
 - prerender dependiente de API en produccion y sitemap automatico;
-- Nginx reproducible y deploy con publicacion/rollback de HTML.
+- Nginx reproducible y deploy con publicacion/rollback de HTML;
+- cache en memoria del catalogo publico con ETag/304 e invalidacion al
+  escribir desde el admin;
+- imagenes y orden de destacados diferidos hasta `Guardar cambios`;
+- usuarios con nombre de login propio, email opcional de recuperacion y
+  flotante de datos (nombre, email, telefono);
+- login por usuario o email;
+- SKUs crudos descartables y restaurables.
 
 ## Datos
 
@@ -78,9 +90,10 @@ compatibles, se conservan hasta la segunda limpieza.
 
 ## Estado de produccion verificado
 
-- aplicacion desplegada desde `49263d6`;
+- aplicacion desplegada desde `b6e77e2`;
 - container API: healthy;
-- migracion 1 aplicada;
+- migraciones 1, 2 y 3 aplicadas (`schema_migrations`);
+- usuarios migrados: `admin`, `pri` y `mel` conservan su login;
 - productos: 64 totales, 62 activos y 14 destacados;
 - Nginx: CSP, HSTS, gzip y uploads directos activos;
 - `/catalogo/` redirige a `/catalogo`;
@@ -90,7 +103,13 @@ compatibles, se conservan hasta la segunda limpieza.
 
 ## Pendiente de operacion
 
-1. Probar con credenciales reales el cambio de una fila y una imagen.
-2. Implementar backups en una fase separada.
-
-Backups no fueron modificados por decision explicita.
+1. Probar con credenciales reales el flotante de datos de usuario y el orden
+   de destacados desde el panel.
+2. Cargar email de recuperacion a los usuarios existentes desde el flotante.
+3. Copia de backups fuera del VPS (rsync/rclone) y cron diario de
+   `scripts/backup.sh`. El backup manual pre-migracion ya existe en
+   `/opt/backups/corralon`.
+4. Fase 2 opcional: recuperacion de contrasena automatica por correo
+   (requiere contratar/configurar SMTP y una pagina publica de reset).
+5. Segunda limpieza: tablas legacy `featured`, `orders` y `leads`, y
+   endpoints individuales compatibles.
