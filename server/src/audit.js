@@ -15,7 +15,7 @@ export function writeAudit({
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(
     actor?.id ?? null,
-    actor?.email ?? null,
+    actor?.username ?? actor?.email ?? null,
     action,
     entityType,
     String(entityId),

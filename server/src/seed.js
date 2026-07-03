@@ -72,7 +72,9 @@ if (!existingUser) {
     console.warn('[seed] SEED_ADMIN_PASSWORD no configurado, saltando creacion de admin user')
   } else {
     const hash = await hashPassword(adminPassword)
-    db.prepare("INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'admin')").run(adminEmail, hash)
+    const adminRecoveryEmail = adminEmail.includes('@') ? adminEmail : null
+    db.prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'admin')")
+      .run(adminEmail, adminRecoveryEmail, hash)
     console.log(`[seed] admin user created: ${adminEmail}`)
   }
 } else {

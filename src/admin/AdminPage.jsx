@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { resolveImage } from '../lib/catalog'
 import { getCatalogQualitySummary } from '../lib/catalog-quality'
 import { makeUniqueSlug } from '../lib/slugify'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 import { api } from './api'
 import './AdminPage.css'
 
@@ -28,18 +29,28 @@ const PRODUCT_EDITABLE_FIELDS = [
   'price',
   'image_url',
   'featured',
+  'sort',
   'active',
 ]
 
 function productPatch(product) {
-  return Object.fromEntries(PRODUCT_EDITABLE_FIELDS.map((field) => [
+  const patch = Object.fromEntries(PRODUCT_EDITABLE_FIELDS.map((field) => [
     field,
-    field === 'price'
+    field === 'price' || field === 'sort'
       ? Number(product[field] || 0)
       : field === 'featured' || field === 'active'
         ? Number(product[field] ?? (field === 'active' ? 1 : 0))
         : product[field] || '',
   ]))
+  // Altas nuevas: sin sort el server asigna el final de la lista (MAX+1).
+  if (product.sort === undefined) delete patch.sort
+  return patch
+}
+
+// Mismo orden que usa la home y el catalogo publico (ORDER BY sort, name).
+function bySortThenName(a, b) {
+  return (Number(a.sort) || 0) - (Number(b.sort) || 0) ||
+    String(a.name).localeCompare(String(b.name))
 }
 
 function changedFields(product, original) {
@@ -133,6 +144,90 @@ function LoginView({ onSuccess }) {
   )
 }
 
+function UserProfileModal({ user, onClose, onSave, saving }) {
+  const dialogRef = useDialogA11y({ onClose })
+  const [draft, setDraft] = useState({
+    username: user.username || '',
+    display_name: user.display_name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+  })
+  const setField = (field) => (event) =>
+    setDraft((current) => ({ ...current, [field]: event.target.value }))
+
+  return (
+    <>
+      <div className="admin-modal-backdrop" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={dialogRef}
+        className="admin-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Datos de ${user.username}`}
+        tabIndex={-1}
+      >
+        <div className="admin-modal-head">
+          <h3>Datos del usuario</h3>
+          <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        <form
+          className="admin-modal-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onSave(draft)
+          }}
+        >
+          <label>
+            Usuario (login)
+            <input
+              type="text"
+              value={draft.username}
+              onChange={setField('username')}
+              autoComplete="off"
+              required
+            />
+          </label>
+          <label>
+            Nombre completo
+            <input
+              type="text"
+              value={draft.display_name}
+              onChange={setField('display_name')}
+              placeholder="ej: Marcos Gonzalez"
+            />
+          </label>
+          <label>
+            Email de recuperación
+            <input
+              type="text"
+              value={draft.email}
+              onChange={setField('email')}
+              placeholder="opcional, ej: ventas@corralon.com"
+            />
+          </label>
+          <small className="admin-modal-hint">
+            Si olvida la contraseña, este correo sirve para contactarlo y resetearla desde acá.
+          </small>
+          <label>
+            Teléfono
+            <input
+              type="text"
+              value={draft.phone}
+              onChange={setField('phone')}
+              placeholder="opcional, ej: 11 5555-5555"
+            />
+          </label>
+          <button type="submit" className="admin-btn admin-btn-primary" disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar datos'}
+          </button>
+        </form>
+      </div>
+    </>
+  )
+}
+
 function PriceField({ value, onChange, consultLabel = 'Consultar' }) {
   const isConsult = !value || Number(value) <= 0
   return (
@@ -209,6 +304,61 @@ function EmptyState({ title, body }) {
   )
 }
 
+function ManualSkuLinker({ sku, products, onLink, saving }) {
+  const [query, setQuery] = useState('')
+  const normalizedQuery = query.trim().toLowerCase()
+  const matches = normalizedQuery.length >= 2
+    ? products
+      .filter((product) => (
+        product.id &&
+        !product.source_code &&
+        matchesQuery([product.name, product.brand, product.id], normalizedQuery)
+      ))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+      .slice(0, 8)
+    : []
+
+  return (
+    <details className="admin-sku-manual-link">
+      <summary>Vincular a otro producto existente</summary>
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Buscar por nombre o ID..."
+        aria-label={`Buscar producto para vincular al SKU ${sku.code}`}
+        autoComplete="off"
+      />
+      {normalizedQuery.length < 2 ? (
+        <small>Escribe al menos 2 caracteres.</small>
+      ) : matches.length ? (
+        <div className="admin-sku-manual-results">
+          {matches.map((product) => (
+            <button
+              className="admin-btn admin-btn-mini"
+              type="button"
+              key={product.id}
+              disabled={saving}
+              onClick={() => {
+                if (window.confirm(
+                  `Vincular el SKU ${sku.code} (${sku.name}) con "${product.name}"? No se creara un producto nuevo.`,
+                )) {
+                  onLink(sku, product.id)
+                }
+              }}
+            >
+              <strong>{product.name}</strong>
+              <span>ID: {product.id}{product.active === 0 ? ' - inactivo' : ''}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <small>No hay productos sin SKU vinculable que coincidan.</small>
+      )}
+    </details>
+  )
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(() => api.isAuthed())
   const [tab, setTab] = useState('products')
@@ -224,9 +374,10 @@ export default function AdminPage() {
   const [reviewQuery, setReviewQuery] = useState('')
   const [me, setMe] = useState(null)
   const [users, setUsers] = useState([])
-  const [newUserEmail, setNewUserEmail] = useState('')
+  const [newUserName, setNewUserName] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
   const [newUserRole, setNewUserRole] = useState('editor')
+  const [editingUser, setEditingUser] = useState(null)
   const [showNewUserPassword, setShowNewUserPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [nextPassword, setNextPassword] = useState('')
@@ -338,15 +489,23 @@ export default function AdminPage() {
   const updateProduct = (index, patch) =>
     setProducts((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
 
-  const removeProduct = async (index) => {
+  const removeProduct = (index) => {
     const product = products[index]
     if (!product) return
     if (!product.id) {
       setProducts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+      flash('Producto nuevo descartado')
       return
     }
-    updateProduct(index, { active: 0 })
-    flash(`"${product.name}" quedara inactivo al guardar`)
+    updateProduct(index, { active: 0, featured: 0 })
+    flash(`"${product.name}" se quitara del catalogo al guardar los cambios`)
+  }
+
+  const restoreProduct = (index) => {
+    const product = products[index]
+    if (!product?.id) return
+    updateProduct(index, { active: 1 })
+    flash(`"${product.name}" volvera al catalogo al guardar los cambios`)
   }
 
   const addProduct = () => {
@@ -589,6 +748,29 @@ export default function AdminPage() {
     return matchesQuery([item.name, item.brand, item.id, categoryKey], query) && matchesCategory && matchesStatus
   })
 
+  const sortedFeaturedItems = [...filteredFeaturedItems].sort(bySortThenName)
+  const featuredHomeOrder = products
+    .filter((item) => item.featured === 1 && item.id)
+    .sort(bySortThenName)
+
+  const moveFeaturedProduct = (item, direction) => {
+    const position = featuredHomeOrder.findIndex((entry) => entry.id === item.id)
+    const neighbor = featuredHomeOrder[position + direction]
+    if (position < 0 || !neighbor) return
+    const itemSort = Number(item.sort) || 0
+    const neighborSort = Number(neighbor.sort) || 0
+    const itemIndex = products.indexOf(item)
+    const neighborIndex = products.indexOf(neighbor)
+    if (itemIndex < 0 || neighborIndex < 0) return
+    if (itemSort === neighborSort) {
+      // Empate de sort: desempata corriendo el elemento movido.
+      updateProduct(itemIndex, { sort: neighborSort + direction })
+    } else {
+      updateProduct(itemIndex, { sort: neighborSort })
+      updateProduct(neighborIndex, { sort: itemSort })
+    }
+  }
+
   const filteredCategories = categories.filter((category) => {
     const query = categoryQuery.trim().toLowerCase()
     return matchesQuery([category.key, category.name], query)
@@ -612,6 +794,9 @@ export default function AdminPage() {
   }
 
   const promoteRawSku = async (sku) => {
+    if (!window.confirm(
+      `Promover el SKU ${sku.code} creara un producto nuevo. Continua solo si confirmaste que no existe en el catalogo.`,
+    )) return
     setSaving(true)
     try {
       const response = await api.promoteSku(sku.code, { category_key: sku.suggested_category_key })
@@ -632,7 +817,14 @@ export default function AdminPage() {
     try {
       const response = await api.linkSku(sku.code, productId)
       setProducts((current) => current.map((product) => (
-        product.id === response.product.id ? response.product : product
+        product.id === response.product.id
+          ? {
+              ...product,
+              source_code: response.product.source_code,
+              version: response.product.version,
+              updated_at: response.product.updated_at,
+            }
+          : product
       )))
       originalProducts.current.set(response.product.id, structuredClone(response.product))
       setRawSkus((current) => current.filter((item) => item.code !== sku.code))
@@ -645,29 +837,62 @@ export default function AdminPage() {
     }
   }
 
+  const dismissRawSku = async (sku) => {
+    if (!window.confirm(
+      `Descartar el SKU ${sku.code} (${sku.name})? Desaparecera de pendientes, pero conservara su registro para auditoria.`,
+    )) return
+    setSaving(true)
+    try {
+      await api.dismissSku(sku.code)
+      setRawSkus((current) => current.filter((item) => item.code !== sku.code))
+      setRawTotal((current) => Math.max(0, current - 1))
+      flash(`SKU ${sku.code} descartado`)
+    } catch (err) {
+      flash(`No se pudo descartar el SKU: ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const logout = () => {
     api.logout()
     setAuthed(false)
   }
 
   const createUser = async () => {
-    const email = newUserEmail.trim()
+    const username = newUserName.trim().toLowerCase()
     const password = newUserPassword
-    if (!email || !password) {
-      flash('Email y contraseña requeridos')
+    if (!username || !password) {
+      flash('Usuario y contraseña requeridos')
       return
     }
 
     setSaving(true)
     try {
-      const response = await api.createUser({ email, password, role: newUserRole })
+      const response = await api.createUser({ username, password, role: newUserRole })
       setUsers((current) => [response.user, ...current])
-      setNewUserEmail('')
+      setNewUserName('')
       setNewUserPassword('')
       setNewUserRole('editor')
-      flash(`Usuario creado: ${response.user.email} (${response.user.role})`)
+      flash(`Usuario creado: ${response.user.username} (${response.user.role})`)
     } catch (err) {
       flash(`Error al crear usuario: ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveUserProfile = async (draft) => {
+    if (!editingUser) return
+    setSaving(true)
+    try {
+      const response = await api.updateUserProfile(editingUser.id, draft)
+      setUsers((current) => current.map((item) => (item.id === response.user.id ? response.user : item)))
+      if (me && response.user.id === me.id) setMe(response.user)
+      setEditingUser(null)
+      flash(`Datos de ${response.user.username} actualizados`)
+    } catch (err) {
+      flash(`Error al guardar datos: ${err.message}`)
     } finally {
       setSaving(false)
     }
@@ -677,18 +902,18 @@ export default function AdminPage() {
     try {
       const response = await api.updateUserRole(user.id, role)
       setUsers((current) => current.map((item) => (item.id === user.id ? response.user : item)))
-      flash(`Rol de ${user.email}: ${response.user.role}`)
+      flash(`Rol de ${user.username}: ${response.user.role}`)
     } catch (err) {
       flash(`Error al cambiar rol: ${err.message}`)
     }
   }
 
   const resetUserPassword = async (user) => {
-    const newPassword = prompt(`Nueva contraseña para ${user.email} (mínimo 8 caracteres):`)
+    const newPassword = prompt(`Nueva contraseña para ${user.username} (mínimo 8 caracteres):`)
     if (newPassword === null) return
     try {
       await api.resetUserPassword(user.id, newPassword)
-      flash(`Contraseña de ${user.email} actualizada`)
+      flash(`Contraseña de ${user.username} actualizada`)
     } catch (err) {
       flash(`Error al resetear contraseña: ${err.message}`)
     }
@@ -715,11 +940,11 @@ export default function AdminPage() {
   }
 
   const deleteUser = async (user) => {
-    if (!window.confirm(`Eliminar el usuario "${user.email}"? Esta acción no se puede deshacer.`)) return
+    if (!window.confirm(`Eliminar el usuario "${user.username}"? Esta acción no se puede deshacer.`)) return
     try {
       await api.deleteUser(user.id)
       setUsers((current) => current.filter((item) => item.id !== user.id))
-      flash(`Usuario ${user.email} eliminado`)
+      flash(`Usuario ${user.username} eliminado`)
     } catch (err) {
       flash(`Error al eliminar usuario: ${err.message}`)
     }
@@ -858,6 +1083,11 @@ export default function AdminPage() {
             </div>
           </div>
 
+          <div className="admin-howto">
+            Quitar del catalogo oculta el articulo de la web sin borrar sus datos ni su historial.
+            Puedes restaurarlo desde el filtro Inactivos.
+          </div>
+
           {productConflicts.length ? (
             <div className="admin-conflict-panel" role="alert">
               <strong>No se guardó ningún cambio.</strong>
@@ -939,7 +1169,7 @@ export default function AdminPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Home</th><th>Estado</th><th></th>
+                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Home</th><th>Estado</th><th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -978,22 +1208,31 @@ export default function AdminPage() {
                           </button>
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            className={`admin-toggle${product.active !== 0 ? ' admin-toggle-on' : ''}`}
-                            onClick={() => updateProduct(index, { active: product.active === 0 ? 1 : 0 })}
-                          >
-                            {product.active === 0 ? 'Inactivo' : 'Activo'}
-                          </button>
+                          <span className={`admin-product-status${product.active !== 0 ? ' admin-product-status-active' : ''}`}>
+                            {product.active === 0 ? 'Fuera del catalogo' : 'Publicado'}
+                          </span>
                         </td>
                         <td>
                           <button
-                            className="admin-card-delete"
+                            type="button"
+                            className={`admin-btn admin-btn-mini admin-product-catalog-action${product.active === 0 ? ' admin-btn-restore' : ' admin-btn-danger'}`}
                             onClick={() => {
-                              if (window.confirm(`Desactivar "${product.name}"?`)) removeProduct(index)
+                              if (!product.id) {
+                                removeProduct(index)
+                                return
+                              }
+                              if (product.active === 0) {
+                                restoreProduct(index)
+                                return
+                              }
+                              if (window.confirm(
+                                `Quitar "${product.name}" del catalogo? Dejara de aparecer en la web, pero sus datos se conservaran.`,
+                              )) {
+                                removeProduct(index)
+                              }
                             }}
                           >
-                            X
+                            {!product.id ? 'Descartar' : product.active === 0 ? 'Restaurar' : 'Quitar del catalogo'}
                           </button>
                         </td>
                       </tr>
@@ -1126,17 +1365,20 @@ export default function AdminPage() {
 
           {loading ? (
             <p className="admin-note">Cargando destacados...</p>
-          ) : filteredFeaturedItems.length ? (
+          ) : sortedFeaturedItems.length ? (
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Producto</th><th>Marca</th><th>Categoria</th><th>Precio</th><th>Home</th><th>Estado</th>
+                    <th>Imagen</th><th>Producto</th><th>Marca</th><th>Categoria</th><th>Precio</th><th>Home</th><th>Orden</th><th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredFeaturedItems.map((item) => {
+                  {sortedFeaturedItems.map((item) => {
                     const index = products.indexOf(item)
+                    const homePosition = item.featured === 1 && item.id
+                      ? featuredHomeOrder.findIndex((entry) => entry.id === item.id)
+                      : -1
                     return (
                       <tr key={item.id || index} className={item.active === 0 ? 'admin-row-hidden' : ''}>
                         <td>
@@ -1169,6 +1411,33 @@ export default function AdminPage() {
                           </button>
                         </td>
                         <td>
+                          {homePosition >= 0 ? (
+                            <div className="admin-order-controls">
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn-mini"
+                                aria-label="Subir en el orden del home"
+                                disabled={homePosition === 0}
+                                onClick={() => moveFeaturedProduct(item, -1)}
+                              >
+                                &uarr;
+                              </button>
+                              <span className="admin-order-position">{homePosition + 1}</span>
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn-mini"
+                                aria-label="Bajar en el orden del home"
+                                disabled={homePosition === featuredHomeOrder.length - 1}
+                                onClick={() => moveFeaturedProduct(item, 1)}
+                              >
+                                &darr;
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="admin-order-position admin-order-position-off">-</span>
+                          )}
+                        </td>
+                        <td>
                           <button
                             type="button"
                             className={`admin-toggle${item.active !== 0 ? ' admin-toggle-on' : ''}`}
@@ -1195,7 +1464,7 @@ export default function AdminPage() {
             <p>Cambia tu contraseña sin afectar a otros usuarios. Al guardar se invalidan tus sesiones anteriores.</p>
           </div>
           <form className="admin-user-create admin-account-form" onSubmit={changeOwnPassword}>
-            <strong>{me?.email}</strong>
+            <strong>{me?.display_name ? `${me.display_name} (${me.username})` : me?.username}</strong>
             <div className="admin-user-create-grid">
               <label>
                 Contraseña actual
@@ -1251,12 +1520,12 @@ export default function AdminPage() {
           <div className="admin-user-create">
             <div className="admin-user-create-grid">
               <label>
-                Email / usuario
+                Usuario
                 <input
                   type="text"
-                  value={newUserEmail}
-                  onChange={(event) => setNewUserEmail(event.target.value)}
-                  placeholder="ej: ventas@corralon.com"
+                  value={newUserName}
+                  onChange={(event) => setNewUserName(event.target.value)}
+                  placeholder="ej: ventas (sin correo)"
                 />
               </label>
               <label>
@@ -1296,9 +1565,14 @@ export default function AdminPage() {
               {users.map((user) => (
                 <article className="admin-user-card" key={user.id}>
                   <strong>
-                    {user.email}
+                    {user.display_name || user.username}
                     {me && user.id === me.id ? ' (vos)' : ''}
                   </strong>
+                  {user.display_name ? <span className="admin-user-username">Usuario: {user.username}</span> : null}
+                  <span className={user.email ? '' : 'admin-user-no-recovery'}>
+                    {user.email ? `Recuperación: ${user.email}` : 'Sin email de recuperación'}
+                  </span>
+                  {user.phone ? <span>Tel: {user.phone}</span> : null}
                   <span className="admin-user-role">
                     Rol:{' '}
                     {me && user.id === me.id ? (
@@ -1311,22 +1585,37 @@ export default function AdminPage() {
                     )}
                   </span>
                   <span>Alta: {String(user.created_at || '').replace('T', ' ').slice(0, 16) || 'sin fecha'}</span>
-                  {me && user.id !== me.id ? (
-                    <div className="admin-user-actions">
-                      <button type="button" className="admin-btn admin-btn-mini" onClick={() => resetUserPassword(user)}>
-                        Resetear contraseña
-                      </button>
-                      <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={() => deleteUser(user)}>
-                        Eliminar
-                      </button>
-                    </div>
-                  ) : null}
+                  <div className="admin-user-actions">
+                    <button type="button" className="admin-btn admin-btn-mini" onClick={() => setEditingUser(user)}>
+                      Editar datos
+                    </button>
+                    {me && user.id !== me.id ? (
+                      <>
+                        <button type="button" className="admin-btn admin-btn-mini" onClick={() => resetUserPassword(user)}>
+                          Resetear contraseña
+                        </button>
+                        <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={() => deleteUser(user)}>
+                          Eliminar
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
                 </article>
               ))}
             </div>
           ) : (
             <EmptyState title="Sin usuarios" body="Todavia no hay usuarios cargados en el sistema." />
           )}
+
+          {editingUser ? (
+            <UserProfileModal
+              key={editingUser.id}
+              user={editingUser}
+              onClose={() => setEditingUser(null)}
+              onSave={saveUserProfile}
+              saving={saving}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -1436,9 +1725,23 @@ export default function AdminPage() {
                           ))}
                         </div>
                       ) : null}
-                      <button className="admin-btn admin-btn-primary" type="button" onClick={() => promoteRawSku(sku)} disabled={saving}>
-                        Promover al catalogo
-                      </button>
+                      <ManualSkuLinker
+                        sku={sku}
+                        products={products}
+                        onLink={linkRawSku}
+                        saving={saving}
+                      />
+                      <div className="admin-sku-actions">
+                        <button className="admin-btn admin-btn-primary" type="button" onClick={() => promoteRawSku(sku)} disabled={saving}>
+                          Promover al catalogo
+                        </button>
+                        <button className="admin-btn admin-btn-danger" type="button" onClick={() => dismissRawSku(sku)} disabled={saving}>
+                          Descartar SKU
+                        </button>
+                      </div>
+                      <small className="admin-sku-promote-warning">
+                        Promover crea un producto nuevo. Si ya existe, vinculalo manualmente.
+                      </small>
                     </article>
                   ))}
                   </div>

@@ -26,10 +26,10 @@ db.prepare(`
 const adminHash = await hashPassword('Admin-test-123')
 const editorHash = await hashPassword('Editor-test-123')
 const adminId = Number(db.prepare(
-  "INSERT INTO users (email, password_hash, role) VALUES ('admin@test.local', ?, 'admin')",
+  "INSERT INTO users (username, email, password_hash, role) VALUES ('admin', 'admin@test.local', ?, 'admin')",
 ).run(adminHash).lastInsertRowid)
 const editorId = Number(db.prepare(
-  "INSERT INTO users (email, password_hash, role) VALUES ('editor@test.local', ?, 'editor')",
+  "INSERT INTO users (username, email, password_hash, role) VALUES ('editor', 'editor@test.local', ?, 'editor')",
 ).run(editorHash).lastInsertRowid)
 
 const server = createApp().listen(0, '127.0.0.1')
@@ -65,7 +65,7 @@ test('backend estabilizado', async (t) => {
   await t.test('aplica migraciones y responde readiness', async () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n,
-      1,
+      3,
     )
     assert.ok(db.prepare('PRAGMA table_info(products)').all().some((column) => column.name === 'version'))
     const { response } = await request('/health/ready')
@@ -155,6 +155,91 @@ test('backend estabilizado', async (t) => {
     assert.equal(linked.response.status, 200)
     assert.equal(linked.data.product.source_code, 123)
     assert.equal(db.prepare('SELECT added FROM raw_skus WHERE code = 123').get().added, 1)
+  })
+
+  await t.test('descarta un SKU sin borrarlo y permite restaurarlo', async () => {
+    db.prepare(`
+      INSERT INTO raw_skus (code, name, rubro, price, added)
+      VALUES (124, 'SKU incorrecto', 'MATERIALES', 300, 0)
+    `).run()
+
+    const dismissed = await request('/api/admin/raw-skus/124', {
+      method: 'DELETE',
+      token: adminToken,
+    })
+    assert.equal(dismissed.response.status, 200)
+    assert.equal(db.prepare('SELECT dismissed FROM raw_skus WHERE code = 124').get().dismissed, 1)
+
+    const pending = await request('/api/admin/raw-skus?added=0', { token: adminToken })
+    assert.equal(pending.response.status, 200)
+    assert.equal(pending.data.skus.some((sku) => sku.code === 124), false)
+
+    const restored = await request('/api/admin/raw-skus/124/restore', {
+      method: 'POST',
+      token: adminToken,
+    })
+    assert.equal(restored.response.status, 200)
+    assert.equal(db.prepare('SELECT dismissed FROM raw_skus WHERE code = 124').get().dismissed, 0)
+  })
+
+  await t.test('crea usuario sin correo y el login acepta usuario o email', async () => {
+    const created = await request('/api/admin/auth/users', {
+      method: 'POST',
+      token: adminToken,
+      body: { username: 'deposito', password: 'Deposito-123' },
+    })
+    assert.equal(created.response.status, 201)
+    assert.equal(created.data.user.username, 'deposito')
+    assert.equal(created.data.user.email, null)
+
+    const byUsername = await login('deposito', 'Deposito-123')
+    assert.ok(byUsername)
+    const byEmail = await login('admin@test.local', 'Admin-test-123')
+    assert.ok(byEmail)
+
+    const invalid = await request('/api/admin/auth/users', {
+      method: 'POST',
+      token: adminToken,
+      body: { username: 'no valido!', password: 'Password-123' },
+    })
+    assert.equal(invalid.response.status, 400)
+  })
+
+  await t.test('el perfil completa email de recuperacion y valida duplicados', async () => {
+    const user = db.prepare("SELECT id FROM users WHERE username = 'deposito'").get()
+    const updated = await request(`/api/admin/auth/users/${user.id}/profile`, {
+      method: 'PUT',
+      token: adminToken,
+      body: {
+        display_name: 'Deposito Solano',
+        email: 'deposito@corralon.com',
+        phone: '11 5555-5555',
+      },
+    })
+    assert.equal(updated.response.status, 200)
+    assert.equal(updated.data.user.display_name, 'Deposito Solano')
+    assert.equal(updated.data.user.email, 'deposito@corralon.com')
+
+    const duplicated = await request(`/api/admin/auth/users/${user.id}/profile`, {
+      method: 'PUT',
+      token: adminToken,
+      body: { email: 'admin@test.local' },
+    })
+    assert.equal(duplicated.response.status, 409)
+
+    const cleared = await request(`/api/admin/auth/users/${user.id}/profile`, {
+      method: 'PUT',
+      token: adminToken,
+      body: { email: '' },
+    })
+    assert.equal(cleared.response.status, 200)
+    assert.equal(cleared.data.user.email, null)
+
+    const byEmailAfterClear = await request('/api/admin/auth/login', {
+      method: 'POST',
+      body: { email: 'deposito@corralon.com', password: 'Deposito-123' },
+    })
+    assert.equal(byEmailAfterClear.response.status, 401)
   })
 
   await t.test('cambiar contrasena invalida inmediatamente el token anterior', async () => {

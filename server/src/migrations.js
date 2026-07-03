@@ -43,6 +43,50 @@ const migrations = [
       `)
     },
   },
+  {
+    version: 2,
+    name: 'users con username y email opcional',
+    up(db) {
+      // Bases legacy: el login era el email obligatorio. Se reconstruye la
+      // tabla (SQLite no permite quitar NOT NULL) copiando email -> username,
+      // asi nadie pierde acceso. Bases nuevas ya nacen con la forma final.
+      const columns = db.prepare('PRAGMA table_info(users)').all()
+      if (!columns.some((entry) => entry.name === 'username')) {
+        db.exec(`
+          CREATE TABLE users_new (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            username      TEXT UNIQUE NOT NULL,
+            email         TEXT,
+            display_name  TEXT DEFAULT '',
+            phone         TEXT DEFAULT '',
+            password_hash TEXT NOT NULL,
+            role          TEXT DEFAULT 'admin',
+            token_version INTEGER NOT NULL DEFAULT 1,
+            created_at    TEXT DEFAULT (datetime('now'))
+          );
+          INSERT INTO users_new (id, username, email, password_hash, role, token_version, created_at)
+            SELECT id, email,
+                   CASE WHEN email LIKE '%@%' THEN email ELSE NULL END,
+                   password_hash, role, token_version, created_at
+            FROM users;
+          DROP TABLE users;
+          ALTER TABLE users_new RENAME TO users;
+        `)
+      }
+      db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique
+          ON users(email) WHERE email IS NOT NULL AND email != '';
+      `)
+    },
+  },
+  {
+    version: 3,
+    name: 'raw skus descartables',
+    up(db) {
+      ensureColumn(db, 'raw_skus', 'dismissed', 'INTEGER NOT NULL DEFAULT 0')
+      db.exec('CREATE INDEX IF NOT EXISTS idx_raw_pending ON raw_skus(added, dismissed)')
+    },
+  },
 ]
 
 function ensureColumn(db, table, column, definition) {

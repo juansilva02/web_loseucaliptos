@@ -69,6 +69,13 @@ export const api = {
     return req('/api/admin/auth/users', { method: 'POST', body: JSON.stringify(data) })
   },
 
+  updateUserProfile(id, data) {
+    return req(`/api/admin/auth/users/${id}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
   updateUserRole(id, role) {
     return req(`/api/admin/auth/users/${id}/role`, {
       method: 'PUT',
@@ -151,6 +158,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ productId }),
     })
+  },
+
+  dismissSku(code) {
+    return req(`/api/admin/raw-skus/${code}`, { method: 'DELETE' })
+  },
+
+  restoreSku(code) {
+    return req(`/api/admin/raw-skus/${code}/restore`, { method: 'POST' })
   },
 
   uploadProductImage(productId, version, file) {

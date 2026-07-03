@@ -81,7 +81,8 @@ test('admin guarda solo la fila editada', async ({ page }, testInfo) => {
     .first()
     .locator('input:not([type="file"])')
     .first()
-  await firstProductName.fill(`${await firstProductName.inputValue()} E2E`)
+  const updatedName = `${await firstProductName.inputValue()} E2E`
+  await firstProductName.fill(updatedName)
   await page.getByRole('button', { name: 'Guardar cambios' }).first().click()
   await expect(page.getByText('1 cambio(s) guardado(s)')).toBeVisible()
 
@@ -93,4 +94,24 @@ test('admin guarda solo la fila editada', async ({ page }, testInfo) => {
   await page.getByRole('button', { name: 'Guardar cambios' }).first().click()
   await expect(firstProductRow.locator('.admin-image-pending')).toHaveCount(0)
   await expect(firstProductRow.locator('.admin-image-preview img')).toHaveAttribute('src', /\/uploads\//)
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await firstProductRow.getByRole('button', { name: 'Quitar del catalogo' }).click()
+  await expect(firstProductRow.getByText('Fuera del catalogo')).toBeVisible()
+  await expect(firstProductRow.getByRole('button', { name: 'Restaurar' })).toBeVisible()
+  await page.getByRole('button', { name: 'Guardar cambios' }).first().click()
+
+  const catalogResponse = await page.request.get('/api/catalog')
+  const catalog = await catalogResponse.json()
+  expect(catalog.products.some((product) => product.name === updatedName)).toBe(false)
+
+  await page.getByRole('button', { name: /Revision/ }).click()
+  const firstSkuCard = page.locator('.admin-review-block').nth(1).locator('.admin-review-card').first()
+  await firstSkuCard.locator('summary').click()
+  await firstSkuCard.getByRole('searchbox', { name: /Buscar producto para vincular/ }).fill(updatedName)
+  const manualMatch = firstSkuCard.locator('.admin-sku-manual-results button').first()
+  await expect(manualMatch).toContainText(updatedName)
+  page.once('dialog', (dialog) => dialog.accept())
+  await manualMatch.click()
+  await expect(page.getByText(/SKU .* vinculado a/)).toBeVisible()
 })

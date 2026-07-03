@@ -87,7 +87,7 @@ export function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Token invalido o expirado' })
   }
   const user = db.prepare(
-    'SELECT id, email, role, token_version FROM users WHERE id = ?',
+    'SELECT id, username, email, role, token_version FROM users WHERE id = ?',
   ).get(payload.id)
   if (!user) {
     return res.status(401).json({ error: 'Usuario no encontrado o eliminado' })
@@ -97,6 +97,7 @@ export function requireAuth(req, res, next) {
   }
   req.user = {
     id: user.id,
+    username: user.username,
     email: user.email,
     role: user.role,
     tokenVersion: user.token_version,

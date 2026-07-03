@@ -117,6 +117,7 @@ function candidateProducts(rawName, products) {
 router.get('/', requireAuth, (req, res) => {
   const search = String(req.query.q || '').trim()
   const added = String(req.query.added ?? '')
+  const dismissed = String(req.query.dismissed ?? '0')
   const limit = parsePositiveInteger(req.query.limit, 200, { max: 200 })
   const offset = parsePositiveInteger(req.query.offset, 0, { min: 0, max: 100000 })
   let where = ' WHERE 1=1'
@@ -124,6 +125,8 @@ router.get('/', requireAuth, (req, res) => {
 
   if (added === '0') where += ' AND added = 0'
   else if (added === '1') where += ' AND added = 1'
+  if (dismissed === '0') where += ' AND dismissed = 0'
+  else if (dismissed === '1') where += ' AND dismissed = 1'
   if (search) {
     where += `
       AND (
@@ -168,6 +171,7 @@ router.post('/:code/link', requireAuth, (req, res) => {
   const result = db.transaction(() => {
     const raw = db.prepare('SELECT * FROM raw_skus WHERE code = ?').get(code)
     if (!raw) throw validationError('SKU no encontrado', 404)
+    if (raw.dismissed) throw validationError('El SKU esta descartado. Restauralo antes de vincularlo.', 409)
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId)
     if (!product) throw validationError('Producto no encontrado', 404)
     const existingLink = db.prepare('SELECT id FROM products WHERE source_code = ? AND id != ?')
@@ -203,6 +207,7 @@ router.post('/:code/promote', requireAuth, (req, res) => {
   if (!Number.isInteger(code) || code < 1) throw validationError('Codigo de SKU invalido')
   const raw = db.prepare('SELECT * FROM raw_skus WHERE code = ?').get(code)
   if (!raw) throw validationError('SKU no encontrado', 404)
+  if (raw.dismissed) throw validationError('El SKU esta descartado. Restauralo antes de promoverlo.', 409)
   if (raw.added) throw validationError('Este SKU ya fue promovido o vinculado', 409)
 
   const exact = db.prepare('SELECT id, name FROM products').all()
@@ -247,6 +252,51 @@ router.post('/:code/promote', requireAuth, (req, res) => {
   })()
 
   res.status(201).json({ product })
+})
+
+router.delete('/:code', requireAuth, (req, res) => {
+  const code = Number(req.params.code)
+  if (!Number.isInteger(code) || code < 1) throw validationError('Codigo de SKU invalido')
+  const raw = db.prepare('SELECT * FROM raw_skus WHERE code = ?').get(code)
+  if (!raw) throw validationError('SKU no encontrado', 404)
+  if (raw.added) {
+    throw validationError('No se puede descartar un SKU ya vinculado o promovido', 409)
+  }
+
+  const sku = db.transaction(() => {
+    db.prepare('UPDATE raw_skus SET dismissed = 1 WHERE code = ?').run(code)
+    writeAudit({
+      actor: req.user,
+      action: 'dismiss_raw_sku',
+      entityType: 'raw_sku',
+      entityId: code,
+      before: { dismissed: raw.dismissed },
+      after: { dismissed: 1 },
+    })
+    return { ...raw, dismissed: 1 }
+  })()
+  res.json({ sku })
+})
+
+router.post('/:code/restore', requireAuth, (req, res) => {
+  const code = Number(req.params.code)
+  if (!Number.isInteger(code) || code < 1) throw validationError('Codigo de SKU invalido')
+  const raw = db.prepare('SELECT * FROM raw_skus WHERE code = ?').get(code)
+  if (!raw) throw validationError('SKU no encontrado', 404)
+
+  const sku = db.transaction(() => {
+    db.prepare('UPDATE raw_skus SET dismissed = 0 WHERE code = ?').run(code)
+    writeAudit({
+      actor: req.user,
+      action: 'restore_raw_sku',
+      entityType: 'raw_sku',
+      entityId: code,
+      before: { dismissed: raw.dismissed },
+      after: { dismissed: 0 },
+    })
+    return { ...raw, dismissed: 0 }
+  })()
+  res.json({ sku })
 })
 
 export default router

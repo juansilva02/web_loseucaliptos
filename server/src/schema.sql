@@ -34,12 +34,16 @@ CREATE TABLE IF NOT EXISTS raw_skus (
   cost       INTEGER,
   stock      INTEGER,
   added      INTEGER DEFAULT 0,          -- 1 si ya se promovio al catalogo
+  dismissed  INTEGER NOT NULL DEFAULT 0, -- 1 si un administrador lo descarto
   updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  email         TEXT UNIQUE NOT NULL,
+  username      TEXT UNIQUE NOT NULL,
+  email         TEXT,                     -- opcional: contacto para recuperar contrasena
+  display_name  TEXT DEFAULT '',
+  phone         TEXT DEFAULT '',
   password_hash TEXT NOT NULL,
   role          TEXT DEFAULT 'admin',
   token_version INTEGER NOT NULL DEFAULT 1,
