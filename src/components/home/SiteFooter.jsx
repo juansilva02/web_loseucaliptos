@@ -15,7 +15,6 @@ export default function SiteFooter({
   scrollToProducts,
   setShowCoverage,
   setShowCart,
-  whatsappBase,
 }) {
   return (
     <footer className="site-footer">
@@ -62,9 +61,6 @@ export default function SiteFooter({
               <a href="tel:+5491130623113">11 3062-3113</a>
             </div>
             <div className="footer-contact-links">
-              <a href={whatsappBase} target="_blank" rel="noreferrer">
-                Escribinos por WhatsApp
-              </a>
               <a className="footer-social-link" href="https://www.instagram.com/corralon.loseucaliptus/" target="_blank" rel="noreferrer">
                 <InstagramGlyph /> @corralon.loseucaliptus
               </a>

@@ -325,7 +325,6 @@ function App() {
         scrollToProducts={scrollToProducts}
         setShowCoverage={setShowCoverage}
         setShowCart={setShowCart}
-        whatsappBase={whatsappBase}
       />
     </>
   )
