@@ -20,7 +20,7 @@ export default function SiteFooter({
   return (
     <footer className="site-footer">
       <div className="site-footer-grid">
-        <div className="site-footer-block">
+        <div className="site-footer-block site-footer-nav">
           <strong>Navegacion</strong>
           <button type="button" onClick={scrollToProducts}>Productos destacados</button>
           <button type="button" onClick={() => navigate('/catalogo')}>Catalogo completo</button>
@@ -44,27 +44,35 @@ export default function SiteFooter({
           <span>Sabados <b>8:00 a 15:00</b></span>
         </div>
 
-        <div className="site-footer-block">
+        <div className="site-footer-block site-footer-contact-block">
           <strong>Contacto</strong>
-          <span className="footer-contact-line">
-            <MapPin className="footer-contact-icon" size={15} aria-hidden="true" />
-            Av. Monteverde 2766, San Francisco Solano
-          </span>
-          <a href="tel:+5491159748316">11 5974-8316</a>
-          <span className="footer-contact-line">
-            <MapPin className="footer-contact-icon" size={15} aria-hidden="true" />
-            Av. Guillermo Hudson 2855, Bosques, F. Varela
-          </span>
-          <a href="tel:+5491130623113">11 3062-3113</a>
-          <a href={whatsappBase} target="_blank" rel="noreferrer">
-            Escribinos por WhatsApp
-          </a>
-          <a className="footer-social-link" href="https://www.instagram.com/corralon.loseucaliptus/" target="_blank" rel="noreferrer">
-            <InstagramGlyph /> @corralon.loseucaliptus
-          </a>
-          <a className="footer-social-link" href="https://www.instagram.com/loseucaliptus.bosques/" target="_blank" rel="noreferrer">
-            <InstagramGlyph /> @loseucaliptus.bosques
-          </a>
+          <div className="site-footer-contact-grid">
+            <div className="footer-contact-location">
+              <span className="footer-contact-line">
+                <MapPin className="footer-contact-icon" size={15} aria-hidden="true" />
+                Av. Monteverde 2766, San Francisco Solano
+              </span>
+              <a href="tel:+5491159748316">11 5974-8316</a>
+            </div>
+            <div className="footer-contact-location">
+              <span className="footer-contact-line">
+                <MapPin className="footer-contact-icon" size={15} aria-hidden="true" />
+                Av. Guillermo Hudson 2855, Bosques, F. Varela
+              </span>
+              <a href="tel:+5491130623113">11 3062-3113</a>
+            </div>
+            <div className="footer-contact-links">
+              <a href={whatsappBase} target="_blank" rel="noreferrer">
+                Escribinos por WhatsApp
+              </a>
+              <a className="footer-social-link" href="https://www.instagram.com/corralon.loseucaliptus/" target="_blank" rel="noreferrer">
+                <InstagramGlyph /> @corralon.loseucaliptus
+              </a>
+              <a className="footer-social-link" href="https://www.instagram.com/loseucaliptus.bosques/" target="_blank" rel="noreferrer">
+                <InstagramGlyph /> @loseucaliptus.bosques
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
