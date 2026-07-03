@@ -29,7 +29,7 @@ proyecto y no debe interpretarse como resuelto.
 | Accesibilidad modal | Resuelto | foco, Escape, restauracion y scroll lock |
 | SEO con fallback en prod | Resuelto | `PRERENDER_REQUIRE_API=1` |
 | Sitemap fijo | Resuelto | generado con fecha de build |
-| Headers/gzip/uploads | Resuelto en repo | config Nginx versionada; requiere deploy |
+| Headers/gzip/uploads | Resuelto | config Nginx versionada y aplicada en produccion |
 | Deploy no atomico | Resuelto | build aislado, HTML atomico, verificacion y rollback |
 | Backups | Diferido | fuera de alcance de esta fase |
 
@@ -81,17 +81,20 @@ publicar HTML con datos distintos de la DB.
 
 ## Criterio de salida a produccion
 
-Antes del deploy:
+Controles ejecutados antes del deploy:
 
 1. confirmar que no existen `source_code` duplicados;
 2. cambiar variables a `SEED_ADMIN_*`;
 3. ejecutar CI completa;
 4. revisar que el Nginx versionado no interfiera con otros sites del VPS.
 
-Despues del deploy:
+Controles ejecutados despues del deploy:
 
 1. `/health/ready`, `/api/catalog`, `/catalogo` y `sitemap.xml` en 200;
 2. assets referenciados en 200;
-3. login y guardado de una fila;
-4. subir, reemplazar y quitar una imagen;
-5. checkout Solano y redireccion de cobertura a Bosques.
+3. home, catalogo y login admin cargan sin errores de navegador;
+4. geocodificacion real asigna cobertura de Solano;
+5. upload existente se sirve directo desde Nginx.
+
+Queda pendiente una prueba manual autenticada de escritura e imagen con
+credenciales operativas.

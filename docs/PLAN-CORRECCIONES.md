@@ -24,13 +24,14 @@ Actualizado: 2026-07-03.
 - [x] Limpieza de `catalogStore.js`, catalogo estatico y `vercel.json`.
 - [x] CI con lint, pruebas, build y auditorias.
 
-## Pendiente antes de produccion
+## Produccion
 
-- [ ] Merge controlado a `main`.
-- [ ] Validar duplicados actuales de `source_code`.
-- [ ] Renombrar variables del VPS a `SEED_ADMIN_*`.
-- [ ] Ejecutar `scripts/deploy.sh`.
-- [ ] Smoke test de admin, imagenes, catalogo y checkout.
+- [x] Merge controlado a `main`.
+- [x] Validar duplicados actuales de `source_code`.
+- [x] Renombrar variables del VPS a `SEED_ADMIN_*`.
+- [x] Ejecutar `scripts/deploy.sh`.
+- [x] Smoke test publico de catalogo, checkout y carga del login admin.
+- [ ] Prueba manual autenticada de escritura e imagen con credenciales reales.
 
 ## Diferido
 

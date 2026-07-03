@@ -2,11 +2,10 @@
 
 Actualizado: 2026-07-03.
 
-## Estado de esta rama
+## Estado desplegado
 
-La estabilizacion esta implementada en `codex/estabilizacion-escalabilidad` y
-verificada localmente. No se considera desplegada hasta mergear a `main` y
-ejecutar `scripts/deploy.sh` en el VPS.
+La estabilizacion fue integrada a `main` y desplegada en produccion el
+2026-07-03. Commit de aplicacion desplegado: `49263d6`.
 
 Verificaciones realizadas:
 
@@ -17,9 +16,11 @@ Verificaciones realizadas:
   375 px y guardado admin;
 - build de produccion correcto;
 - chunk principal de 266,67 kB minificado;
-- auditorias npm de frontend y backend sin vulnerabilidades conocidas.
+- auditorias npm de frontend y backend sin vulnerabilidades conocidas;
+- workflow `quality` de GitHub finalizado en `success`;
+- smoke test real de home, catalogo y login admin en desktop y 375 px.
 
-## Topologia preparada
+## Topologia actual
 
 ```text
 Internet
@@ -75,12 +76,21 @@ bootstrap y no pisa ediciones administrativas.
 Tablas legacy `featured`, `orders` y `leads`, y endpoints individuales
 compatibles, se conservan hasta la segunda limpieza.
 
+## Estado de produccion verificado
+
+- aplicacion desplegada desde `49263d6`;
+- container API: healthy;
+- migracion 1 aplicada;
+- productos: 64 totales, 62 activos y 14 destacados;
+- Nginx: CSP, HSTS, gzip y uploads directos activos;
+- `/catalogo/` redirige a `/catalogo`;
+- sitemap generado el dia del build;
+- proxy geografico responde y asigna Solano correctamente;
+- variables del VPS renombradas a `SEED_ADMIN_*`.
+
 ## Pendiente de operacion
 
-1. Revisar el diff y mergear esta rama.
-2. Renombrar `ADMIN_*` a `SEED_ADMIN_*` en el `.env` del VPS.
-3. Ejecutar el deploy por fases.
-4. Verificar login, upload real y checkout en produccion.
-5. Implementar backups en una fase separada.
+1. Probar con credenciales reales el cambio de una fila y una imagen.
+2. Implementar backups en una fase separada.
 
 Backups no fueron modificados por decision explicita.
