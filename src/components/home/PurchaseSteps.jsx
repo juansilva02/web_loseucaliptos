@@ -25,14 +25,15 @@ export default function PurchaseSteps({
           </h3>
         </div>
         <div className="benefits-rail-intro-side">
-          <div className="benefits-rail-progress" aria-hidden="true">
+          <div className="benefits-rail-progress" aria-label="Seleccionar paso de compra">
             {purchaseSteps.map((step, index) => (
               <button
                 key={step.title}
                 type="button"
-                tabIndex={-1}
                 className={`benefits-rail-progress-seg${index < activeStep ? ' benefits-rail-progress-seg-done' : ''}${stepsPaused && index === activeStep ? ' benefits-rail-progress-seg-paused' : ''}`}
                 onClick={() => setActiveStep(index)}
+                aria-label={`Paso ${index + 1}: ${step.title}`}
+                aria-pressed={index === activeStep}
               >
                 {!stepsPaused && index === activeStep ? <span className="benefits-rail-progress-fill" /> : null}
               </button>

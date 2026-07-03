@@ -1,8 +1,9 @@
-import { categoryCards, resolveImage } from '../../lib/catalog'
+import { resolveImage } from '../../lib/catalog'
 import { getCatalogQualitySummary } from '../../lib/catalog-quality'
 import { getBundledProductImage } from '../../lib/product-images'
 
 export default function FeaturedProducts({
+  categories,
   activeCategory,
   featuredSearch,
   filteredProducts,
@@ -27,7 +28,7 @@ export default function FeaturedProducts({
             <span>Filtrar</span>
             <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)}>
               <option value="all">Todas las categorias</option>
-              {categoryCards.slice(0, 6).map((category) => (
+              {categories.map((category) => (
                 <option key={category.key} value={category.key}>
                   {category.name}
                 </option>
@@ -58,6 +59,7 @@ export default function FeaturedProducts({
           {filteredProducts.map((product, index) => {
           const quality = getCatalogQualitySummary(product.excelName)
           const imgSrc = resolveImage(product.image) || getBundledProductImage({ id: product.id, name: product.excelName })
+          const purchasable = product.price > 0 && !quality.unavailable
 
           return (
           <article
@@ -71,7 +73,14 @@ export default function FeaturedProducts({
                 className="product-visual-large product-visual-image-frame product-visual-open"
                 onClick={() => onOpenProduct(product)}
               >
-                <img className="product-visual-image" src={imgSrc} alt={quality.displayName} />
+                <img
+                  className="product-visual-image"
+                  src={imgSrc}
+                  alt={quality.displayName}
+                  width="640"
+                  height="480"
+                  loading="lazy"
+                />
               </button>
             ) : (
               <button
@@ -93,7 +102,7 @@ export default function FeaturedProducts({
               <button className="text-link-button" type="button" onClick={() => onOpenProduct(product)}>
                 Ver detalle
               </button>
-              {!quality.unavailable ? <div className="mini-quantity">
+              {purchasable ? <div className="mini-quantity">
                 <button type="button" aria-label="Disminuir cantidad" onClick={() => changeProductDraftQuantity(product.id, -1)}>
                   -
                 </button>
@@ -110,7 +119,7 @@ export default function FeaturedProducts({
                   +
                 </button>
               </div> : null}
-              {!quality.unavailable ? (
+              {purchasable ? (
                 <button className="add-cart-button" type="button" onClick={() => handleAddToCart(product)}>
                   Agregar al carrito
                 </button>

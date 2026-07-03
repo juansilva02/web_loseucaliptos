@@ -12,6 +12,8 @@ export default function Locations({ branches, activeLocation, setActiveLocation 
             <article
               key={branch.name}
               className={`location-card${activeLocation === index ? ' location-card-visible' : ''}`}
+              aria-hidden={activeLocation !== index}
+              inert={activeLocation !== index}
             >
               <div className="location-copy">
                 <p className="section-kicker">{branch.kicker}</p>
@@ -27,13 +29,15 @@ export default function Locations({ branches, activeLocation, setActiveLocation 
                 </a>
               </div>
               <div className="location-map-frame">
-                <CoverageMap
-                  lat={branch.lat}
-                  lng={branch.lng}
-                  radius={branch.coverageRadius}
-                  color="#db3a1e"
-                  label={branch.kicker}
-                />
+                {activeLocation === index ? (
+                  <CoverageMap
+                    lat={branch.lat}
+                    lng={branch.lng}
+                    radius={branch.coverageRadius}
+                    color="#db3a1e"
+                    label={branch.kicker}
+                  />
+                ) : null}
               </div>
             </article>
           ))}
@@ -56,6 +60,7 @@ export default function Locations({ branches, activeLocation, setActiveLocation 
                 type="button"
                 onClick={() => setActiveLocation(index)}
                 aria-label={`Ver ${branch.name}`}
+                aria-pressed={activeLocation === index}
               />
             ))}
           </div>

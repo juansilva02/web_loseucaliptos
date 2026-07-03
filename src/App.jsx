@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import CoverageChecker from './components/CoverageChecker'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import BenefitsBar from './components/home/BenefitsBar'
 import CartDrawer from './components/home/CartDrawer'
 import FeaturedProducts from './components/home/FeaturedProducts'
@@ -9,14 +8,21 @@ import Hero from './components/home/Hero'
 import PurchaseSteps from './components/home/PurchaseSteps'
 import SiteFooter from './components/home/SiteFooter'
 import SiteHeader from './components/home/SiteHeader'
-import ProductQuickView from './components/ProductQuickView'
 import { api } from './admin/api'
-import { benefitTicker, branches, faqs, heroSignals, promoImages, purchaseSteps } from './data/siteContent'
+import {
+  benefitTicker,
+  branches as siteBranches,
+  faqs,
+  heroSignals,
+  promoImages,
+  purchaseSteps,
+} from './data/siteContent'
 import { useCart } from './context/useCart'
 import { useAutoRotate, useScrolled } from './hooks'
 import {
-  categoryCards,
+  formatMoney,
   formatPrice,
+  getCategoryDefinition,
   normalizeText,
   whatsappBase,
   whatsappBosques,
@@ -24,48 +30,51 @@ import {
 import './App.css'
 
 const CatalogPage = lazy(() => import('./pages/CatalogPage'))
+const CartPriceReviewModal = lazy(() => import('./components/checkout/CartPriceReviewModal'))
+const CheckoutDeliveryModal = lazy(() => import('./components/checkout/CheckoutDeliveryModal'))
+const CoverageChecker = lazy(() => import('./components/CoverageChecker'))
 const Locations = lazy(() => import('./components/home/Locations'))
+const ProductQuickView = lazy(() => import('./components/ProductQuickView'))
 const PromoCarousel = lazy(() => import('./components/home/PromoCarousel'))
 const FaqSection = lazy(() => import('./components/home/FaqSection'))
 
 function parseDraftQuantity(value) {
   if (value === '') return ''
   const parsed = parseInt(value, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(10000, parsed) : ''
 }
 
 function normalizeDraftQuantity(value) {
   const parsed = parseInt(value, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
-}
-
-function buildWhatsappOrderMessage({ items, subtotal }) {
-  const itemLines = items.map((item) => `- ${item.name} x${item.quantity} | ${formatPrice(item.price * item.quantity)}`)
-
-  return [
-    'Hola, quiero hacer este pedido:',
-    '',
-    ...itemLines,
-    '',
-    `Subtotal: ${formatPrice(subtotal)}`,
-    '',
-    'Aguardo contacto del equipo de ventas para continuar la compra.',
-  ]
-    .filter(Boolean)
-    .join('\n')
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(10000, parsed) : 1
 }
 
 function App() {
-  const { items, itemCount, subtotal, addItem, removeItem, changeQuantity, clearCart } = useCart()
+  const {
+    items,
+    itemCount,
+    subtotal,
+    addItem,
+    removeItem,
+    changeQuantity,
+    replaceItems,
+    clearCart,
+  } = useCart()
   const [activeCategory, setActiveCategory] = useState('all')
   const [featuredSearch, setFeaturedSearch] = useState('')
   const [showCart, setShowCart] = useState(false)
   const [showCoverage, setShowCoverage] = useState(false)
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [checkoutBranchKey, setCheckoutBranchKey] = useState('solano')
+  const [checkoutBusy, setCheckoutBusy] = useState(false)
+  const [checkoutError, setCheckoutError] = useState('')
+  const [priceReview, setPriceReview] = useState(null)
   const [productQuantities, setProductQuantities] = useState({})
   const [activeLocation, setActiveLocation] = useState(0)
   const [activePromo, setActivePromo] = useState(0)
   const [stepsPaused, setStepsPaused] = useState(false)
-  const [apiFeatured, setApiFeatured] = useState([])
+  const [catalog, setCatalog] = useState({ categories: [], products: [] })
+  const [catalogStatus, setCatalogStatus] = useState('loading')
   const [quickViewProduct, setQuickViewProduct] = useState(null)
   const [deliveryLocation, setDeliveryLocation] = useState(() => {
     try {
@@ -80,76 +89,117 @@ function App() {
   const [activeStep, setActiveStep] = useAutoRotate(purchaseSteps.length, 3400, stepsPaused)
   const navigate = useNavigate()
   const location = useLocation()
-  const isCatalog = location.pathname === '/catalogo'
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [location.pathname])
 
-  useEffect(() => {
-    let cancelled = false
-
-    api.getPublicFeatured()
-      .then((res) => {
-        if (!cancelled) setApiFeatured(res.featured || [])
+  const loadCatalog = () => {
+    setCatalogStatus('loading')
+    return api.getPublicCatalog()
+      .then((response) => {
+        setCatalog({
+          categories: response.categories || [],
+          products: response.products || [],
+        })
+        setCatalogStatus('ok')
       })
       .catch(() => {
-        if (!cancelled) setApiFeatured([])
+        setCatalogStatus('error')
       })
+  }
 
+  useEffect(() => {
+    let cancelled = false
+    api.getPublicCatalog()
+      .then((response) => {
+        if (cancelled) return
+        setCatalog({
+          categories: response.categories || [],
+          products: response.products || [],
+        })
+        setCatalogStatus('ok')
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogStatus('error')
+      })
     return () => {
       cancelled = true
     }
   }, [])
 
-  const featuredProducts = useMemo(() => {
-    return apiFeatured.map((product) => {
-      const category = categoryCards.find((entry) => entry.key === product.categoryKey)
-      const subtitle = [product.brandName, product.unit ? `Venta por ${product.unit}` : '']
-        .filter(Boolean)
-        .join(' · ')
+  const categoryNameByKey = useMemo(
+    () => new Map(catalog.categories.map((category) => [category.key, category.name])),
+    [catalog.categories],
+  )
 
-      return {
-        ...product,
-        subtitle: subtitle || category?.description || 'Material disponible para entrega y retiro.',
-        publicBlurb: category?.description || '',
-      }
-    })
-  }, [apiFeatured])
+  const featuredProducts = useMemo(() => {
+    return catalog.products
+      .filter((product) => product.featured === 1)
+      .map((product) => {
+        const definition = getCategoryDefinition(product.category)
+        const categoryName = categoryNameByKey.get(product.category) || definition.name
+        const subtitle = [product.brand, product.unit ? `Venta por ${product.unit}` : '']
+          .filter(Boolean)
+          .join(' | ')
+
+        return {
+          id: product.id,
+          code: product.id,
+          excelName: product.name,
+          price: product.price,
+          brandName: product.brand || '',
+          unit: product.unit || '',
+          categoryKey: product.category,
+          categoryName,
+          image: product.image || '',
+          version: product.version,
+          subtitle: subtitle || definition.description,
+          publicBlurb: definition.description,
+        }
+      })
+  }, [catalog.products, categoryNameByKey])
+
+  const deliveryBranches = useMemo(
+    () => siteBranches.map((branch) => ({
+      key: branch.key,
+      label: branch.label,
+      name: branch.name,
+      kicker: branch.kicker,
+      lat: branch.lat,
+      lng: branch.lng,
+      coverageRadius: branch.coverageRadius,
+      address: branch.address,
+      whatsappUrl: branch.whatsappUrl,
+    })),
+    [],
+  )
 
   const filteredProducts = useMemo(() => {
     const term = normalizeText(featuredSearch.trim())
-
     return featuredProducts.filter((product) => {
       const matchesCategory = activeCategory === 'all' || product.categoryKey === activeCategory
       const matchesSearch = !term ||
         normalizeText(product.excelName).includes(term) ||
         normalizeText(product.categoryName).includes(term) ||
         normalizeText(product.brandName).includes(term)
-
       return matchesCategory && matchesSearch
     })
   }, [activeCategory, featuredSearch, featuredProducts])
 
   const [activeProduct, setActiveProduct] = useAutoRotate(filteredProducts.length, 2800)
   const floatingCartItems = items.slice(0, 3)
-  const cartMsg = encodeURIComponent(buildWhatsappOrderMessage({ items, subtotal }))
-  const cartWhatsappUrl = `${whatsappBase}?text=${cartMsg}`
-  const cartWhatsappBosques = `${whatsappBosques}?text=${cartMsg}`
   const highlightedProduct = filteredProducts.length ? activeProduct % filteredProducts.length : -1
 
   const scrollToProducts = () => {
-    const section = document.getElementById('productos-destacados')
-    if (section) {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+    document.getElementById('productos-destacados')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const changeProductDraftQuantity = (productId, delta) => {
     setProductQuantities((current) => {
       const base = normalizeDraftQuantity(current[productId])
-      const next = Math.max(1, base + delta)
-      return { ...current, [productId]: next }
+      return { ...current, [productId]: Math.min(10000, Math.max(1, base + delta)) }
     })
   }
 
@@ -165,94 +215,145 @@ function App() {
     setProductQuantities((current) => ({ ...current, [product.id]: 1 }))
   }
 
-  const handleQuickViewQuantity = (productId, value) => {
-    setProductDraftQuantity(productId, value)
-  }
-
   const handleCoverageResult = (nextLocation) => {
     setDeliveryLocation(nextLocation)
     try {
       window.localStorage.setItem('eucaliptus-delivery-location', JSON.stringify(nextLocation))
     } catch {
-      // almacenamiento no disponible
+      // El selector sigue funcionando sin persistencia.
     }
   }
 
+  const openCheckoutWithQuote = (quote, branchKey) => {
+    replaceItems(quote.items)
+    setPriceReview(null)
+    setCheckoutError('')
+    if (!quote.items.length) {
+      setCheckoutError('Los productos del carrito ya no estan disponibles para compra.')
+      setShowCart(true)
+      return
+    }
+    setCheckoutBranchKey(branchKey)
+    setShowCart(false)
+    setShowCheckout(true)
+  }
+
+  const handleStartCheckout = async (branchKey) => {
+    if (!items.length || checkoutBusy) return
+    setCheckoutBusy(true)
+    setCheckoutError('')
+    try {
+      const quote = await api.quoteCart(items)
+      if (quote.changes.length || quote.blocked.length) {
+        setShowCart(false)
+        setPriceReview({ ...quote, branchKey })
+      } else {
+        openCheckoutWithQuote(quote, branchKey)
+      }
+    } catch (error) {
+      setCheckoutError(error.message || 'No pudimos validar los precios. Intenta nuevamente.')
+    } finally {
+      setCheckoutBusy(false)
+    }
+  }
+
+  const home = (
+    <>
+      <BenefitsBar benefitTicker={benefitTicker} />
+      <SiteHeader
+        isScrolled={isScrolled}
+        deliveryLocation={deliveryLocation}
+        itemCount={itemCount}
+        subtotal={subtotal}
+        formatPrice={formatMoney}
+        setShowCoverage={setShowCoverage}
+        setShowCart={setShowCart}
+        whatsappBase={whatsappBase}
+        whatsappBosques={whatsappBosques}
+      />
+      <Hero
+        heroSignals={heroSignals}
+        activeSignal={activeSignal}
+        scrollToProducts={scrollToProducts}
+        whatsappBase={whatsappBase}
+        whatsappBosques={whatsappBosques}
+      />
+      <FeaturedProducts
+        categories={catalog.categories}
+        activeCategory={activeCategory}
+        featuredSearch={featuredSearch}
+        filteredProducts={filteredProducts}
+        highlightedProduct={highlightedProduct}
+        navigate={navigate}
+        setActiveCategory={setActiveCategory}
+        setFeaturedSearch={setFeaturedSearch}
+        setActiveProduct={setActiveProduct}
+        changeProductDraftQuantity={changeProductDraftQuantity}
+        getProductDraftQuantity={getProductDraftQuantity}
+        setProductDraftQuantity={setProductDraftQuantity}
+        handleAddToCart={handleAddToCart}
+        formatPrice={formatPrice}
+        onOpenProduct={setQuickViewProduct}
+      />
+      <PurchaseSteps
+        purchaseSteps={purchaseSteps}
+        activeStep={activeStep}
+        stepsPaused={stepsPaused}
+        setStepsPaused={setStepsPaused}
+        setActiveStep={setActiveStep}
+        setShowCart={setShowCart}
+        whatsappBase={whatsappBase}
+        whatsappBosques={whatsappBosques}
+      />
+      <Suspense fallback={null}>
+        <Locations
+          branches={siteBranches}
+          activeLocation={activeLocation}
+          setActiveLocation={setActiveLocation}
+        />
+        <PromoCarousel
+          promoImages={promoImages}
+          activePromo={activePromo}
+          setActivePromo={setActivePromo}
+        />
+        <FaqSection faqs={faqs} />
+      </Suspense>
+      <SiteFooter
+        navigate={navigate}
+        scrollToProducts={scrollToProducts}
+        setShowCoverage={setShowCoverage}
+        setShowCart={setShowCart}
+        whatsappBase={whatsappBase}
+      />
+    </>
+  )
+
   return (
     <main className="figma-storefront">
-      {isCatalog ? (
-        <Suspense fallback={<div className="route-loading">Cargando catalogo...</div>}>
-          <CatalogPage onBack={() => navigate('/')} onOpenCart={() => setShowCart(true)} />
-        </Suspense>
-      ) : (
-        <>
-          <BenefitsBar benefitTicker={benefitTicker} />
-          <SiteHeader
-            isScrolled={isScrolled}
-            deliveryLocation={deliveryLocation}
-            itemCount={itemCount}
-            subtotal={subtotal}
-            formatPrice={formatPrice}
-            setShowCoverage={setShowCoverage}
-            setShowCart={setShowCart}
-            whatsappBase={whatsappBase}
-            whatsappBosques={whatsappBosques}
-          />
-          <Hero
-            heroSignals={heroSignals}
-            activeSignal={activeSignal}
-            scrollToProducts={scrollToProducts}
-            whatsappBase={whatsappBase}
-            whatsappBosques={whatsappBosques}
-          />
-          <FeaturedProducts
-            activeCategory={activeCategory}
-            featuredSearch={featuredSearch}
-            filteredProducts={filteredProducts}
-            highlightedProduct={highlightedProduct}
-            navigate={navigate}
-            setActiveCategory={setActiveCategory}
-            setFeaturedSearch={setFeaturedSearch}
-            setActiveProduct={setActiveProduct}
-            changeProductDraftQuantity={changeProductDraftQuantity}
-            getProductDraftQuantity={getProductDraftQuantity}
-            setProductDraftQuantity={setProductDraftQuantity}
-            handleAddToCart={handleAddToCart}
-            formatPrice={formatPrice}
-            onOpenProduct={setQuickViewProduct}
-          />
-          <PurchaseSteps
-            purchaseSteps={purchaseSteps}
-            activeStep={activeStep}
-            stepsPaused={stepsPaused}
-            setStepsPaused={setStepsPaused}
-            setActiveStep={setActiveStep}
-            setShowCart={setShowCart}
-            whatsappBase={whatsappBase}
-            whatsappBosques={whatsappBosques}
-          />
-          <Suspense fallback={null}>
-            <Locations
-              branches={branches}
-              activeLocation={activeLocation}
-              setActiveLocation={setActiveLocation}
-            />
-            <PromoCarousel
-              promoImages={promoImages}
-              activePromo={activePromo}
-              setActivePromo={setActivePromo}
-            />
-            <FaqSection faqs={faqs} />
-          </Suspense>
-          <SiteFooter
-            navigate={navigate}
-            scrollToProducts={scrollToProducts}
-            setShowCoverage={setShowCoverage}
-            setShowCart={setShowCart}
-            whatsappBase={whatsappBase}
-          />
-        </>
-      )}
+      <Routes>
+        <Route path="/" element={home} />
+        <Route
+          path="/catalogo/*"
+          element={(
+            location.pathname === '/catalogo/' ? (
+              <Navigate to="/catalogo" replace />
+            ) : location.pathname === '/catalogo' ? (
+              <Suspense fallback={<div className="route-loading">Cargando catalogo...</div>}>
+                <CatalogPage
+                  catalog={catalog}
+                  status={catalogStatus}
+                  onRetry={loadCatalog}
+                  onBack={() => navigate('/')}
+                  onOpenCart={() => setShowCart(true)}
+                />
+              </Suspense>
+            ) : (
+              <Navigate to="/catalogo" replace />
+            )
+          )}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <a
         className={`floating-whatsapp${showCart ? ' floating-whatsapp-shifted' : ''}`}
@@ -267,40 +368,67 @@ function App() {
         </svg>
       </a>
 
-      <ProductQuickView
-        product={quickViewProduct}
-        quantity={quickViewProduct ? getProductDraftQuantity(quickViewProduct.id) : 1}
-        onClose={() => setQuickViewProduct(null)}
-        onChangeQuantity={(value) => quickViewProduct && handleQuickViewQuantity(quickViewProduct.id, value)}
-        onBlurQuantity={() => quickViewProduct && setProductDraftQuantity(quickViewProduct.id, getProductDraftQuantity(quickViewProduct.id), true)}
-        onAddToCart={() => {
-          if (!quickViewProduct) return
-          handleAddToCart(quickViewProduct)
-          setQuickViewProduct(null)
-          setShowCart(true)
-        }}
-      />
+      <Suspense fallback={null}>
+        {quickViewProduct ? (
+          <ProductQuickView
+            product={quickViewProduct}
+            quantity={getProductDraftQuantity(quickViewProduct.id)}
+            onClose={() => setQuickViewProduct(null)}
+            onChangeQuantity={(value) => setProductDraftQuantity(quickViewProduct.id, value)}
+            onBlurQuantity={() => setProductDraftQuantity(
+              quickViewProduct.id,
+              getProductDraftQuantity(quickViewProduct.id),
+              true,
+            )}
+            onAddToCart={() => {
+              handleAddToCart(quickViewProduct)
+              setQuickViewProduct(null)
+              setShowCart(true)
+            }}
+          />
+        ) : null}
 
       {!showCart ? (
         <FloatingCartButton
           itemCount={itemCount}
           floatingCartItems={floatingCartItems}
           subtotal={subtotal}
-          formatPrice={formatPrice}
+          formatPrice={formatMoney}
           setShowCart={setShowCart}
         />
       ) : null}
 
       {showCoverage ? (
         <CoverageChecker
-          branches={[
-            { name: 'Solano', lat: branches[0].lat, lng: branches[0].lng, radius: branches[0].coverageRadius, whatsappUrl: whatsappBase },
-            { name: 'Bosques', lat: branches[1].lat, lng: branches[1].lng, radius: branches[1].coverageRadius, whatsappUrl: whatsappBosques },
-          ]}
+          branches={deliveryBranches}
           onClose={() => setShowCoverage(false)}
           onResult={handleCoverageResult}
         />
       ) : null}
+
+      {priceReview ? (
+        <CartPriceReviewModal
+          quote={priceReview}
+          formatMoney={formatMoney}
+          onClose={() => {
+            setPriceReview(null)
+            setShowCart(true)
+          }}
+          onConfirm={() => openCheckoutWithQuote(priceReview, priceReview.branchKey)}
+        />
+      ) : null}
+
+      {showCheckout ? (
+        <CheckoutDeliveryModal
+          selectedBranchKey={checkoutBranchKey}
+          cartItems={items}
+          subtotal={subtotal}
+          branches={deliveryBranches}
+          formatPrice={formatMoney}
+          onClose={() => setShowCheckout(false)}
+        />
+      ) : null}
+      </Suspense>
 
       {showCart ? (
         <div className="cart-backdrop" onClick={() => setShowCart(false)} aria-hidden="true" />
@@ -311,12 +439,13 @@ function App() {
         setShowCart={setShowCart}
         items={items}
         subtotal={subtotal}
-        formatPrice={formatPrice}
+        formatPrice={formatMoney}
         changeQuantity={changeQuantity}
         removeItem={removeItem}
         clearCart={clearCart}
-        cartWhatsappUrl={cartWhatsappUrl}
-        cartWhatsappBosques={cartWhatsappBosques}
+        checkoutBusy={checkoutBusy}
+        checkoutError={checkoutError}
+        onStartCheckout={handleStartCheckout}
       />
     </main>
   )

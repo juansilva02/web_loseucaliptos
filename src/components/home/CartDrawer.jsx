@@ -1,3 +1,5 @@
+import { useDialogA11y } from '../../hooks/useDialogA11y'
+
 export default function CartDrawer({
   showCart,
   setShowCart,
@@ -7,13 +9,23 @@ export default function CartDrawer({
   changeQuantity,
   removeItem,
   clearCart,
-  cartWhatsappUrl,
-  cartWhatsappBosques,
+  onStartCheckout,
+  checkoutBusy = false,
+  checkoutError = '',
 }) {
+  const closeCart = () => setShowCart(false)
+  const dialogRef = useDialogA11y({ onClose: closeCart, active: showCart })
   if (!showCart) return null
 
   return (
-    <aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Mi carrito">
+    <aside
+      ref={dialogRef}
+      className="cart-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mi carrito"
+      tabIndex={-1}
+    >
       <div className="cart-drawer-header">
         <div>
           <p>Mi carrito</p>
@@ -55,16 +67,27 @@ export default function CartDrawer({
       </div>
 
       <div className="cart-drawer-footer">
+        {checkoutError ? <p className="cart-checkout-error" role="alert">{checkoutError}</p> : null}
         <button className="secondary-cta dark" type="button" onClick={clearCart}>
           Vaciar carrito
         </button>
         <div className="cart-send-group">
-          <a className="primary-cta" href={cartWhatsappUrl} target="_blank" rel="noreferrer">
-            Enviar - Solano
-          </a>
-          <a className="primary-cta" href={cartWhatsappBosques} target="_blank" rel="noreferrer">
+          <button
+            className="primary-cta"
+            type="button"
+            onClick={() => onStartCheckout?.('solano')}
+            disabled={!items.length || checkoutBusy}
+          >
+            {checkoutBusy ? 'Validando...' : 'Enviar - Solano'}
+          </button>
+          <button
+            className="primary-cta"
+            type="button"
+            onClick={() => onStartCheckout?.('bosques')}
+            disabled={!items.length || checkoutBusy}
+          >
             Enviar - Bosques
-          </a>
+          </button>
         </div>
       </div>
     </aside>

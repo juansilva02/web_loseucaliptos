@@ -10,7 +10,13 @@ export default function Hero({
   return (
     <section className="hero-section">
       <div className="hero-bg">
-        <img src={promoCamion} alt="Camion de Los Eucaliptus Corralon" />
+        <img
+          src={promoCamion}
+          alt="Camion de Los Eucaliptus Corralon"
+          width="1400"
+          height="991"
+          fetchPriority="high"
+        />
       </div>
       <div className="hero-content">
         <p className="hero-eyebrow">Desde 1954 · Solano y Bosques, Zona Sur</p>

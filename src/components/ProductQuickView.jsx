@@ -1,6 +1,7 @@
 import { formatPrice, resolveImage, whatsappBase } from '../lib/catalog'
 import { getCatalogQualitySummary } from '../lib/catalog-quality'
 import { getBundledProductImage } from '../lib/product-images'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 import './ProductQuickView.css'
 
 const CREDIT_1_TO_3 = 1.2
@@ -26,6 +27,7 @@ export default function ProductQuickView({
   onBlurQuantity,
   onAddToCart,
 }) {
+  const dialogRef = useDialogA11y({ onClose, active: Boolean(product) })
   if (!product) return null
 
   const quality = getCatalogQualitySummary(product.excelName)
@@ -38,10 +40,12 @@ export default function ProductQuickView({
   return (
     <div className="product-quickview-backdrop" role="presentation" onClick={onClose}>
       <aside
+        ref={dialogRef}
         className="product-quickview"
         role="dialog"
         aria-modal="true"
         aria-label={`Detalle de ${quality.displayName}`}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <button type="button" className="product-quickview-close" onClick={onClose} aria-label="Cerrar detalle">
@@ -50,7 +54,13 @@ export default function ProductQuickView({
 
         <div className="product-quickview-media">
           {imageSrc ? (
-            <img src={imageSrc} alt={quality.displayName} className="product-quickview-image" />
+            <img
+              src={imageSrc}
+              alt={quality.displayName}
+              className="product-quickview-image"
+              width="800"
+              height="600"
+            />
           ) : (
             <div className="product-quickview-fallback">{quality.displayName}</div>
           )}
@@ -91,7 +101,7 @@ export default function ProductQuickView({
         </div>
 
         <div className="product-quickview-actions">
-          <div className="mini-quantity">
+          {cashPrice > 0 && !quality.unavailable ? <div className="mini-quantity">
             <button type="button" aria-label="Disminuir cantidad" onClick={() => onChangeQuantity(quantity - 1)}>
               -
             </button>
@@ -107,7 +117,7 @@ export default function ProductQuickView({
             <button type="button" aria-label="Aumentar cantidad" onClick={() => onChangeQuantity(quantity + 1)}>
               +
             </button>
-          </div>
+          </div> : null}
           {cashPrice > 0 && !quality.unavailable ? (
             <button type="button" className="add-cart-button" onClick={onAddToCart}>
               Agregar al carrito

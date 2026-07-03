@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import ProductQuickView from '../components/ProductQuickView'
 import { useCart } from '../context/useCart'
-import { formatPrice, normalizeText, resolveImage, whatsappBase } from '../lib/catalog'
+import { formatMoney, formatPrice, normalizeText, resolveImage, whatsappBase } from '../lib/catalog'
 import { getCatalogQualitySummary } from '../lib/catalog-quality'
 import { getBundledProductImage } from '../lib/product-images'
 import './CatalogPage.css'
@@ -33,34 +33,18 @@ function toCatalogCardProduct(product, categoryMap) {
   }
 }
 
-export default function CatalogPage({ onBack, onOpenCart }) {
+export default function CatalogPage({
+  catalog = { categories: [], products: [] },
+  status = 'loading',
+  onRetry,
+  onBack,
+  onOpenCart,
+}) {
   const { addItem, itemCount, subtotal } = useCart()
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [quantities, setQuantities] = useState({})
-  const [catalog, setCatalog] = useState({ categories: [], products: [] })
-  const [status, setStatus] = useState('loading')
   const [selectedProduct, setSelectedProduct] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/catalog')
-      .then((r) => {
-        if (!r.ok) throw new Error('http ' + r.status)
-        return r.json()
-      })
-      .then((d) => {
-        if (cancelled) return
-        setCatalog({ categories: d.categories || [], products: d.products || [] })
-        setStatus('ok')
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('error')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const categoryMap = useMemo(() => {
     const map = {}
@@ -117,7 +101,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
         </div>
         <button className="catalog-cart-btn" type="button" onClick={onOpenCart}>
           <strong>Mi carrito - {itemCount} items</strong>
-          <span>{formatPrice(subtotal)}</span>
+          <span>{formatMoney(subtotal)}</span>
         </button>
       </header>
 
@@ -130,7 +114,6 @@ export default function CatalogPage({ onBack, onOpenCart }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoComplete="off"
-            autoFocus
           />
           {search ? (
             <button
@@ -172,7 +155,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
       ) : status === 'error' ? (
         <div className="catalog-empty">
           <p>No se pudo cargar el catalogo. Reintenta en unos minutos.</p>
-          <button type="button" onClick={() => window.location.reload()}>
+          <button type="button" onClick={onRetry}>
             Reintentar
           </button>
         </div>
@@ -196,6 +179,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
             const qty = getQty(product.id)
             const imgSrc = resolveImage(product.image) || getBundledProductImage({ id: product.id, name: product.excelName })
             const consultHref = `${whatsappBase}?text=${encodeURIComponent(`Hola, consulto precio de: ${product.quality.displayName}`)}`
+            const purchasable = product.price > 0 && !product.quality.unavailable
 
             return (
               <article className="catalog-card" key={product.id} data-category={product.categoryKey}>
@@ -210,6 +194,8 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                       alt={product.quality.displayName}
                       className="catalog-card-img"
                       loading="lazy"
+                      width="640"
+                      height="480"
                     />
                   </button>
                 ) : (
@@ -249,7 +235,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                     <button type="button" className="catalog-detail-btn" onClick={() => setSelectedProduct(product)}>
                       Ver detalle
                     </button>
-                    {!product.quality.unavailable ? <div className="mini-quantity">
+                    {purchasable ? <div className="mini-quantity">
                       <button type="button" aria-label="Disminuir cantidad" onClick={() => changeQty(product.id, -1)}>
                         -
                       </button>
@@ -266,7 +252,7 @@ export default function CatalogPage({ onBack, onOpenCart }) {
                         +
                       </button>
                     </div> : null}
-                    {product.price > 0 && !product.quality.unavailable ? (
+                    {purchasable ? (
                       <button className="add-cart-button" type="button" onClick={() => handleAdd(product)}>
                         Agregar
                       </button>

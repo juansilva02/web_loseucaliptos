@@ -1,14 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+
+function subscribeReducedMotion(callback) {
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+  media.addEventListener('change', callback)
+  return () => media.removeEventListener('change', callback)
+}
+
+function reducedMotionSnapshot() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+export function usePrefersReducedMotion() {
+  return useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => false)
+}
 
 // Rotación automática de un índice 0..length-1 cada intervalMs.
 // Devuelve [index, setIndex] para poder fijarlo manualmente (hover, dots).
 export function useAutoRotate(length, intervalMs, paused = false) {
   const [index, setIndex] = useState(0)
+  const reducedMotion = usePrefersReducedMotion()
   useEffect(() => {
-    if (paused || length <= 0) return undefined
+    if (paused || reducedMotion || length <= 0) return undefined
     const id = window.setInterval(() => setIndex((i) => (i + 1) % length), intervalMs)
     return () => window.clearInterval(id)
-  }, [length, intervalMs, paused])
+  }, [length, intervalMs, paused, reducedMotion])
   return [index, setIndex]
 }
 

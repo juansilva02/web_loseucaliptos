@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { resolveImage } from '../lib/catalog'
 import { getCatalogQualitySummary } from '../lib/catalog-quality'
+import { makeUniqueSlug } from '../lib/slugify'
 import { api } from './api'
-import { slugify } from './catalogStore'
 import './AdminPage.css'
 
 const ADMIN_APPEARANCE_KEY = 'eucaliptus-admin-appearance'
@@ -18,6 +18,36 @@ const EMPTY_PRODUCT = {
   brand: '',
   unit: 'unidad',
   price: 0,
+}
+
+const PRODUCT_EDITABLE_FIELDS = [
+  'name',
+  'category_key',
+  'brand',
+  'unit',
+  'price',
+  'image_url',
+  'featured',
+  'active',
+]
+
+function productPatch(product) {
+  return Object.fromEntries(PRODUCT_EDITABLE_FIELDS.map((field) => [
+    field,
+    field === 'price'
+      ? Number(product[field] || 0)
+      : field === 'featured' || field === 'active'
+        ? Number(product[field] ?? (field === 'active' ? 1 : 0))
+        : product[field] || '',
+  ]))
+}
+
+function changedFields(product, original) {
+  const next = productPatch(product)
+  if (!original) return next
+  return Object.fromEntries(
+    Object.entries(next).filter(([field, value]) => value !== productPatch(original)[field]),
+  )
 }
 
 function readFileAsDataUrl(file) {
@@ -109,7 +139,7 @@ function PriceField({ value, onChange, consultLabel = 'Consultar' }) {
   )
 }
 
-function ImageCell({ item, currentSrc, onUpload, onRemove }) {
+function ImageCell({ item, currentSrc, onUpload, onRemove, disabled = false }) {
   const inputRef = useRef(null)
 
   return (
@@ -118,26 +148,33 @@ function ImageCell({ item, currentSrc, onUpload, onRemove }) {
         {currentSrc ? <img src={currentSrc} alt="" /> : <span className="admin-image-empty">Sin imagen</span>}
       </div>
       <div className="admin-image-actions">
-        <button type="button" className="admin-btn admin-btn-mini" onClick={() => inputRef.current?.click()}>
+        <button
+          type="button"
+          className="admin-btn admin-btn-mini"
+          onClick={() => inputRef.current?.click()}
+          disabled={disabled}
+          title={disabled ? 'Guarda primero el producto' : undefined}
+        >
           {currentSrc ? 'Cambiar' : 'Subir'}
         </button>
         {currentSrc ? (
-          <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={onRemove}>
+          <button type="button" className="admin-btn admin-btn-mini admin-btn-ghost" onClick={onRemove} disabled={disabled}>
             Quitar
           </button>
         ) : null}
         <input
           ref={inputRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          accept="image/png,image/jpeg,image/webp"
           hidden
           onChange={async (event) => {
             const file = event.target.files?.[0]
-            if (file) onUpload(await readFileAsDataUrl(file))
+            if (file) onUpload(file)
             event.target.value = ''
           }}
         />
       </div>
+      {disabled ? <small className="admin-image-help">Guarda el producto antes de subir una imagen.</small> : null}
       {item.image ? <code className="admin-image-path">{item.image}</code> : null}
     </div>
   )
@@ -170,11 +207,19 @@ export default function AdminPage() {
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
   const [newUserRole, setNewUserRole] = useState('editor')
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [nextPassword, setNextPassword] = useState('')
+  const [showAccountPasswords, setShowAccountPasswords] = useState(false)
   const toastTimer = useRef(null)
+  const originalProducts = useRef(new Map())
+  const originalCategories = useRef(new Map())
 
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [productConflicts, setProductConflicts] = useState([])
   const [rawSkus, setRawSkus] = useState([])
+  const [rawTotal, setRawTotal] = useState(0)
   const [rawSearch, setRawSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -187,11 +232,31 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    window.localStorage.setItem(ADMIN_APPEARANCE_KEY, JSON.stringify(appearance))
+    try {
+      window.localStorage.setItem(ADMIN_APPEARANCE_KEY, JSON.stringify(appearance))
+    } catch (error) {
+      console.warn('No se pudo persistir la apariencia del admin', error)
+    }
   }, [appearance])
 
-  // El listado de usuarios es solo-admin (403 para editores): no debe tumbar
-  // la carga del resto del panel.
+  useEffect(() => {
+    const handleUnauthorized = () => setAuthed(false)
+    window.addEventListener('eucaliptus-admin-unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('eucaliptus-admin-unauthorized', handleUnauthorized)
+  }, [])
+
+  const applyServerData = (prodRes, catRes, meRes, usersRes) => {
+    const nextProducts = prodRes.products || []
+    const nextCategories = catRes.categories || []
+    setProducts(nextProducts)
+    setCategories(nextCategories)
+    setMe(meRes.user)
+    setUsers(usersRes.users || [])
+    setProductConflicts([])
+    originalProducts.current = new Map(nextProducts.map((product) => [product.id, structuredClone(product)]))
+    originalCategories.current = new Map(nextCategories.map((category) => [category.key, structuredClone(category)]))
+  }
+
   const loadPanelData = () =>
     Promise.all([
       api.getProducts({ all: '1' }),
@@ -204,11 +269,7 @@ export default function AdminPage() {
     setLoading(true)
     try {
       const [prodRes, catRes, meRes, usersRes] = await loadPanelData()
-      setProducts(prodRes.products)
-      setCategories(catRes.categories)
-      setMe(meRes.user)
-      setUsers(usersRes.users || [])
-      // La pileta (rawSkus) la maneja el efecto de busqueda debounced.
+      applyServerData(prodRes, catRes, meRes, usersRes)
     } catch (err) {
       flash(`Error al cargar datos: ${err.message}`)
     } finally {
@@ -222,10 +283,7 @@ export default function AdminPage() {
     loadPanelData()
       .then(([prodRes, catRes, meRes, usersRes]) => {
         if (!cancelled) {
-          setProducts(prodRes.products)
-          setCategories(catRes.categories)
-          setMe(meRes.user)
-          setUsers(usersRes.users || [])
+          applyServerData(prodRes, catRes, meRes, usersRes)
           setLoading(false)
         }
       })
@@ -241,13 +299,17 @@ export default function AdminPage() {
     }
   }, [authed])
 
-  // Pileta de SKUs: busqueda server-side (debounced). Sin termino trae los primeros 200.
   useEffect(() => {
     if (!authed) return undefined
     const term = rawSearch.trim()
     const timer = window.setTimeout(() => {
-      api.getRawSkus(term ? { q: term, added: '0' } : { added: '0' })
-        .then((res) => setRawSkus(res.skus || []))
+      api.getRawSkus(term
+        ? { q: term, added: '0', candidates: '1', limit: 80 }
+        : { added: '0', candidates: '1', limit: 80 })
+        .then((res) => {
+          setRawSkus(res.skus || [])
+          setRawTotal(Number(res.total || 0))
+        })
         .catch((err) => flash(`Error al buscar SKUs: ${err.message}`))
     }, 300)
     return () => window.clearTimeout(timer)
@@ -259,39 +321,59 @@ export default function AdminPage() {
   const removeProduct = async (index) => {
     const product = products[index]
     if (!product) return
-    // Fila nueva sin guardar: solo existe en el estado local.
-    if (!product.id || product.id.startsWith('nuevo-')) {
+    if (!product.id) {
       setProducts((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
       return
     }
-    try {
-      await api.deactivateProduct(product.id)
-      updateProduct(index, { active: 0 })
-      flash(`"${product.name}" desactivado`)
-    } catch (err) {
-      flash(`Error al desactivar: ${err.message}`)
-    }
+    updateProduct(index, { active: 0 })
+    flash(`"${product.name}" quedara inactivo al guardar`)
   }
 
   const addProduct = () => {
     const key = categories[0]?.key || ''
-    setProducts((prev) => [{ ...EMPTY_PRODUCT, category_key: key, id: `nuevo-${prev.length + 1}` }, ...prev])
+    setProducts((prev) => [{
+      ...EMPTY_PRODUCT,
+      category_key: key,
+      id: '',
+      active: 1,
+      featured: 0,
+      _clientId: crypto.randomUUID(),
+    }, ...prev])
   }
 
-  const uploadProductImage = async (index, dataUrl) => {
+  const uploadProductImage = async (index, file) => {
     const item = products[index]
-    const productId = item.id || slugify(item.name) || `producto-${index}`
+    if (!item?.id) {
+      flash('Guarda primero el producto y luego sube la imagen')
+      return
+    }
     try {
-      const uploaded = await api.uploadImage(productId, dataUrl, item.image_url || item.image || '')
-      updateProduct(index, { image_url: uploaded.url, _preview: dataUrl })
+      const uploaded = await api.uploadProductImage(item.id, item.version, file)
+      setProducts((current) => current.map((product) => (
+        product.id === item.id ? uploaded.product : product
+      )))
+      originalProducts.current.set(item.id, structuredClone(uploaded.product))
       flash(`Imagen subida: ${uploaded.fileName}`)
     } catch (err) {
+      if (err.status === 409) setProductConflicts(err.details?.conflicts || [])
       flash(`Error al subir imagen: ${err.message}`)
     }
   }
 
-  const removeProductImage = (index) => {
-    updateProduct(index, { image_url: '', _preview: undefined })
+  const removeProductImage = async (index) => {
+    const item = products[index]
+    if (!item?.id) return
+    try {
+      const response = await api.removeProductImage(item.id, item.version)
+      setProducts((current) => current.map((product) => (
+        product.id === item.id ? response.product : product
+      )))
+      originalProducts.current.set(item.id, structuredClone(response.product))
+      flash('Imagen eliminada')
+    } catch (err) {
+      if (err.status === 409) setProductConflicts(err.details?.conflicts || [])
+      flash(`Error al quitar imagen: ${err.message}`)
+    }
   }
 
   const updateCategory = (index, patch) =>
@@ -325,53 +407,85 @@ export default function AdminPage() {
 
   const saveProducts = async () => {
     setSaving(true)
-    let ok = 0
-    let fail = 0
-    for (const [index, product] of products.entries()) {
-      try {
-        const body = {
-          name: product.name,
-          category_key: product.category_key,
-          brand: product.brand || '',
-          unit: product.unit || '',
-          price: product.price ?? 0,
-          image_url: product.image_url || '',
-          featured: product.featured ? 1 : 0,
-          active: product.active ?? 1,
-        }
-        const exists = product.id && !product.id.startsWith('nuevo-')
-        if (exists) {
-          await api.updateProduct(product.id, body)
-        } else {
-          body.id = product.id || slugify(product.name) || `prod-${index + 1}`
-          await api.createProduct(body)
-        }
-        ok++
-      } catch (err) {
-        fail++
-        console.error(`Error guardando ${product.id || product.name}:`, err)
+    setProductConflicts([])
+    try {
+      const occupiedIds = new Set(products.map((product) => product.id).filter(Boolean))
+      const updates = products
+        .filter((product) => product.id)
+        .map((product) => ({
+          id: product.id,
+          version: product.version,
+          patch: changedFields(product, originalProducts.current.get(product.id)),
+        }))
+        .filter((entry) => Object.keys(entry.patch).length)
+      const creates = products
+        .filter((product) => !product.id)
+        .map((product) => ({
+          clientId: product._clientId,
+          product: {
+            ...productPatch(product),
+            id: makeUniqueSlug(product.name, occupiedIds),
+          },
+        }))
+
+      if (!updates.length && !creates.length) {
+        flash('No hay cambios pendientes')
+        return
       }
+
+      const response = await api.saveProductsBulk({ updates, creates })
+      const savedById = new Map((response.products || []).map((product) => [product.id, product]))
+      const createdByClient = new Map((response.created || []).map((entry) => [entry.clientId, entry.product]))
+      const merged = products.map((product) => (
+        product.id
+          ? savedById.get(product.id) || product
+          : createdByClient.get(product._clientId) || product
+      ))
+      setProducts(merged)
+      for (const product of [...(response.products || []), ...(response.created || []).map((entry) => entry.product)]) {
+        originalProducts.current.set(product.id, structuredClone(product))
+      }
+      flash(`${updates.length + creates.length} cambio(s) guardado(s)`)
+    } catch (err) {
+      if (err.status === 409) {
+        setProductConflicts(err.details?.conflicts || [])
+        flash('Hay cambios de otro usuario. Tus ediciones se conservaron.')
+      } else {
+        flash(`No se pudieron guardar los productos: ${err.message}`)
+      }
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    flash(`${ok} producto(s) guardado(s)${fail ? `, ${fail} error(es)` : ''}`)
-    if (ok) syncFromServer()
   }
 
   const saveCategories = async () => {
     setSaving(true)
-    let ok = 0
-    let fail = 0
-    for (const category of categories) {
-      try {
-        await api.updateCategory(category.key, { name: category.name })
-        ok++
-      } catch (err) {
-        fail++
-        console.error(`Error guardando categoria ${category.key}:`, err)
+    try {
+      const updates = categories
+        .filter((category) => category.name !== originalCategories.current.get(category.key)?.name)
+        .map((category) => ({
+          key: category.key,
+          version: category.version,
+          name: category.name,
+        }))
+      if (!updates.length) {
+        flash('No hay cambios pendientes')
+        return
       }
+      const response = await api.saveCategoriesBulk(updates)
+      const savedByKey = new Map(response.categories.map((category) => [category.key, category]))
+      setCategories((current) => current.map((category) => savedByKey.get(category.key) || category))
+      response.categories.forEach((category) => {
+        originalCategories.current.set(category.key, structuredClone(category))
+      })
+      flash(`${updates.length} categoria(s) guardada(s)`)
+    } catch (err) {
+      flash(err.status === 409
+        ? 'Otra persona modifico una categoria. Recarga antes de volver a guardar.'
+        : `No se pudieron guardar las categorias: ${err.message}`)
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    flash(`${ok} categoria(s) guardada(s)${fail ? `, ${fail} error(es)` : ''}`)
   }
 
   const productStats = {
@@ -434,19 +548,39 @@ export default function AdminPage() {
   const reviewStats = {
     flaggedProducts: reviewProducts.length,
     unavailableProducts: products.filter((product) => getCatalogQualitySummary(product.name).unavailable).length,
-    pendingRaw: rawSkus.length,
+    pendingRaw: rawTotal,
     productsWithoutCategory: products.filter((product) => !(product.category_key || product.category)).length,
   }
 
   const promoteRawSku = async (sku) => {
     setSaving(true)
     try {
-      await api.promoteSku(sku.code, { category_key: sku.suggested_category_key })
+      const response = await api.promoteSku(sku.code, { category_key: sku.suggested_category_key })
       flash(`SKU ${sku.code} promovido con categoria sugerida`)
       setRawSkus((prev) => prev.filter((item) => item.code !== sku.code))
-      syncFromServer()
+      setRawTotal((current) => Math.max(0, current - 1))
+      setProducts((current) => [response.product, ...current])
+      originalProducts.current.set(response.product.id, structuredClone(response.product))
     } catch (err) {
       flash(`Error al promover SKU ${sku.code}: ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const linkRawSku = async (sku, productId) => {
+    setSaving(true)
+    try {
+      const response = await api.linkSku(sku.code, productId)
+      setProducts((current) => current.map((product) => (
+        product.id === response.product.id ? response.product : product
+      )))
+      originalProducts.current.set(response.product.id, structuredClone(response.product))
+      setRawSkus((current) => current.filter((item) => item.code !== sku.code))
+      setRawTotal((current) => Math.max(0, current - 1))
+      flash(`SKU ${sku.code} vinculado a ${response.product.name}`)
+    } catch (err) {
+      flash(`No se pudo vincular el SKU: ${err.message}`)
     } finally {
       setSaving(false)
     }
@@ -491,13 +625,33 @@ export default function AdminPage() {
   }
 
   const resetUserPassword = async (user) => {
-    const newPassword = prompt(`Nueva contraseña para ${user.email} (mínimo 6 caracteres):`)
+    const newPassword = prompt(`Nueva contraseña para ${user.email} (mínimo 8 caracteres):`)
     if (newPassword === null) return
     try {
       await api.resetUserPassword(user.id, newPassword)
       flash(`Contraseña de ${user.email} actualizada`)
     } catch (err) {
       flash(`Error al resetear contraseña: ${err.message}`)
+    }
+  }
+
+  const changeOwnPassword = async (event) => {
+    event.preventDefault()
+    if (!me?.id) return
+    if (nextPassword.length < 8) {
+      flash('La nueva contraseña debe tener al menos 8 caracteres')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.changeOwnPassword(me.id, currentPassword, nextPassword)
+      setCurrentPassword('')
+      setNextPassword('')
+      flash('Contraseña actualizada. Las sesiones anteriores quedaron invalidadas.')
+    } catch (err) {
+      flash(`No se pudo cambiar la contraseña: ${err.message}`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -518,6 +672,14 @@ export default function AdminPage() {
 
   const uploadWallpaper = async (file) => {
     if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      flash('Usa una imagen JPG, PNG o WebP')
+      return
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      flash('El wallpaper debe pesar menos de 3 MB')
+      return
+    }
     try {
       const dataUrl = await readFileAsDataUrl(file)
       updateAppearance({ wallpaper: dataUrl })
@@ -578,7 +740,7 @@ export default function AdminPage() {
                 Subir wallpaper
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  accept="image/png,image/jpeg,image/webp"
                   hidden
                   onChange={(event) => {
                     const file = event.target.files?.[0]
@@ -615,6 +777,9 @@ export default function AdminPage() {
             Usuarios <em>{users.length}</em>
           </button>
         ) : null}
+        <button className={tab === 'account' ? 'active' : ''} onClick={() => setTab('account')}>
+          Mi cuenta
+        </button>
       </nav>
 
       {toast ? <div className="admin-toast">{toast}</div> : null}
@@ -633,6 +798,24 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+
+          {productConflicts.length ? (
+            <div className="admin-conflict-panel" role="alert">
+              <strong>No se guardó ningún cambio.</strong>
+              <p>Otro administrador modificó estos productos. Tus valores locales siguen en pantalla.</p>
+              {productConflicts.map((conflict) => (
+                <div key={conflict.id}>
+                  <code>{conflict.id}</code>
+                  <span>
+                    Local: {products.find((product) => product.id === conflict.id)?.name || 'sin fila local'}
+                  </span>
+                  <span>
+                    Servidor: {conflict.current?.name || 'producto eliminado'} · versión {conflict.current?.version || '-'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="admin-kpi-row">
             <div className="admin-kpi-card">
@@ -702,15 +885,16 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {filteredProducts.map((product) => {
-                    const index = products.findIndex((item) => item.id === product.id)
+                    const index = products.indexOf(product)
                     return (
-                      <tr key={product.id || index} className={product.active === 0 ? 'admin-row-hidden' : ''}>
+                      <tr key={product.id || product._clientId} className={product.active === 0 ? 'admin-row-hidden' : ''}>
                         <td>
                           <ImageCell
                             item={product}
                             currentSrc={product._preview || resolveImage(product.image_url || product.image)}
-                            onUpload={(dataUrl) => uploadProductImage(index, dataUrl)}
+                            onUpload={(file) => uploadProductImage(index, file)}
                             onRemove={() => removeProductImage(index)}
+                            disabled={!product.id}
                           />
                         </td>
                         <td><input value={product.name} onChange={(event) => updateProduct(index, { name: event.target.value })} /></td>
@@ -893,15 +1077,16 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {filteredFeaturedItems.map((item) => {
-                    const index = products.findIndex((entry) => entry.id === item.id)
+                    const index = products.indexOf(item)
                     return (
                       <tr key={item.id || index} className={item.active === 0 ? 'admin-row-hidden' : ''}>
                         <td>
                           <ImageCell
                             item={item}
                             currentSrc={item._preview || resolveImage(item.image_url || item.image)}
-                            onUpload={(dataUrl) => uploadProductImage(index, dataUrl)}
+                            onUpload={(file) => uploadProductImage(index, file)}
                             onRemove={() => removeProductImage(index)}
+                            disabled={!item.id}
                           />
                         </td>
                         <td><input value={item.name} onChange={(event) => updateProduct(index, { name: event.target.value })} /></td>
@@ -945,6 +1130,51 @@ export default function AdminPage() {
         </section>
       ) : null}
 
+      {tab === 'account' ? (
+        <section className="admin-section">
+          <div className="admin-section-head">
+            <p>Cambia tu contraseña sin afectar a otros usuarios. Al guardar se invalidan tus sesiones anteriores.</p>
+          </div>
+          <form className="admin-user-create admin-account-form" onSubmit={changeOwnPassword}>
+            <strong>{me?.email}</strong>
+            <div className="admin-user-create-grid">
+              <label>
+                Contraseña actual
+                <input
+                  type={showAccountPasswords ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
+              <label>
+                Nueva contraseña
+                <input
+                  type={showAccountPasswords ? 'text' : 'password'}
+                  value={nextPassword}
+                  onChange={(event) => setNextPassword(event.target.value)}
+                  autoComplete="new-password"
+                  minLength="8"
+                  required
+                />
+              </label>
+            </div>
+            <label className="admin-password-toggle">
+              <input
+                type="checkbox"
+                checked={showAccountPasswords}
+                onChange={(event) => setShowAccountPasswords(event.target.checked)}
+              />
+              Mostrar contraseñas
+            </label>
+            <button className="admin-btn admin-btn-primary" type="submit" disabled={saving}>
+              {saving ? 'Actualizando...' : 'Cambiar contraseña'}
+            </button>
+          </form>
+        </section>
+      ) : null}
+
       {tab === 'users' && me?.role === 'admin' ? (
         <section className="admin-section">
           <div className="admin-section-head">
@@ -973,10 +1203,12 @@ export default function AdminPage() {
               <label>
                 Contraseña inicial
                 <input
-                  type="text"
+                  type={showNewUserPassword ? 'text' : 'password'}
                   value={newUserPassword}
                   onChange={(event) => setNewUserPassword(event.target.value)}
-                  placeholder="Minimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
+                  autoComplete="new-password"
+                  minLength="8"
                 />
               </label>
               <label>
@@ -987,6 +1219,14 @@ export default function AdminPage() {
                 </select>
               </label>
             </div>
+            <label className="admin-password-toggle">
+              <input
+                type="checkbox"
+                checked={showNewUserPassword}
+                onChange={(event) => setShowNewUserPassword(event.target.checked)}
+              />
+              Mostrar contraseña
+            </label>
             <button className="admin-btn admin-btn-primary" type="button" onClick={createUser} disabled={saving}>
               {saving ? 'Creando...' : 'Crear usuario'}
             </button>
@@ -1105,8 +1345,8 @@ export default function AdminPage() {
               {rawSkus.length ? (
                 <>
                   <p className="admin-review-hint">
-                    Mostrando {Math.min(rawSkus.length, 80)} de {rawSkus.length}
-                    {rawSkus.length >= 200 ? '+ — afina con la busqueda' : ''}.
+                    Mostrando {Math.min(rawSkus.length, 80)} de {rawTotal}.
+                    {rawTotal > rawSkus.length ? ' Afina con la búsqueda para ver otros resultados.' : ''}
                   </p>
                   <div className="admin-review-list">
                   {rawSkus.slice(0, 80).map((sku) => (
@@ -1119,6 +1359,22 @@ export default function AdminPage() {
                       {sku.quality_flags?.length ? (
                         <div className="admin-review-tags">
                           {sku.quality_flags.map((flag) => <span key={flag}>{flag}</span>)}
+                        </div>
+                      ) : null}
+                      {sku.candidates?.length ? (
+                        <div className="admin-sku-candidates">
+                          <span>Posibles productos ya existentes:</span>
+                          {sku.candidates.map((candidate) => (
+                            <button
+                              className="admin-btn admin-btn-mini"
+                              type="button"
+                              key={candidate.id}
+                              onClick={() => linkRawSku(sku, candidate.id)}
+                              disabled={saving}
+                            >
+                              Vincular a {candidate.name} ({candidate.score}%)
+                            </button>
+                          ))}
                         </div>
                       ) : null}
                       <button className="admin-btn admin-btn-primary" type="button" onClick={() => promoteRawSku(sku)} disabled={saving}>

@@ -14,7 +14,13 @@ export default function SiteHeader({
   return (
     <header className={`commerce-header${isScrolled ? ' commerce-header-scrolled' : ''}`}>
       <div className="brand-lockup">
-        <img className="brand-logo-image" src={logoHeader} alt="Los Eucaliptus Corralon" />
+        <img
+          className="brand-logo-image"
+          src={logoHeader}
+          alt="Los Eucaliptus Corralon"
+          width="1120"
+          height="373"
+        />
       </div>
 
       <div className="header-actions">

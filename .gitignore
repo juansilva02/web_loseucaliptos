@@ -33,3 +33,7 @@ dist-ssr
 .agents/
 skills-lock.json
 seo-audit/
+.e2e/
+playwright-report/
+test-results/
+.deploy/

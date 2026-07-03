@@ -1,35 +1,49 @@
-// En produccion (Vercel + dominio) se define VITE_API_URL.
-// En desarrollo local Vite proxye /api/* al backend sin prefijo.
 const API_BASE = import.meta.env.VITE_API_URL || ''
+const TOKEN_KEY = 'eucaliptus-admin-token'
 
 function token() {
-  return sessionStorage.getItem('eucaliptus-admin-token')
+  return window.sessionStorage.getItem(TOKEN_KEY)
 }
 
-function storeToken(t) {
-  sessionStorage.setItem('eucaliptus-admin-token', t)
+function storeToken(value) {
+  window.sessionStorage.setItem(TOKEN_KEY, value)
 }
 
 function clearToken() {
-  sessionStorage.removeItem('eucaliptus-admin-token')
+  window.sessionStorage.removeItem(TOKEN_KEY)
 }
 
-async function req(path, opts = {}) {
-  const t = token()
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(t ? { Authorization: `Bearer ${t}` } : {}),
-      ...opts.headers,
-    },
-    ...opts,
-  })
-  if (!res.ok) {
-    if (res.status === 401) clearToken()
-    const body = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(body.error || `HTTP ${res.status}`)
+async function req(path, options = {}) {
+  const authToken = token()
+  const headers = new Headers(options.headers || {})
+  if (authToken) headers.set('Authorization', `Bearer ${authToken}`)
+  if (options.body != null && !(options.body instanceof Blob) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
   }
-  return res.json()
+
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers })
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearToken()
+      window.dispatchEvent(new CustomEvent('eucaliptus-admin-unauthorized'))
+    }
+    const body = await response.json().catch(() => ({ error: response.statusText }))
+    const error = new Error(body.error || `HTTP ${response.status}`)
+    error.status = response.status
+    error.details = body.details
+    throw error
+  }
+  if (response.status === 204) return null
+  return response.json()
+}
+
+function queryString(params) {
+  const query = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== '' && value !== undefined),
+    ),
+  ).toString()
+  return query ? `?${query}` : ''
 }
 
 export const api = {
@@ -37,7 +51,10 @@ export const api = {
     return req('/api/admin/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    }).then((data) => { storeToken(data.token); return data })
+    }).then((data) => {
+      storeToken(data.token)
+      return data
+    })
   },
 
   me() {
@@ -53,42 +70,50 @@ export const api = {
   },
 
   updateUserRole(id, role) {
-    return req(`/api/admin/auth/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) })
+    return req(`/api/admin/auth/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    })
   },
 
   resetUserPassword(id, newPassword) {
-    return req(`/api/admin/auth/users/${id}/reset-password`, { method: 'PUT', body: JSON.stringify({ newPassword }) })
+    return req(`/api/admin/auth/users/${id}/reset-password`, {
+      method: 'PUT',
+      body: JSON.stringify({ newPassword }),
+    })
+  },
+
+  changeOwnPassword(id, currentPassword, newPassword) {
+    return req(`/api/admin/auth/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }).then((data) => {
+      if (data.token) storeToken(data.token)
+      return data
+    })
   },
 
   deleteUser(id) {
     return req(`/api/admin/auth/users/${id}`, { method: 'DELETE' })
   },
 
-  logout() { clearToken() },
+  logout() {
+    clearToken()
+  },
 
-  isAuthed() { return !!token() },
+  isAuthed() {
+    return Boolean(token())
+  },
 
   getProducts(params = {}) {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== undefined))
-    ).toString()
-    return req(`/api/admin/products${qs ? '?' + qs : ''}`)
+    return req(`/api/admin/products${queryString(params)}`)
   },
 
-  createProduct(data) {
-    return req('/api/admin/products', { method: 'POST', body: JSON.stringify(data) })
-  },
-
-  updateProduct(id, data) {
-    return req(`/api/admin/products/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) })
-  },
-
-  deactivateProduct(id) {
-    return req(`/api/admin/products/${encodeURIComponent(id)}/deactivate`, { method: 'POST' })
-  },
-
-  activateProduct(id) {
-    return req(`/api/admin/products/${encodeURIComponent(id)}/activate`, { method: 'POST' })
+  saveProductsBulk(data) {
+    return req('/api/admin/products/bulk', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
   },
 
   getCategories() {
@@ -99,8 +124,11 @@ export const api = {
     return req('/api/admin/categories', { method: 'POST', body: JSON.stringify(data) })
   },
 
-  updateCategory(key, data) {
-    return req(`/api/admin/categories/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(data) })
+  saveCategoriesBulk(updates) {
+    return req('/api/admin/categories/bulk', {
+      method: 'PUT',
+      body: JSON.stringify({ updates }),
+    })
   },
 
   deleteCategory(key) {
@@ -108,24 +136,71 @@ export const api = {
   },
 
   getRawSkus(params = {}) {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== undefined))
-    ).toString()
-    return req(`/api/admin/raw-skus${qs ? '?' + qs : ''}`)
+    return req(`/api/admin/raw-skus${queryString(params)}`)
   },
 
   promoteSku(code, data = {}) {
-    return req(`/api/admin/raw-skus/${code}/promote`, { method: 'POST', body: JSON.stringify(data) })
-  },
-
-  uploadImage(productId, dataUrl, currentImageUrl = '') {
-    return req('/api/admin/upload', {
+    return req(`/api/admin/raw-skus/${code}/promote`, {
       method: 'POST',
-      body: JSON.stringify({ productId, dataUrl, currentImageUrl }),
+      body: JSON.stringify(data),
     })
   },
 
-  getPublicFeatured() {
-    return req('/api/featured')
+  linkSku(code, productId) {
+    return req(`/api/admin/raw-skus/${code}/link`, {
+      method: 'POST',
+      body: JSON.stringify({ productId }),
+    })
+  },
+
+  uploadProductImage(productId, version, file) {
+    return req(
+      `/api/admin/products/${encodeURIComponent(productId)}/image?version=${encodeURIComponent(version)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      },
+    )
+  },
+
+  removeProductImage(productId, version) {
+    return req(`/api/admin/products/${encodeURIComponent(productId)}/image`, {
+      method: 'DELETE',
+      body: JSON.stringify({ version }),
+    })
+  },
+
+  getPublicCatalog() {
+    return req('/api/catalog')
+  },
+
+  quoteCart(items) {
+    return req('/api/catalog/quote', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: items.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+          seenPrice: item.price,
+        })),
+      }),
+    })
+  },
+
+  searchDeliveryAddress(data, signal) {
+    return req('/api/delivery/search', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      signal,
+    })
+  },
+
+  reverseDeliveryLocation(data, signal) {
+    return req('/api/delivery/reverse', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      signal,
+    })
   },
 }

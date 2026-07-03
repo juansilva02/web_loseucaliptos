@@ -9,8 +9,10 @@ export default function PromoCarousel({ promoImages, activePromo, setActivePromo
           <div
             key={index}
             className={`promo-carousel-slide${activePromo === index ? ' promo-carousel-slide-active' : ''}`}
+            aria-hidden={activePromo !== index}
+            inert={activePromo !== index}
           >
-            <img src={image.src} alt={image.alt} />
+            <img src={image.src} alt={image.alt} width="1400" height="747" loading="lazy" />
           </div>
         ))}
       </div>
@@ -26,6 +28,7 @@ export default function PromoCarousel({ promoImages, activePromo, setActivePromo
                 className={`promo-dot${activePromo === index ? ' promo-dot-active' : ''}`}
                 onClick={() => setActivePromo(index)}
                 aria-label={`Ver imagen ${index + 1}`}
+                aria-pressed={activePromo === index}
               />
             ))}
           </div>

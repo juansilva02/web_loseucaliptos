@@ -1,6 +1,9 @@
 // Contenido estático del sitio (data, no lógica). Separado de App.jsx.
 import { CreditCard, Landmark, Truck, MapPin, Hammer, Zap } from 'lucide-react'
 import promoMateriales from '../assets/promo-cta-corralon.webp'
+import { deliveryBranches } from '../lib/delivery-config'
+
+const branchConfig = new Map(deliveryBranches.map((branch) => [branch.key, branch]))
 
 export const promoImages = [
   { src: promoMateriales, alt: 'Materiales para la construccion en Corralon Los Eucaliptus' },
@@ -51,32 +54,26 @@ export const heroSignals = [
 
 export const branches = [
   {
+    ...branchConfig.get('solano'),
     name: 'Corralon Los Eucaliptus "Solano"',
     kicker: 'Sucursal Solano',
     heading: 'Visitanos en Av. Monteverde 2766',
     description:
       'Estamos en San Francisco Solano, Zona Sur. Podes acercarte o escribirnos por WhatsApp para coordinar el pedido y la entrega.',
-    address: 'Av. Monteverde 2766, San Francisco Solano, Buenos Aires',
     hours: 'Lun a Vie 8:00 a 12:00 y 14:00 a 19:00 | Sab 08:00 a 14:00',
-    lat: -34.7904685,
-    lng: -58.3096963,
-    coverageRadius: 5000, // metros (5 km)
     mapsEmbedUrl: 'https://www.google.com/maps?q=-34.7904685,-58.3096963&output=embed',
     mapsDirectionsUrl:
       'https://www.google.com/maps/place/Corral%C3%B3n+Los+Eucaliptus+%22Solano%22/@-34.7904685,-58.3096963,17z/data=!3m1!4b1!4m6!3m5!1s0x95a32c71520b4479:0x4a3a34f33c1db2be!8m2!3d-34.7904685!4d-58.3096963!16s%2Fg%2F11c6pnxypl?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDYwMS4wIKXMDSoASAFQAw%3D%3D',
   },
   {
+    ...branchConfig.get('bosques'),
     name: 'Corralon Los Eucaliptus "Bosques"',
     kicker: 'Sucursal Bosques',
     heading: 'Visitanos en Av. Guillermo Hudson 2855',
     description:
       'Encontranos en Bosques, Florencio Varela. Los mismos materiales, la misma atencion y el mismo compromiso de siempre.',
-    address: 'Av. Guillermo Hudson 2855, Bosques, Buenos Aires',
     phone: '11 3062-3113',
     hours: 'Lun a Vie 08:00 a 18:00 | Sab 08:00 a 15:00',
-    lat: -34.8315412,
-    lng: -58.2423633,
-    coverageRadius: 5000, // metros (5 km)
     mapsEmbedUrl: 'https://www.google.com/maps?q=-34.8315412,-58.2423633&output=embed',
     mapsDirectionsUrl:
       'https://www.google.com/maps/place/Corralon+Los+Eucaliptus+%22Bosques%22/@-34.8315412,-58.2449382,17z/data=!3m1!4b1!4m6!3m5!1s0x95a329fb5902748d:0xc9956ec6f35647e6!8m2!3d-34.8315412!4d-58.2423633!16s%2Fg%2F11l2fcpsk1?entry=tts',
