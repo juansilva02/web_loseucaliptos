@@ -1,104 +1,82 @@
 # Backend API
 
-Backend actual del corralon. Expone catalogo publico, panel admin, uploads y
-seed inicial.
+API Express del catalogo, checkout y panel admin.
 
-## Stack real
-
-- Node 22
-- Express
-- SQLite con `better-sqlite3`
-- auth propia con `node:crypto`
-- `sharp` para imagenes
-- Docker Compose
-
-## Rutas principales
-
-Publicas:
-- `GET /health`
-- `GET /api/catalog`
-- `GET /api/featured`
-
-Admin:
-- `POST /api/admin/auth/login`
-- `GET /api/admin/auth/me`
-- `GET /api/admin/auth/users`
-- `POST /api/admin/auth/users`
-- `PUT /api/admin/auth/users/:id/password`
-- `GET/POST/PUT /api/admin/products`
-- `POST /api/admin/products/:id/deactivate`
-- `POST /api/admin/products/:id/activate`
-- `GET/POST/PUT/DELETE /api/admin/categories`
-- `GET /api/admin/raw-skus`
-- `POST /api/admin/raw-skus/:code/promote`
-- `POST /api/admin/upload`
-
-## Persistencia
-
-Bind mounts:
-- `./data` -> `/app/data`
-- `./uploads` -> `/app/uploads`
-
-Archivos principales:
-- DB: `server/data/loseucaliptos.sqlite`
-- uploads: `server/uploads/`
-- seed versionado:
-  - `server/seed-data/featured-catalog.json`
-  - `server/seed-data/raw-catalog.json`
-
-## Docker
-
-Levantar:
+## Inicio
 
 ```bash
-cd server
 docker compose up -d --build
-```
-
-Ver estado:
-
-```bash
 docker compose ps
 docker compose logs -f api
 ```
 
-## Variables de entorno
+El compose usa el contexto raiz para incluir `shared/delivery-config.json`.
+Los bind mounts son:
 
-- `PORT`
-- `DB_PATH` opcional
-- `JWT_SECRET`
+- `./data` -> `/app/data`
+- `./uploads` -> `/app/uploads`
+
+El container corre como UID 1001, publica solo `127.0.0.1:3001` y tiene
+healthcheck y rotacion de logs.
+
+## Variables
+
+- `PORT`, default `3001`
+- `DB_PATH`, opcional
+- `UPLOADS_DIR`, opcional y usado por tests
+- `JWT_SECRET`, obligatorio en produccion
+- `JWT_EXPIRES`, default `12h`
 - `CORS_ORIGINS`
 - `SEED_ADMIN_EMAIL`
 - `SEED_ADMIN_PASSWORD`
-- `N8N_WEBHOOK_URL` reservado para integraciones futuras
+- `GEOCODER_EMAIL`, recomendado para Nominatim
+- `GEOCODER_USER_AGENT`
 
-Atencion: el `.env` historico del VPS usa `ADMIN_EMAIL`/`ADMIN_PASSWORD`, pero
-`seed.js` solo lee los nombres `SEED_ADMIN_*`. En una DB nueva, con los nombres
-viejos el seed no crea ningun usuario admin.
+`ADMIN_EMAIL` y `ADMIN_PASSWORD` son aliases temporales del seed y generan una
+advertencia.
 
-## Seed
+## Rutas publicas
 
-El seed vive en `server/src/seed.js`.
+- `GET /health`
+- `GET /health/ready`
+- `GET /api/catalog`
+- `POST /api/catalog/quote`
+- `GET /api/featured`, compatibilidad temporal
+- `POST /api/delivery/search`
+- `POST /api/delivery/reverse`
 
-Importante:
-- es util para bootstrap
-- usa `INSERT OR IGNORE`
-- no debe considerarse una sincronizacion bidireccional ni una reconciliacion
-  completa de la DB viva
+## Persistencia
 
-## Seguridad actual
+`initSchema()` aplica `schema.sql` y luego migraciones registradas en
+`schema_migrations`. Las migraciones son aditivas para permitir rollback del
+frontend y backend anterior.
 
-- `helmet`
-- `trust proxy = 1`
-- rate limits
-- auth JWT
-- passwords con `scrypt`
-- uploads con sanitizacion y conversion a WebP
-- contenedor no root
+Una DB nueva se prepara con:
 
-## Observaciones
+```bash
+SEED_ADMIN_EMAIL=admin@example.com \
+SEED_ADMIN_PASSWORD='cambiar-esta-clave' \
+npm run seed
+```
 
-- La documentacion historica que hablaba de Vercel, bcrypt o rutas antiguas ya
-  no aplica.
-- El frontend sirve HTML estatico desde Nginx; por eso los headers de `helmet`
-  solo cubren la API, no el borde completo.
+El seed crea siete categorias y marca explicitamente catorce productos como
+destacados. Usa `INSERT OR IGNORE`: no reconcilia una DB ya operativa.
+
+## Seguridad y trazabilidad
+
+- JWT HMAC con expiracion configurable y `token_version`.
+- `scrypt` asincrono para contrasenas.
+- rate limit global, de login y de geocodificacion.
+- schemas de validacion para productos, IDs, cantidades y paginacion.
+- logs JSON con request ID, sin bodies ni datos privados.
+- `audit_log` para acciones administrativas, sin hashes ni contrasenas.
+- imagenes binarias convertidas por `sharp`.
+
+## Pruebas
+
+```bash
+npm test
+```
+
+Las pruebas usan SQLite y uploads temporales. Cubren migraciones, bulk
+atomico, quote, imagenes, SKUs, revocacion de token y seed.

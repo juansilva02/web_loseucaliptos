@@ -1,181 +1,43 @@
-# Plan de correcciones — flujo de trabajo
+# Plan de correcciones - estado
 
-Flujo ordenado desde el commit de documentacion hasta cerrar los hallazgos de
-la [auditoria 2026-07-02](AUDITORIA-TECNICA-2026-07-02.md). Cada paso indica
-donde se ejecuta (local/VPS), que commit genera y como se verifica.
+Actualizado: 2026-07-03.
 
-Regla general del flujo:
-1. un hallazgo (o grupo afin) = un commit
-2. cambios de codigo se prueban local antes de pushear
-3. deploy siempre igual: `git push` + `ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"`
-4. verificacion despues de cada deploy, no al final de todo
+## Implementado en la rama
 
----
+- [x] Config unica de sucursales, cobertura, WhatsApp y agenda.
+- [x] Agenda de siete dias calendario sin domingos.
+- [x] Checkout con borrador de sesion y quote de precios.
+- [x] Proxy Nominatim con cache, timeout, cola y cancelacion cliente.
+- [x] Migraciones, versiones, indices y `audit_log`.
+- [x] Dirty tracking y bulk atomico de productos/categorias.
+- [x] Vinculo/promocion segura de `raw_skus`.
+- [x] Upload binario WebP con hash y limpieza.
+- [x] `scrypt` asincrono, JWT 12h y revocacion por version.
+- [x] Cambio de contrasena propia y password inputs protegidos.
+- [x] Catalogo runtime unico y destacados derivados.
+- [x] Lazy loading y chunk principal menor a 300 kB.
+- [x] Accesibilidad de modales, carouseles y controles tactiles.
+- [x] Nginx versionado, uploads directos y gzip.
+- [x] Deploy aislado, assets acumulativos, rollback HTML y healthchecks.
+- [x] Seed con 14 destacados.
+- [x] Prerender con API obligatoria y sitemap automatico.
+- [x] Limpieza de `catalogStore.js`, catalogo estatico y `vercel.json`.
+- [x] CI con lint, pruebas, build y auditorias.
 
-## Fase 0 — Commit de la documentacion (local, hoy) — HECHO 2026-07-02
+## Pendiente antes de produccion
 
-- [x] Commit unico con los `.md` actualizados y `.env.example`
-- [x] Push a `main` (no requiere deploy: los docs no afectan el build)
+- [ ] Merge controlado a `main`.
+- [ ] Validar duplicados actuales de `source_code`.
+- [ ] Renombrar variables del VPS a `SEED_ADMIN_*`.
+- [ ] Ejecutar `scripts/deploy.sh`.
+- [ ] Smoke test de admin, imagenes, catalogo y checkout.
 
-## Fase 0.5 — Hotfix DB readonly (hallazgo 16) — EN CURSO
+## Diferido
 
-Descubierto al ejecutar este plan: desde el deploy del 2026-07-01 ~21:30 el
-panel admin no puede guardar (`attempt to write a readonly database`), porque
-los bind mounts pertenecen a root y el container corre como uid 1001.
+- [ ] Backups y prueba de restore.
+- [ ] Eliminar tablas/endpoints legacy despues del backup.
+- [ ] Persistencia real de pedidos fuera de WhatsApp.
+- [ ] Observabilidad externa y alertas.
 
-- [x] Backup manual pre-cambios en `/opt/backups/corralon/` (DB + uploads + env)
-- [x] `deploy.sh` chownea `server/data` y `server/uploads` a 1001 en cada corrida
-- [x] Aplicado en el VPS via deploy del 2026-07-02: data/uploads pertenecen a
-  1001 y el container los ve escribibles (verificado con `[ -w ... ]`)
-- [ ] Verificar: guardar un producto desde el panel sin error (requiere login)
-
-## Fase 1 — Operacion urgente en el VPS (sin tocar codigo)
-
-Ningun paso de esta fase requiere build ni redeploy de la app.
-
-### 1.1 Backups (hallazgo 9 — critico)
-
-- [ ] Crear `scripts/backup.sh` en el repo (version propuesta en
-  [RECONSTRUCCION-ARQUITECTURA.md](RECONSTRUCCION-ARQUITECTURA.md) seccion 11)
-  — commit: `feat: script de backup diario de DB, uploads y .env`
-- [ ] Deploy (para que el script llegue al VPS) y crear el cron:
-  `0 4 * * * bash /opt/loseucaliptos/scripts/backup.sh >> /var/log/corralon-backup.log 2>&1`
-- [ ] Configurar copia externa (rclone/rsync hacia fuera del VPS)
-- [ ] Verificar: correr el script a mano, confirmar que aparece
-  `/opt/backups/corralon/db-<fecha>.sqlite` y **probar un restore** en local
-  (abrir el .sqlite y contar productos)
-
-### 1.2 Nginx: body size, headers y gzip (hallazgos 4, 11, 12)
-
-- [ ] Versionar la config en el repo (`deploy/nginx-corralon.conf`) para que
-  Nginx deje de ser estado no reproducible —
-  commit: `feat: versiona config de Nginx del corralon`
-- [ ] En el VPS, editar `/etc/nginx/sites-available/corralon`:
-  - `client_max_body_size 12m;` en el server 443 del apex
-  - headers: HSTS, `X-Content-Type-Options nosniff`,
-    `X-Frame-Options SAMEORIGIN`, `Referrer-Policy`
-- [ ] En `/etc/nginx/nginx.conf`: descomentar `gzip_types` (y `gzip_vary`)
-- [ ] `nginx -t && systemctl reload nginx`
-- [ ] Verificar:
-  - `curl -I https://corralonloseucaliptus.com/` muestra los headers nuevos
-  - `curl -H "Accept-Encoding: gzip" -I https://corralonloseucaliptus.com/assets/<bundle>.js`
-    devuelve `content-encoding: gzip`
-  - subir desde el admin una foto de ~3 MB y confirmar que ya no da 413
-
-### 1.3 Env del VPS (hallazgo 10)
-
-- [ ] En `/opt/loseucaliptos/server/.env`: renombrar `ADMIN_EMAIL` →
-  `SEED_ADMIN_EMAIL` y `ADMIN_PASSWORD` → `SEED_ADMIN_PASSWORD`
-- [ ] `docker compose up -d` (recrea el container con el env nuevo)
-- [ ] Verificar: `/health` OK y login admin sigue funcionando
-
-### 1.4 Disco (hallazgo 9)
-
-- [ ] `docker system prune -f` (imagenes huerfanas de builds anteriores)
-- [ ] Verificar: `df -h /` — objetivo quedar debajo de 70%
-
-## Fase 2 — Seguridad backend (local → deploy)
-
-### 2.1 + 2.2 Gestion de roles de usuario (hallazgos 2 y 3) — HECHO 2026-07-02
-
-Decision de diseño: en vez de poner `requireAdmin` en las rutas de catalogo,
-se formalizaron dos roles. `admin` gestiona usuarios; `editor` opera el
-catalogo (products/categories/raw-skus/upload quedan en `requireAuth`, que
-ahora relee el rol desde la DB en cada request).
-
-- [x] `GET/POST /users`, cambio de rol, reset y delete pasan a `requireAdmin`
-- [x] Roles validados contra whitelist (`admin`, `editor`); default `editor`
-- [x] `PUT /users/:id/password` queda solo para la propia contrasena
-- [x] Nuevo `PUT /users/:id/reset-password` (admin, sin `currentPassword`,
-  prohibido sobre uno mismo)
-- [x] Nuevo `PUT /users/:id/role` y `DELETE /users/:id` con protecciones:
-  nunca sobre uno mismo, nunca dejar al sistema sin admins
-- [x] `requireAuth` relee el rol desde la DB: cambios de rol y bajas aplican
-  aunque el JWT viejo siga vigente
-- [x] UI: pestana Usuarios solo-admin, alta con rol, selector de rol por
-  usuario, reset de contrasena y eliminacion con confirmacion
-- [ ] Deploy + verificar en produccion (login admin: cambiar rol de un usuario
-  de prueba, resetear su clave, verificar que un editor no ve Usuarios)
-
-### 2.3 Higiene menor (hallazgo 13 + logging)
-
-- [ ] Arreglar escape de `LIKE` (agregar `ESCAPE '\'` en products.js y
-  escapar tambien en raw-skus.js)
-- [ ] Agregar logging de requests (morgan `combined` o formato corto) para
-  trazabilidad del panel
-- [ ] Commit: `fix: escape de LIKE y logging de requests`
-- [ ] Deploy + verificar: buscar `%` en el admin devuelve vacio (no todo),
-  `docker compose logs api` muestra requests
-
-## Fase 3 — Admin frontend (local → deploy)
-
-### 3.1 "Quitar" producto honesto (hallazgo 14) — HECHO 2026-07-02
-
-- [x] `removeProduct` llama a `deactivateProduct` para filas ya guardadas y
-  solo descarta localmente las filas nuevas sin guardar
-- [x] Commit: `fix: quitar producto desactiva en DB en vez de ocultar local`
-
-### 3.2 Guardado por fila / dirty tracking (hallazgo 7)
-
-- [ ] Trackear filas modificadas (comparar contra snapshot al cargar) y que
-  `saveProducts` solo envie las cambiadas
-- [ ] Opcional siguiente: endpoint `PUT /api/admin/products/bulk` transaccional
-- [ ] Commit: `feat: guardado admin solo de filas modificadas`
-- [ ] Verificar: editar 2 productos de 64 y confirmar en el log del backend
-  que solo salen 2 PUT
-
-### 3.3 Limpieza de legacy (hallazgo 15)
-
-- [ ] Borrar el modelo export/JSON de `catalogStore.js` (mover `slugify` a
-  `src/lib/`), borrar comentarios Vercel en `api.js`
-- [ ] Dejar de seedear la tabla `featured` (y documentar que la tabla queda
-  muerta hasta un DROP futuro)
-- [ ] Commit: `chore: elimina codigo legacy del modelo export/Vercel`
-- [ ] Deploy de fases 3.1-3.3 juntas si se prefiere; verificar panel completo
-
-## Fase 4 — Datos y SEO (local → deploy)
-
-### 4.1 Prerender con fuente unica (hallazgo 5)
-
-- [ ] `scripts/prerender.mjs`: si la API no responde, **fallar el build** en el
-  VPS (env `PRERENDER_REQUIRE_API=1` que setea deploy.sh) en vez de caer al
-  JSON estatico; el fallback queda solo para dev local
-- [ ] Commit: `fix(seo): prerender exige API viva en deploy`
-
-### 4.2 Sitemap automatico (hallazgo SEO)
-
-- [ ] Generar `sitemap.xml` en el build con `lastmod` real (fecha de build)
-- [ ] Commit: `feat(seo): sitemap generado en build`
-- [ ] Deploy + verificar `curl https://corralonloseucaliptus.com/sitemap.xml`
-
-### 4.3 Huerfanos de uploads (hallazgo 8)
-
-- [ ] Al quitar imagen desde admin, borrar el archivo si esta bajo `/uploads/`
-  (endpoint `DELETE /api/admin/upload/:fileName` con sanitizacion existente)
-- [ ] Commit: `fix: elimina archivo de upload al quitar imagen`
-
-### 4.4 Decision sobre el seed (hallazgo 1)
-
-No es un fix de codigo sino una decision. Opciones:
-- A) declarar la DB como unica fuente de verdad y degradar `seed-data/` a
-  "bootstrap historico" (solo documentacion — barato, recomendado)
-- B) construir reconciliacion explicita seed→DB con reglas de conflicto (caro)
-- [ ] Decidir, documentar en ESTADO-PROYECTO.md y cerrar el hallazgo
-
-## Fase 5 — Cierre
-
-- [ ] Actualizar ESTADO-PROYECTO.md y AUDITORIA (marcar hallazgos resueltos)
-- [ ] Commit: `docs: estado post-correcciones`
-- [ ] Backup manual extra post-cambios y verificacion final completa
-  (seccion 10 del informe de reconstruccion)
-
-## Orden y dependencias
-
-```text
-Fase 0 (docs) ──> Fase 1 (VPS: backup PRIMERO, despues todo lo demas)
-                     └─> Fase 2 (seguridad) ─> Fase 3 (admin) ─> Fase 4 (SEO/datos) ─> Fase 5
-```
-
-La unica dependencia dura: **backups antes que cualquier otro cambio** — todo
-lo demas modifica el sistema y hoy no hay red de seguridad. Dentro de cada
-fase los pasos son independientes entre si.
+No usar `docker system prune`. El deploy solo ejecuta
+`docker image prune -f`.

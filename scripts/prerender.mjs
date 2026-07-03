@@ -1,91 +1,138 @@
-// Prerender de /catalogo: genera dist/catalogo/index.html con meta propias,
-// JSON-LD (ItemList de Productos + BreadcrumbList) y un listado en <noscript>,
-// para que el catálogo sea visible/indexable aunque sea una SPA.
-// Corre en el build (post vite). En el VPS toma datos en vivo de la API;
-// en local cae al JSON estático.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
-const SITE = 'https://corralonloseucaliptus.com'
+const outputDir = resolve(root, process.env.BUILD_OUT_DIR || 'dist')
+const site = 'https://corralonloseucaliptus.com'
 
 async function getCatalog() {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/catalog', { signal: AbortSignal.timeout(5000) })
-    if (res.ok) {
-      const d = await res.json()
-      return { categories: d.categories || [], products: d.products || [], source: 'api' }
+    const response = await fetch('http://127.0.0.1:3001/api/catalog', {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    return {
+      categories: data.categories || [],
+      products: data.products || [],
+      source: 'api',
     }
-  } catch {
-    /* sin API: usar el JSON estático */
+  } catch (error) {
+    if (process.env.PRERENDER_REQUIRE_API === '1') {
+      throw new Error(`La API es obligatoria para el prerender de produccion: ${error.message}`)
+    }
   }
-  const d = JSON.parse(readFileSync(join(root, 'src/data/featured-catalog.json'), 'utf8'))
-  return { categories: d.categories || [], products: d.products || [], source: 'static' }
+
+  const data = JSON.parse(
+    readFileSync(join(root, 'src/data/featured-catalog.json'), 'utf8'),
+  )
+  return {
+    categories: data.categories || [],
+    products: data.products || [],
+    source: 'static',
+  }
 }
 
 const { products, source } = await getCatalog()
-const active = products.filter((p) => !p.hidden)
+const activeProducts = products.filter((product) => product.active !== 0 && !product.hidden)
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+const formatPrice = (value) => (
+  Number(value) > 0 ? `$${Number(value).toLocaleString('es-AR')}` : 'A consultar'
+)
+const absoluteImage = (image) => (
+  !image ? null : image.startsWith('http') ? image : site + image
+)
+const isUnavailable = (name) => (
+  /\b(NO+\s*HAY+|SIN\s+STOCK|NO\s+DISPONIBLE)\b/i.test(String(name || ''))
+)
 
-const esc = (s) =>
-  String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const fmtPrice = (n) => (n > 0 ? `$${Number(n).toLocaleString('es-AR')}` : 'A consultar')
-const absImg = (img) => (!img ? null : img.startsWith('http') ? img : SITE + img)
-
-const TITLE = 'Catálogo de Materiales de Construcción — Precios | Los Eucaliptus'
-const DESC =
-  'Más de 70 productos: ladrillos, cemento, hierro, áridos y más con precios actualizados. Stock permanente y envíos en Zona Sur.'
-
+const title = 'Catalogo de Materiales de Construccion - Precios | Los Eucaliptus'
+const description =
+  'Materiales para construccion con precios actualizados, stock y envios en Zona Sur.'
 const breadcrumb = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Inicio', item: SITE + '/' },
-    { '@type': 'ListItem', position: 2, name: 'Catálogo', item: SITE + '/catalogo' },
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${site}/` },
+    { '@type': 'ListItem', position: 2, name: 'Catalogo', item: `${site}/catalogo` },
   ],
 }
-
 const itemList = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: 'Catálogo Los Eucaliptus',
-  numberOfItems: active.length,
-  itemListElement: active.map((p, i) => {
-    const product = { '@type': 'Product', name: p.name }
-    if (p.brand) product.brand = { '@type': 'Brand', name: p.brand }
-    const img = absImg(p.image)
-    if (img) product.image = img
-    product.offers = {
-      '@type': 'Offer',
-      priceCurrency: 'ARS',
-      availability: 'https://schema.org/InStock',
-      url: SITE + '/catalogo',
-      ...(p.price > 0 ? { price: p.price } : {}),
+  name: 'Catalogo Los Eucaliptus',
+  numberOfItems: activeProducts.length,
+  itemListElement: activeProducts.map((productData, index) => {
+    const product = { '@type': 'Product', name: productData.name }
+    if (productData.brand) product.brand = { '@type': 'Brand', name: productData.brand }
+    const image = absoluteImage(productData.image)
+    if (image) product.image = image
+    if (Number(productData.price) > 0 && !isUnavailable(productData.name)) {
+      product.offers = {
+        '@type': 'Offer',
+        priceCurrency: 'ARS',
+        availability: 'https://schema.org/InStock',
+        url: `${site}/catalogo`,
+        price: productData.price,
+      }
     }
-    return { '@type': 'ListItem', position: i + 1, item: product }
+    return { '@type': 'ListItem', position: index + 1, item: product }
   }),
 }
 
-const shell = readFileSync(join(root, 'dist/index.html'), 'utf8')
-
+const shell = readFileSync(join(outputDir, 'index.html'), 'utf8')
 let html = shell
-  .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(TITLE)}</title>`)
-  .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${esc(DESC)}" />`)
-  .replace(/<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${SITE}/catalogo" />`)
-  .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="${SITE}/catalogo" />`)
-  .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(TITLE)}" />`)
+  .replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(title)}</title>`)
+  .replace(
+    /<meta name="description"[^>]*>/,
+    `<meta name="description" content="${escapeHtml(description)}" />`,
+  )
+  .replace(
+    /<link rel="canonical"[^>]*>/,
+    `<link rel="canonical" href="${site}/catalogo" />`,
+  )
+  .replace(
+    /<meta property="og:url"[^>]*>/,
+    `<meta property="og:url" content="${site}/catalogo" />`,
+  )
+  .replace(
+    /<meta property="og:title"[^>]*>/,
+    `<meta property="og:title" content="${escapeHtml(title)}" />`,
+  )
 
-const jsonld =
-  `<script type="application/ld+json">${JSON.stringify(breadcrumb)}</script>\n` +
-  `    <script type="application/ld+json">${JSON.stringify(itemList)}</script>`
-html = html.replace('</head>', `${jsonld}\n  </head>`)
+const jsonLd = [
+  `<script type="application/ld+json">${JSON.stringify(breadcrumb)}</script>`,
+  `<script type="application/ld+json">${JSON.stringify(itemList)}</script>`,
+].join('\n    ')
+html = html.replace('</head>', `    ${jsonLd}\n  </head>`)
 
-const seo =
-  `<noscript><section id="seo-catalogo"><h1>Catálogo de materiales de construcción</h1>` +
-  `<ul>${active.map((p) => `<li>${esc(p.name)} — ${esc(fmtPrice(p.price))}</li>`).join('')}</ul></section></noscript>`
-html = html.replace('<div id="root"></div>', `<div id="root"></div>\n    ${seo}`)
+const noScript = [
+  '<noscript><section id="seo-catalogo">',
+  '<h1>Catalogo de materiales de construccion</h1><ul>',
+  activeProducts
+    .map((product) => `<li>${escapeHtml(product.name)} - ${escapeHtml(formatPrice(product.price))}</li>`)
+    .join(''),
+  '</ul></section></noscript>',
+].join('')
+html = html.replace('<div id="root"></div>', `<div id="root"></div>\n    ${noScript}`)
 
-mkdirSync(join(root, 'dist/catalogo'), { recursive: true })
-writeFileSync(join(root, 'dist/catalogo/index.html'), html)
-console.log(`[prerender] dist/catalogo/index.html · ${active.length} productos · fuente: ${source}`)
+mkdirSync(join(outputDir, 'catalogo'), { recursive: true })
+writeFileSync(join(outputDir, 'catalogo', 'index.html'), html)
+
+const buildDate = new Date().toISOString().slice(0, 10)
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/sitemap/0.9">
+  <url><loc>${site}/</loc><lastmod>${buildDate}</lastmod></url>
+  <url><loc>${site}/catalogo</loc><lastmod>${buildDate}</lastmod></url>
+</urlset>
+`
+writeFileSync(join(outputDir, 'sitemap.xml'), sitemap)
+console.log(
+  `[prerender] catalogo/index.html - ${activeProducts.length} productos - fuente: ${source}`,
+)

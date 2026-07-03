@@ -1,114 +1,97 @@
 # Corralon Los Eucaliptus
 
-Web catalogo + panel admin para Corralon Los Eucaliptus. Todo corre en un VPS:
-frontend estatico servido por Nginx, backend Express en Docker y datos en
-SQLite.
+Catalogo web y panel administrativo para Los Eucaliptus. La aplicacion usa un
+frontend React, una API Express y SQLite, desplegados en un unico VPS detras de
+Nginx.
 
-Produccion:
-- https://corralonloseucaliptus.com
+Produccion: https://corralonloseucaliptus.com
 
-Documentacion clave:
-- [Estado del proyecto](docs/ESTADO-PROYECTO.md)
-- [Panel admin](ADMIN.md)
-- [Auditoria tecnica 2026-07-02](docs/AUDITORIA-TECNICA-2026-07-02.md)
-- [Reconstruccion de arquitectura](docs/RECONSTRUCCION-ARQUITECTURA.md)
-- [Plan de correcciones](docs/PLAN-CORRECCIONES.md)
-
-## Arquitectura actual
+## Arquitectura
 
 ```text
-Internet
-  -> Nginx en el VPS
-    -> /                -> /opt/loseucaliptos/dist
-    -> /catalogo        -> /opt/loseucaliptos/dist/catalogo/index.html
-    -> /api/*           -> container Express en 127.0.0.1:3001
-    -> /uploads/*       -> container Express en 127.0.0.1:3001
+Navegador
+  -> Nginx
+     -> / y /catalogo   -> frontend estatico en /opt/loseucaliptos/dist
+     -> /assets/*       -> bundles con cache immutable
+     -> /uploads/*      -> archivos en server/uploads, servidos por Nginx
+     -> /api/*          -> Express en 127.0.0.1:3001
+                            -> SQLite
+                            -> Nominatim, solo mediante proxy controlado
 ```
 
-Stack:
-- Frontend: React 19 + Vite
-- Backend: Node 22 + Express
-- DB: SQLite (`server/data/loseucaliptos.sqlite`)
-- Imagenes: `server/uploads/`
-- Infra: Debian 12 + Nginx + Docker Compose
+- Frontend: React 19, React Router y Vite.
+- Backend: Node 22, Express, `better-sqlite3` y `sharp`.
+- Persistencia: `server/data/loseucaliptos.sqlite`.
+- Imagenes administradas: `server/uploads/`.
+- Infraestructura: Docker Compose, Nginx y `scripts/deploy.sh`.
+- Config compartida de sucursales y entregas: `shared/delivery-config.json`.
 
-## Datos y fuentes
+## Fuentes de datos
 
-- Catalogo publico: tabla `products`
-- Destacados del home: `products.featured = 1`
-- Categorias: tabla `categories`
-- Pileta administrativa: tabla `raw_skus`
-- Seed versionado:
-  - `server/seed-data/featured-catalog.json`
-  - `server/seed-data/raw-catalog.json`
+- `products`: unica fuente runtime del catalogo y de los destacados.
+- `categories`: categorias publicas.
+- `raw_skus`: base curada para revisar, vincular o promover productos.
+- `audit_log`: trazabilidad de escrituras administrativas.
+- `schema_migrations`: migraciones aditivas aplicadas.
+- `server/seed-data/`: bootstrap de una DB nueva, no sincronizacion de la DB
+  viva.
 
-Dato importante:
-- El admin guarda directo en la DB del VPS.
-- El seed inicial es idempotente por `INSERT OR IGNORE`; no reconcilia cambios
-  posteriores del JSON con la DB ya existente.
+`GET /api/featured` se mantiene temporalmente por compatibilidad. El frontend
+deriva destacados desde `GET /api/catalog`.
 
-## Panel admin
+## Flujos principales
 
-Entrada:
-- `https://corralonloseucaliptus.com/#admin`
+- El carrito valida precios y disponibilidad con `POST /api/catalog/quote`
+  antes de iniciar el checkout.
+- El checkout guarda su borrador privado dos horas en `sessionStorage` y
+  termina en WhatsApp.
+- La cobertura se resuelve mediante `/api/delivery/*`; el navegador no consulta
+  Nominatim directamente.
+- El admin guarda solo filas modificadas mediante un bulk transaccional con
+  control de versiones.
+- Las imagenes se convierten a WebP y se guardan como
+  `<product-id>-<hash>.webp`.
 
-Funciones actuales:
-- editar productos
-- activar/desactivar productos
-- marcar destacados
-- CRUD de categorias
-- promover `raw_skus` al catalogo
-- subir imagenes de producto
-- crear usuarios admin
-- elegir tema y wallpaper local del panel
+## Desarrollo
 
-## Deploy
-
-Flujo normal:
-1. editar local
-2. `git push origin main`
-3. `ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"`
-
-El script actual:
-- hace `git fetch origin main --prune`
-- fuerza `main` a `origin/main`
-- builda frontend
-- rebuilda backend
-- recarga Nginx
-- verifica `frontend` y `/api/catalog`
-
-## Desarrollo local
-
-Frontend:
 ```bash
-npm install
+npm ci
+npm --prefix server ci
+docker compose -f server/docker-compose.yml up -d --build
 npm run dev
 ```
 
-Backend:
+Controles locales:
+
 ```bash
-cd server
-npm install
-docker compose up -d --build
+npm run lint
+npm test
+npm run build
+npm --prefix server test
+npm run test:e2e
 ```
 
-Proxy de desarrollo:
-- `/api` -> `http://localhost:3001`
-- `/uploads` -> `http://localhost:3001`
+Las pruebas del backend requieren Node 22 por el modulo nativo de SQLite.
 
-## Estado operativo resumido
+## Deploy
 
-- Total productos en DB: 64
-- Productos publicos activos: 62
-- Categorias: 7
-- `raw_skus`: 1749
-- Usuarios: 3
+```bash
+git push origin main
+ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"
+```
 
-Riesgos operativos abiertos (ver auditoria para el detalle):
-- no hay backups del `.sqlite` ni de `uploads/` (unico cron: renovacion TLS)
-- disco del VPS al 78% (compartido con n8n, chatwoot y portainer)
-- subida de imagenes limitada a ~750 KB por falta de `client_max_body_size`
-- el `.env` del VPS no usa los nombres `SEED_ADMIN_*` que espera el seed
+El deploy usa `npm ci`, espera readiness de la DB, exige API viva para
+prerender, construye el frontend fuera de `dist`, publica HTML de forma
+atomica, conserva assets anteriores durante 30 dias y restaura los HTML
+anteriores si falla la verificacion.
 
-Para detalles de operacion, riesgos y reconstruccion completa, ver los docs en
-`docs/`.
+## Documentacion
+
+- [Panel admin](ADMIN.md)
+- [Estado operativo](docs/ESTADO-PROYECTO.md)
+- [Auditoria tecnica](docs/AUDITORIA-TECNICA-2026-07-02.md)
+- [Reconstruccion](docs/RECONSTRUCCION-ARQUITECTURA.md)
+- [Plan y cierre](docs/PLAN-CORRECCIONES.md)
+
+Los backups siguen fuera de este cambio y se implementaran en una fase
+separada.

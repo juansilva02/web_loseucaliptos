@@ -1,178 +1,86 @@
 # Estado del proyecto
 
-Referencia viva del estado real del sistema. Actualizado al 2026-07-02, con
-verificacion en vivo del VPS por SSH (repo, Docker, Nginx, DB y cron).
+Actualizado: 2026-07-03.
 
-## 1. Topologia real
+## Estado de esta rama
 
-Todo corre en el VPS `190.104.252.7`.
+La estabilizacion esta implementada en `codex/estabilizacion-escalabilidad` y
+verificada localmente. No se considera desplegada hasta mergear a `main` y
+ejecutar `scripts/deploy.sh` en el VPS.
+
+Verificaciones realizadas:
+
+- lint sin errores;
+- 4 pruebas unitarias frontend;
+- 8 pruebas de integracion backend en Node 22;
+- 3 flujos E2E aprobados: storefront/checkout desktop, storefront/checkout
+  375 px y guardado admin;
+- build de produccion correcto;
+- chunk principal de 266,67 kB minificado;
+- auditorias npm de frontend y backend sin vulnerabilidades conocidas.
+
+## Topologia preparada
 
 ```text
-Usuario
-  -> https://corralonloseucaliptus.com
-    -> Nginx
-      -> /                      -> /opt/loseucaliptos/dist
-      -> /catalogo             -> /opt/loseucaliptos/dist/catalogo/index.html
-      -> /api/*                -> 127.0.0.1:3001
-      -> /uploads/*            -> 127.0.0.1:3001
+Internet
+  -> Nginx
+     -> /, /catalogo       -> /opt/loseucaliptos/dist
+     -> /assets            -> dist/assets
+     -> /uploads           -> /opt/loseucaliptos/server/uploads
+     -> /api               -> 127.0.0.1:3001
+                                -> Express
+                                -> SQLite WAL
+                                -> Nominatim
 ```
-
-Piezas:
-- dominio: `corralonloseucaliptus.com`
-- frontend: React + Vite compilado en `dist/`
-- backend: Express en Docker
-- DB: SQLite persistida en `server/data/loseucaliptos.sqlite`
-- imagenes: `server/uploads/`
-- TLS: `acme.sh` + Nginx
-
-## 2. Ubicaciones operativas
 
 | Recurso | Ubicacion |
 |---|---|
-| Repo local | `E:\\Loseucaliptos2026` |
-| Repo en VPS | `/opt/loseucaliptos` |
-| Frontend build | `/opt/loseucaliptos/dist` |
-| Backend | `/opt/loseucaliptos/server` |
-| Nginx site | `/etc/nginx/sites-available/corralon` |
-| Certificados TLS | `/etc/nginx/ssl/corralon/fullchain.cer` + `private.key` |
+| Repo local | `E:\Loseucaliptos2026` |
+| Repo VPS | `/opt/loseucaliptos` |
 | DB | `/opt/loseucaliptos/server/data/loseucaliptos.sqlite` |
 | Uploads | `/opt/loseucaliptos/server/uploads` |
+| Nginx versionado | `deploy/nginx-corralon.conf` |
+| Nginx activo | `/etc/nginx/sites-available/corralon` |
 | Deploy | `/opt/loseucaliptos/scripts/deploy.sh` |
 
-El VPS es compartido: Nginx tambien sirve los sites `n8n`, `chatwoot` y `acme`.
-Cualquier cambio de Nginx debe cuidar de no pisarlos.
+## Cambios funcionales preparados
 
-## 3. Estado de datos
+- catalogo publico como unica fuente runtime;
+- destacados derivados de `products.featured`;
+- quote de carrito antes del checkout;
+- checkout de entrega en tres pasos con borrador de dos horas;
+- proxy geografico con cache, timeout y limite global;
+- admin con dirty tracking, bulk atomico y conflictos por version;
+- vinculo explicito entre `raw_skus` y productos;
+- imagenes binarias versionadas por hash;
+- sesiones revocables por `token_version`;
+- cambio de contrasena propia;
+- rutas declarativas y admin lazy;
+- modales accesibles, controles tactiles y reduced motion;
+- prerender dependiente de API en produccion y sitemap automatico;
+- Nginx reproducible y deploy con publicacion/rollback de HTML.
 
-Conteos observados en el VPS (verificados 2026-07-02):
-- categorias: 7
-- productos totales en DB: 64
-- productos publicos activos: 62
-- `raw_skus`: 1749
-- usuarios: 3
-- `orders`: 0 y `leads`: 0 (las tablas existen en el esquema pero no hay
-  endpoints que escriban en ellas)
-- destacados legacy: 18 registros en tabla `featured`, pero el home publico usa
-  `products.featured = 1`; el seed sigue poblando esa tabla aunque ya no se lee
-- `server/uploads/` en el VPS tiene 1 solo archivo: casi todas las imagenes
-  publicadas salen de assets bundleados en el frontend, no de uploads
+## Datos
 
-Fuentes versionadas:
-- `server/seed-data/featured-catalog.json`
-- `server/seed-data/raw-catalog.json`
+Una DB nueva queda validada con:
 
-Limitacion importante:
-- `server/src/seed.js` usa `INSERT OR IGNORE`
-- eso sirve para bootstrap, pero no vuelve a alinear la DB con el repo una vez
-  que la DB ya existe
+- 7 categorias;
+- 14 productos destacados;
+- admin creado desde `SEED_ADMIN_*`;
+- migracion registrada en `schema_migrations`.
 
-## 4. Como funciona el admin
+La DB viva sigue siendo la fuente de verdad. `server/seed-data` solo sirve para
+bootstrap y no pisa ediciones administrativas.
 
-Entrada:
-- `/#admin`
+Tablas legacy `featured`, `orders` y `leads`, y endpoints individuales
+compatibles, se conservan hasta la segunda limpieza.
 
-Frontend:
-- `src/admin/AdminPage.jsx`
-- `src/admin/api.js`
+## Pendiente de operacion
 
-Backend:
-- `server/src/routes/auth.js`
-- `server/src/routes/products.js`
-- `server/src/routes/categories.js`
-- `server/src/routes/raw-skus.js`
-- `server/src/routes/uploads.js`
+1. Revisar el diff y mergear esta rama.
+2. Renombrar `ADMIN_*` a `SEED_ADMIN_*` en el `.env` del VPS.
+3. Ejecutar el deploy por fases.
+4. Verificar login, upload real y checkout en produccion.
+5. Implementar backups en una fase separada.
 
-Flujo:
-1. login -> token JWT en `sessionStorage`
-2. el panel carga productos, categorias y usuarios
-3. los cambios se guardan por endpoint REST
-4. las imagenes van a `/api/admin/upload`
-5. el sitio publico consume `/api/catalog` y `/api/featured`
-
-## 5. Seguridad implementada hoy
-
-- `helmet()` en backend API
-- `trust proxy = 1`
-- rate limit global `500/15m`
-- rate limit de login `20/15m`
-- JWT propio con HMAC SHA-256
-- passwords con `scrypt`
-- validacion de `JWT_SECRET` en produccion
-- uploads con nombre canonico por producto y sanitizacion
-- backend Docker como usuario no root
-
-Huecos pendientes (verificados en codigo y VPS):
-- Nginx no agrega headers de seguridad al HTML estatico del frontend (el
-  `curl -I /` no devuelve CSP, HSTS, X-Content-Type-Options ni X-Frame-Options)
-- ~~`GET /api/admin/auth/users` sin `requireAdmin`~~ resuelto el 2026-07-02:
-  la gestion de usuarios es solo-admin y existen roles `admin`/`editor`; las
-  rutas de catalogo quedan en `requireAuth` a proposito (los editores operan
-  el catalogo)
-- Nginx no define `client_max_body_size` (default 1 MB): la subida de imagenes
-  viaja como base64 dentro de JSON, asi que una foto mayor a ~750 KB reales
-  devuelve 413 antes de llegar a Express (que si permite 10 MB)
-- `gzip on` esta activo pero `gzip_types` esta comentado en `nginx.conf`: los
-  bundles JS/CSS se sirven sin comprimir (solo se comprime text/html)
-- el `.env` del VPS define `ADMIN_EMAIL`/`ADMIN_PASSWORD`, pero `seed.js` lee
-  `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`: en una reconstruccion desde cero el
-  seed NO crearia el usuario admin con ese `.env`
-
-## 6. SEO y publicacion
-
-Implementado:
-- `robots.txt`
-- `sitemap.xml`
-- canonical y meta tags en `index.html`
-- JSON-LD de Organization, WebSite y FAQ en home
-- prerender de `/catalogo` con Breadcrumb + ItemList
-
-Riesgos actuales:
-- `sitemap.xml` tiene `lastmod` manual y fijo
-- el prerender depende de la API viva o cae al JSON estatico
-- hay deuda de calidad y normalizacion de nombres del catalogo, aunque la salida
-  publica validada en UTF-8 no mostro un problema real de encoding
-
-## 7. Deploy
-
-Comando:
-
-```bash
-ssh loseucaliptus "bash /opt/loseucaliptos/scripts/deploy.sh"
-```
-
-El script:
-1. `git fetch origin main --prune`
-2. `git checkout main`
-3. `git reset --hard origin/main`
-4. `npm install`
-5. `npm run build`
-6. `docker compose up -d --build`
-7. `nginx -t && systemctl reload nginx`
-8. verifica `/` y `/api/catalog`
-
-## 8. Estado operativo del VPS (verificado 2026-07-02)
-
-- container `loseucaliptos-api`: Up, `/health` responde OK
-- repo en VPS: `be1b782`, working tree limpio, alineado con `origin/main`
-- **no existe ningun backup**: el unico cron es la renovacion de acme.sh; no
-  hay `/opt/backups` ni copia del `.sqlite` fuera del VPS
-- **disco al 78%**: 4,1 GB libres de 19 GB (el VPS comparte espacio con n8n,
-  chatwoot, portainer y sus imagenes Docker)
-- DB en modo WAL (`.sqlite` + `-shm` + `-wal`), ~800 KB total
-
-## 9. Pendientes estrategicos
-
-- backups automaticos del `.sqlite` y de `uploads/` (hoy: cero backups)
-- vigilar espacio en disco (78% usado; limpiar imagenes Docker huerfanas)
-- alinear nombres de variables del `.env` del VPS con lo que lee `seed.js`
-- `client_max_body_size` en Nginx para que la subida de imagenes reales funcione
-- reconciliacion real entre seed versionado y DB viva
-- headers de seguridad en Nginx para frontend
-- corregir permisos de usuarios admin (`requireAdmin` en rutas de escritura)
-- endpoint real para reset admin de contrasenas
-- endpoints `orders` y `leads` (las tablas ya existen vacias)
-- observabilidad y alertas basicas del backend (hoy no hay logging de requests)
-
-Ver tambien:
-- [Auditoria tecnica 2026-07-02](AUDITORIA-TECNICA-2026-07-02.md)
-- [Reconstruccion de arquitectura](RECONSTRUCCION-ARQUITECTURA.md)
+Backups no fueron modificados por decision explicita.
