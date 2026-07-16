@@ -65,7 +65,7 @@ test('backend estabilizado', async (t) => {
   await t.test('aplica migraciones y responde readiness', async () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n,
-      3,
+      4,
     )
     assert.ok(db.prepare('PRAGMA table_info(products)').all().some((column) => column.name === 'version'))
     const { response } = await request('/health/ready')
@@ -115,6 +115,83 @@ test('backend estabilizado', async (t) => {
     assert.equal(quote.data.subtotal, 300)
     assert.equal(quote.data.changes.length, 1)
     assert.equal(quote.data.blocked[0].reason, 'not_purchasable')
+    assert.equal(quote.data.status, 'partial')
+  })
+
+  await t.test('busca productos para identificar consultas de WhatsApp', async () => {
+    const exact = await request('/api/catalog/search?q=malla%20para%20revoque')
+    assert.equal(exact.response.status, 200)
+    assert.equal(exact.data.count, 0)
+    assert.equal(exact.data.ambiguous, false)
+
+    const broad = await request('/api/catalog/search?q=producto')
+    assert.equal(broad.response.status, 200)
+    assert.equal(broad.data.count, 2)
+    assert.equal(broad.data.ambiguous, true)
+
+    const short = await request('/api/catalog/search?q=ab')
+    assert.equal(short.response.status, 400)
+
+    const enriched = await request('/api/admin/products/bulk', {
+      method: 'PUT',
+      token: adminToken,
+      body: {
+        updates: [{
+          id: 'producto-a',
+          version: 2,
+          patch: {
+            search_aliases: ['malla'],
+            search_measurements: ['6', '15x25'],
+            search_applications: ['revoque'],
+          },
+        }],
+        creates: [],
+      },
+    })
+    assert.equal(enriched.response.status, 200)
+    assert.deepEqual(JSON.parse(enriched.data.products[0].search_applications), ['revoque'])
+
+    const enrichedSearch = await request('/api/catalog/search?q=malla%20para%20revoque')
+    assert.equal(enrichedSearch.data.count, 1)
+    assert.equal(enrichedSearch.data.results[0].id, 'producto-a')
+    assert.ok(enrichedSearch.data.results[0].score > 0)
+    assert.match(enrichedSearch.data.results[0].matchReason.join(' '), /revoque: aplicacion/)
+  })
+
+  await t.test('persiste consultas de WhatsApp y es idempotente', async () => {
+    const payload = {
+      idempotencyKey: 'openwa-message-1',
+      sessionId: 'session-1',
+      chatId: '5491112345678@c.us',
+      customerName: 'Juan',
+      message: 'Quiero 2 productos A',
+      productQuery: 'producto A',
+      quantity: 2,
+      intent: 'product_quote',
+      resolutionStatus: 'resolved',
+      response: 'Total: $300',
+      details: { subtotal: 300 },
+    }
+    const created = await request('/api/automation/consultations', {
+      method: 'POST',
+      body: payload,
+    })
+    assert.equal(created.response.status, 201)
+    assert.equal(created.data.created, true)
+    assert.equal(created.data.consultation.customer_phone, '5491112345678')
+    assert.equal(created.data.consultation.resolved, true)
+
+    const duplicate = await request('/api/automation/consultations', {
+      method: 'POST',
+      body: payload,
+    })
+    assert.equal(duplicate.response.status, 200)
+    assert.equal(duplicate.data.created, false)
+    assert.equal(duplicate.data.consultation.id, created.data.consultation.id)
+
+    const listed = await request('/api/automation/consultations?limit=10')
+    assert.equal(listed.response.status, 200)
+    assert.equal(listed.data.count, 1)
   })
 
   await t.test('imagen binaria reemplaza DB y se elimina sin dejar archivo', async () => {
@@ -122,7 +199,7 @@ test('backend estabilizado', async (t) => {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
       'base64',
     )
-    const uploaded = await request('/api/admin/products/producto-a/image?version=2', {
+    const uploaded = await request('/api/admin/products/producto-a/image?version=3', {
       method: 'PUT',
       token: adminToken,
       body: png,

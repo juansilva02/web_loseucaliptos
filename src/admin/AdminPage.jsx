@@ -19,6 +19,9 @@ const EMPTY_PRODUCT = {
   brand: '',
   unit: 'unidad',
   price: 0,
+  search_aliases: [],
+  search_measurements: [],
+  search_applications: [],
 }
 
 const PRODUCT_EDITABLE_FIELDS = [
@@ -31,12 +34,77 @@ const PRODUCT_EDITABLE_FIELDS = [
   'featured',
   'sort',
   'active',
+  'search_aliases',
+  'search_measurements',
+  'search_applications',
 ]
+
+const SEARCH_FIELDS = [
+  ['search_aliases', 'Alias y sinonimos', 'malla de acero, malla 6'],
+  ['search_measurements', 'Medidas y formatos', '6, 15x25, 25 kg'],
+  ['search_applications', 'Aplicaciones y usos', 'revoque, estructura'],
+]
+
+function listValue(value) {
+  if (Array.isArray(value)) return value
+  if (!value) return []
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed)) return parsed
+  } catch {
+    // Bases antiguas pueden tener texto separado por comas.
+  }
+  return String(value).split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function cleanList(value) {
+  return [...new Set(listValue(value).map((item) => String(item).trim()).filter(Boolean))]
+}
+
+function hydrateProduct(product) {
+  return {
+    ...product,
+    search_aliases: cleanList(product.search_aliases),
+    search_measurements: cleanList(product.search_measurements),
+    search_applications: cleanList(product.search_applications),
+  }
+}
+
+function autocompleteSearchData(product) {
+  const name = String(product.name || '').trim()
+  const lowerName = name.toLocaleLowerCase('es')
+  const measurements = name.match(/\b\d+(?:[.,]\d+)?(?:\s*x\s*\d+(?:[.,]\d+)?)?(?:\s*(?:kg|gr|mm|cm|m|mts|un))?\b/gi) || []
+  const applications = []
+  const addApplication = (pattern, values) => {
+    if (pattern.test(lowerName)) applications.push(...values)
+  }
+  addApplication(/revoque|fino|enduido/, ['revoque', 'terminacion'])
+  addApplication(/malla.*6|acero|hierro|hierros/, ['estructura', 'armadura'])
+  addApplication(/ladrillo|bloque/, ['mamposteria', 'pared'])
+  addApplication(/cemento|portland|cal/, ['mezcla', 'obra gruesa'])
+  addApplication(/arena|piedra|cascote|ripio/, ['mezcla', 'obra gruesa'])
+  addApplication(/yeso|placa/, ['interior', 'terminacion'])
+
+  const aliases = []
+  if (/malla.*6/.test(lowerName)) aliases.push('malla 6', 'malla de acero')
+  if (/cemento|portland/.test(lowerName)) aliases.push('cemento')
+  if (/ladrillo hueco/.test(lowerName)) aliases.push('ladrillo hueco')
+  if (/bloque/.test(lowerName)) aliases.push('bloque')
+  if (/arena/.test(lowerName)) aliases.push('arena')
+
+  return {
+    search_aliases: cleanList([...(product.search_aliases || []), ...aliases]),
+    search_measurements: cleanList([...(product.search_measurements || []), ...measurements]),
+    search_applications: cleanList([...(product.search_applications || []), ...applications]),
+  }
+}
 
 function productPatch(product) {
   const patch = Object.fromEntries(PRODUCT_EDITABLE_FIELDS.map((field) => [
     field,
-    field === 'price' || field === 'sort'
+    field.startsWith('search_')
+      ? JSON.stringify(cleanList(product[field]))
+      : field === 'price' || field === 'sort'
       ? Number(product[field] || 0)
       : field === 'featured' || field === 'active'
         ? Number(product[field] ?? (field === 'active' ? 1 : 0))
@@ -66,9 +134,10 @@ function hasPendingImageChange(product) {
 }
 
 function mergeSavedProduct(saved, local) {
-  if (!hasPendingImageChange(local)) return saved
+  const hydrated = hydrateProduct(saved)
+  if (!hasPendingImageChange(local)) return hydrated
   return {
-    ...saved,
+    ...hydrated,
     _pendingImageFile: local._pendingImageFile,
     _pendingImagePreview: local._pendingImagePreview,
     _removeImage: local._removeImage,
@@ -304,6 +373,40 @@ function EmptyState({ title, body }) {
   )
 }
 
+function SearchMetadataEditor({ product, onChange }) {
+  const totalValues = SEARCH_FIELDS.reduce((total, [field]) => total + cleanList(product[field]).length, 0)
+  const updateList = (field, event) => {
+    onChange({ [field]: cleanList(event.target.value.split(/[,;\n]+/)) })
+  }
+  const autocomplete = () => onChange(autocompleteSearchData(product))
+
+  return (
+    <details className="admin-search-details">
+      <summary>
+        Datos de busqueda <span>{totalValues ? `${totalValues} cargados` : 'sin datos'}</span>
+      </summary>
+      <div className="admin-search-editor">
+        <p>Estos datos los usa la API para interpretar consultas de WhatsApp. Separá valores con coma.</p>
+        {SEARCH_FIELDS.map(([field, label, placeholder]) => (
+          <label key={field}>
+            {label}
+            <textarea
+              rows="2"
+              value={cleanList(product[field]).join(', ')}
+              onChange={(event) => updateList(field, event)}
+              placeholder={placeholder}
+            />
+          </label>
+        ))}
+        <button type="button" className="admin-btn admin-btn-mini" onClick={autocomplete}>
+          Autocompletar datos
+        </button>
+        <small>El autocompletado es una propuesta editable y no modifica el precio ni la categoría.</small>
+      </div>
+    </details>
+  )
+}
+
 function ManualSkuLinker({ sku, products, onLink, saving }) {
   const [query, setQuery] = useState('')
   const normalizedQuery = query.trim().toLowerCase()
@@ -417,7 +520,7 @@ export default function AdminPage() {
   }, [])
 
   const applyServerData = (prodRes, catRes, meRes, usersRes) => {
-    const nextProducts = prodRes.products || []
+    const nextProducts = (prodRes.products || []).map(hydrateProduct)
     const nextCategories = catRes.categories || []
     setProducts(nextProducts)
     setCategories(nextCategories)
@@ -488,6 +591,13 @@ export default function AdminPage() {
 
   const updateProduct = (index, patch) =>
     setProducts((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
+
+  const autocompleteAllSearchData = () => {
+    setProducts((current) => current.map((product) => (
+      product.active === 0 ? product : { ...product, ...autocompleteSearchData(product) }
+    )))
+    flash('Datos de busqueda propuestos. Revisalos y pulsa "Guardar cambios".')
+  }
 
   const removeProduct = (index) => {
     const product = products[index]
@@ -637,7 +747,7 @@ export default function AdminPage() {
           return saved ? mergeSavedProduct(saved, product) : product
         })
         for (const product of [...(response.products || []), ...(response.created || []).map((entry) => entry.product)]) {
-          originalProducts.current.set(product.id, structuredClone(product))
+          originalProducts.current.set(product.id, structuredClone(hydrateProduct(product)))
         }
       }
 
@@ -648,8 +758,9 @@ export default function AdminPage() {
           const response = product._pendingImageFile
             ? await api.uploadProductImage(product.id, product.version, product._pendingImageFile)
             : await api.removeProductImage(product.id, product.version)
-          merged = merged.map((item) => (item.id === product.id ? response.product : item))
-          originalProducts.current.set(product.id, structuredClone(response.product))
+          const savedProduct = hydrateProduct(response.product)
+          merged = merged.map((item) => (item.id === product.id ? savedProduct : item))
+          originalProducts.current.set(product.id, structuredClone(savedProduct))
           savedImages += 1
         } catch (err) {
           if (err.status === 409) setProductConflicts(err.details?.conflicts || [])
@@ -803,8 +914,9 @@ export default function AdminPage() {
       flash(`SKU ${sku.code} promovido con categoria sugerida`)
       setRawSkus((prev) => prev.filter((item) => item.code !== sku.code))
       setRawTotal((current) => Math.max(0, current - 1))
-      setProducts((current) => [response.product, ...current])
-      originalProducts.current.set(response.product.id, structuredClone(response.product))
+      const promotedProduct = hydrateProduct(response.product)
+      setProducts((current) => [promotedProduct, ...current])
+      originalProducts.current.set(promotedProduct.id, structuredClone(promotedProduct))
     } catch (err) {
       flash(`Error al promover SKU ${sku.code}: ${err.message}`)
     } finally {
@@ -826,7 +938,7 @@ export default function AdminPage() {
             }
           : product
       )))
-      originalProducts.current.set(response.product.id, structuredClone(response.product))
+      originalProducts.current.set(response.product.id, structuredClone(hydrateProduct(response.product)))
       setRawSkus((current) => current.filter((item) => item.code !== sku.code))
       setRawTotal((current) => Math.max(0, current - 1))
       flash(`SKU ${sku.code} vinculado a ${response.product.name}`)
@@ -1077,6 +1189,9 @@ export default function AdminPage() {
                 Recargar
               </button>
               <button className="admin-btn admin-btn-primary" onClick={addProduct}>+ Agregar producto</button>
+              <button className="admin-btn" onClick={autocompleteAllSearchData} disabled={saving || loading}>
+                Autocompletar busquedas
+              </button>
               <button className="admin-btn admin-btn-primary" onClick={saveProducts} disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
@@ -1169,7 +1284,7 @@ export default function AdminPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Home</th><th>Estado</th><th>Acciones</th>
+                    <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoria</th><th>Unidad</th><th>Precio</th><th>Busqueda</th><th>Home</th><th>Estado</th><th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1197,6 +1312,12 @@ export default function AdminPage() {
                         <td><input className="admin-input-sm" value={product.unit || ''} onChange={(event) => updateProduct(index, { unit: event.target.value })} /></td>
                         <td>
                           <PriceField value={product.price} onChange={(value) => updateProduct(index, { price: value ?? 0 })} consultLabel="A consultar" />
+                        </td>
+                        <td className="admin-search-cell">
+                          <SearchMetadataEditor
+                            product={product}
+                            onChange={(patch) => updateProduct(index, patch)}
+                          />
                         </td>
                         <td>
                           <button

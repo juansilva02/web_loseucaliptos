@@ -32,6 +32,9 @@ const PRODUCT_FIELDS = [
   'featured',
   'sort',
   'active',
+  'search_aliases',
+  'search_measurements',
+  'search_applications',
 ]
 
 function escapeLike(value) {
@@ -143,10 +146,11 @@ router.put('/bulk', requireAuth, (req, res) => {
       const nextSort = db.prepare('SELECT COALESCE(MAX(sort), 0) + 1 AS next FROM products').get().next
       db.prepare(`
         INSERT INTO products (
-          id, name, category_key, brand, unit, price, image_url, featured, sort, active, version
+          id, name, category_key, brand, unit, price, image_url, featured, sort, active,
+          search_aliases, search_measurements, search_applications, version
         ) VALUES (
           @id, @name, @category_key, @brand, @unit, @price, @image_url,
-          @featured, @sort, @active, 1
+          @featured, @sort, @active, @search_aliases, @search_measurements, @search_applications, 1
         )
       `).run({ id: entry.id, ...entry.data, sort: entry.data.sort ?? nextSort })
       const product = db.prepare('SELECT * FROM products WHERE id = ?').get(entry.id)
@@ -277,10 +281,11 @@ router.post('/', requireAuth, (req, res) => {
   const nextSort = db.prepare('SELECT COALESCE(MAX(sort), 0) + 1 AS next FROM products').get().next
   db.prepare(`
     INSERT INTO products (
-      id, name, category_key, brand, unit, price, image_url, featured, sort, active, version
+      id, name, category_key, brand, unit, price, image_url, featured, sort, active,
+      search_aliases, search_measurements, search_applications, version
     ) VALUES (
       @id, @name, @category_key, @brand, @unit, @price, @image_url,
-      @featured, @sort, @active, 1
+      @featured, @sort, @active, @search_aliases, @search_measurements, @search_applications, 1
     )
   `).run({ id, ...data, sort: data.sort ?? nextSort })
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id)

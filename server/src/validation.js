@@ -16,6 +16,29 @@ function integerField(value, name, { min = 0, max = 2147483647 } = {}) {
   return next
 }
 
+function jsonListField(value, name, { maxItems = 40, maxItemLength = 100 } = {}) {
+  const source = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? (() => {
+          try {
+            const parsed = JSON.parse(value)
+            return Array.isArray(parsed) ? parsed : value.split(',')
+          } catch {
+            return value.split(',')
+          }
+        })()
+      : []
+  const list = [...new Set(source
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean))]
+  if (list.length > maxItems) throw validationError(`${name} admite hasta ${maxItems} valores`)
+  if (list.some((item) => item.length > maxItemLength)) {
+    throw validationError(`Cada valor de ${name} admite hasta ${maxItemLength} caracteres`)
+  }
+  return JSON.stringify(list)
+}
+
 export function validationError(message, status = 400, details) {
   const error = new Error(message)
   error.status = status
@@ -41,7 +64,10 @@ export function validateCategoryKey(value, { allowEmpty = true } = {}) {
 export function validateProductInput(input, { partial = false } = {}) {
   const source = input && typeof input === 'object' ? input : {}
   const output = {}
-  const allowed = ['name', 'category_key', 'brand', 'unit', 'price', 'image_url', 'featured', 'sort', 'active']
+  const allowed = [
+    'name', 'category_key', 'brand', 'unit', 'price', 'image_url', 'featured', 'sort', 'active',
+    'search_aliases', 'search_measurements', 'search_applications',
+  ]
 
   for (const field of allowed) {
     if (source[field] === undefined) continue
@@ -52,6 +78,9 @@ export function validateProductInput(input, { partial = false } = {}) {
     else if (field === 'image_url') output.image_url = stringField(source.image_url, 'image_url', { max: 500 })
     else if (field === 'price') output.price = integerField(source.price ?? 0, 'price')
     else if (field === 'sort') output.sort = integerField(source.sort ?? 0, 'sort')
+    else if (field === 'search_aliases') output.search_aliases = jsonListField(source.search_aliases, 'alias')
+    else if (field === 'search_measurements') output.search_measurements = jsonListField(source.search_measurements, 'medidas')
+    else if (field === 'search_applications') output.search_applications = jsonListField(source.search_applications, 'aplicaciones')
     else output[field] = source[field] ? 1 : 0
   }
 
@@ -64,6 +93,9 @@ export function validateProductInput(input, { partial = false } = {}) {
     output.image_url ??= ''
     output.featured ??= 0
     output.active ??= 1
+    output.search_aliases ??= '[]'
+    output.search_measurements ??= '[]'
+    output.search_applications ??= '[]'
   }
 
   if (partial && !Object.keys(output).length) throw validationError('Sin campos validos para actualizar')

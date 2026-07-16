@@ -87,6 +87,15 @@ const migrations = [
       db.exec('CREATE INDEX IF NOT EXISTS idx_raw_pending ON raw_skus(added, dismissed)')
     },
   },
+  {
+    version: 4,
+    name: 'metadatos de busqueda por producto',
+    up(db) {
+      ensureColumn(db, 'products', 'search_aliases', "TEXT NOT NULL DEFAULT '[]'")
+      ensureColumn(db, 'products', 'search_measurements', "TEXT NOT NULL DEFAULT '[]'")
+      ensureColumn(db, 'products', 'search_applications', "TEXT NOT NULL DEFAULT '[]'")
+    },
+  },
 ]
 
 function ensureColumn(db, table, column, definition) {

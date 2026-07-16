@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS products (
   sort         INTEGER DEFAULT 0,
   active       INTEGER DEFAULT 1,
   source_code  INTEGER,                 -- code del raw_sku si vino de la pileta
+  search_aliases TEXT NOT NULL DEFAULT '[]',
+  search_measurements TEXT NOT NULL DEFAULT '[]',
+  search_applications TEXT NOT NULL DEFAULT '[]',
   version      INTEGER NOT NULL DEFAULT 1,
   created_at   TEXT DEFAULT (datetime('now')),
   updated_at   TEXT DEFAULT (datetime('now'))
@@ -73,6 +76,32 @@ CREATE TABLE IF NOT EXISTS leads (
   message    TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Consultas recibidas por WhatsApp y resultado de la automatizacion.
+CREATE TABLE IF NOT EXISTS whatsapp_consultations (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  idempotency_key  TEXT UNIQUE,
+  session_id       TEXT NOT NULL,
+  chat_id          TEXT DEFAULT '',
+  customer_phone   TEXT DEFAULT '',
+  customer_name    TEXT DEFAULT '',
+  message          TEXT NOT NULL,
+  product_query    TEXT DEFAULT '',
+  quantity         INTEGER,
+  intent           TEXT DEFAULT '',
+  resolution_status TEXT NOT NULL DEFAULT 'needs_clarification',
+  resolved         INTEGER NOT NULL DEFAULT 0,
+  response         TEXT DEFAULT '',
+  details          TEXT DEFAULT '{}',
+  created_at       TEXT DEFAULT (datetime('now')),
+  updated_at       TEXT DEFAULT (datetime('now')),
+  CHECK (resolution_status IN ('resolved', 'needs_clarification', 'needs_admin'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_consultations_status
+  ON whatsapp_consultations(resolution_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_consultations_phone
+  ON whatsapp_consultations(customer_phone, created_at);
 
 -- Tabla legacy: se conserva hasta completar backup y limpieza de segunda fase.
 CREATE TABLE IF NOT EXISTS featured (
