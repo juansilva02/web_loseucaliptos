@@ -375,10 +375,26 @@ function EmptyState({ title, body }) {
 
 function SearchMetadataEditor({ product, onChange }) {
   const totalValues = SEARCH_FIELDS.reduce((total, [field]) => total + cleanList(product[field]).length, 0)
-  const updateList = (field, event) => {
-    onChange({ [field]: cleanList(event.target.value.split(/[,;\n]+/)) })
+  const [drafts, setDrafts] = useState(() => Object.fromEntries(
+    SEARCH_FIELDS.map(([field]) => [field, cleanList(product[field]).join(', ')]),
+  ))
+
+  useEffect(() => {
+    setDrafts(Object.fromEntries(
+      SEARCH_FIELDS.map(([field]) => [field, cleanList(product[field]).join(', ')]),
+    ))
+  }, [product.search_aliases, product.search_measurements, product.search_applications])
+
+  const commitList = (field) => {
+    onChange({ [field]: cleanList(drafts[field].split(/[,;\n]+/)) })
   }
-  const autocomplete = () => onChange(autocompleteSearchData(product))
+  const autocomplete = () => {
+    const suggestions = autocompleteSearchData(product)
+    setDrafts(Object.fromEntries(
+      SEARCH_FIELDS.map(([field]) => [field, cleanList(suggestions[field]).join(', ')]),
+    ))
+    onChange(suggestions)
+  }
 
   return (
     <details className="admin-search-details">
@@ -392,8 +408,9 @@ function SearchMetadataEditor({ product, onChange }) {
             {label}
             <textarea
               rows="2"
-              value={cleanList(product[field]).join(', ')}
-              onChange={(event) => updateList(field, event)}
+              value={drafts[field]}
+              onChange={(event) => setDrafts((current) => ({ ...current, [field]: event.target.value }))}
+              onBlur={() => commitList(field)}
               placeholder={placeholder}
             />
           </label>
