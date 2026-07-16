@@ -129,6 +129,11 @@ function changedFields(product, original) {
   )
 }
 
+function hasUnsavedProductChanges(product, original) {
+  if (!product.id) return true
+  return Object.keys(changedFields(product, original)).length > 0 || hasPendingImageChange(product)
+}
+
 function hasPendingImageChange(product) {
   return Boolean(product._pendingImageFile || product._removeImage)
 }
@@ -921,6 +926,38 @@ export default function AdminPage() {
     productsWithoutCategory: products.filter((product) => !(product.category_key || product.category)).length,
   }
 
+  const unsavedProducts = products.filter((product) => (
+    hasUnsavedProductChanges(product, originalProducts.current.get(product.id))
+  ))
+  const unsavedCategories = categories.filter((category) => (
+    category.name !== originalCategories.current.get(category.key)?.name
+  ))
+  const unsavedChanges = unsavedProducts.length + unsavedCategories.length
+
+  useEffect(() => {
+    if (!unsavedChanges) return undefined
+    const warnBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [unsavedChanges])
+
+  const discardChanges = () => {
+    setProducts([...originalProducts.current.values()].map((product) => hydrateProduct(structuredClone(product))))
+    setCategories([...originalCategories.current.values()].map((category) => structuredClone(category)))
+    setProductConflicts([])
+    flash('Cambios descartados')
+  }
+
+  const saveAllChanges = async () => {
+    const saveProductsNow = unsavedProducts.length > 0
+    const saveCategoriesNow = unsavedCategories.length > 0
+    if (saveProductsNow) await saveProducts()
+    if (saveCategoriesNow) await saveCategories()
+  }
+
   const promoteRawSku = async (sku) => {
     if (!window.confirm(
       `Promover el SKU ${sku.code} creara un producto nuevo. Continua solo si confirmaste que no existe en el catalogo.`,
@@ -1195,6 +1232,22 @@ export default function AdminPage() {
         </button>
       </nav>
 
+      {unsavedChanges ? (
+        <div className="admin-unsaved-bar" role="status">
+          <div className="admin-unsaved-copy">
+            <strong>Tenes cambios sin guardar</strong>
+            <span>{unsavedChanges} elemento(s) pendiente(s)</span>
+          </div>
+          <div className="admin-unsaved-actions">
+            <button type="button" className="admin-btn admin-btn-ghost-dark" onClick={discardChanges} disabled={saving}>
+              Descartar cambios
+            </button>
+            <button type="button" className="admin-btn admin-btn-primary" onClick={saveAllChanges} disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {toast ? <div className="admin-toast">{toast}</div> : null}
 
       {tab === 'products' ? (
