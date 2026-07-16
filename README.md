@@ -39,6 +39,35 @@ Navegador
 `GET /api/featured` se mantiene temporalmente por compatibilidad. El frontend
 deriva destacados desde `GET /api/catalog`.
 
+## Busqueda de productos
+
+Los SKU importados se revisan primero en `raw_skus`. Solo los productos activos
+de `products` se publican en el catalogo y participan de la busqueda de la API.
+
+En el panel administrativo se puede abrir **Datos de busqueda** para cada
+producto y completar:
+
+- Alias y sinonimos, por ejemplo `malla para revoque`, `malla de fibra`.
+- Medidas y formatos, por ejemplo `6`, `15x25`, `25 kg`.
+- Aplicaciones y usos, por ejemplo `revoque`, `estructura`.
+
+El boton **Autocompletar busquedas** propone esos datos para todos los
+productos activos. Las propuestas deben revisarse y guardarse desde el panel.
+Los valores pueden escribirse separados por comas o por saltos de linea; los
+espacios dentro de un alias se conservan.
+
+Panel: `https://corralonloseucaliptus.com/#admin`
+
+La busqueda publica es:
+
+```http
+GET /api/catalog/search?q=malla%20para%20revoque
+```
+
+La API exige que coincidan todos los terminos relevantes y devuelve candidatos
+con `score`, `matchedTerms` y `matchReason`. La respuesta no incluye SKU crudos;
+el workflow de n8n debe consultar este endpoint y usar los productos activos.
+
 ## Flujos principales
 
 - `GET /api/catalog` se sirve desde una cache en memoria con ETag: las visitas
@@ -53,6 +82,9 @@ deriva destacados desde `GET /api/catalog`.
 - El admin guarda solo filas modificadas mediante un bulk transaccional con
   control de versiones. Las imagenes y el orden de destacados tambien se
   publican al guardar.
+- Los metadatos de busqueda se guardan junto al producto mediante el mismo bulk
+  transaccional y se incluyen en la busqueda sin exponerlos en el catalogo
+  publico.
 - Las imagenes se convierten a WebP y se guardan como
   `<product-id>-<hash>.webp`.
 - Los usuarios del panel ingresan con nombre de usuario o email; el email es
