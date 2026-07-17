@@ -13,6 +13,7 @@ process.env.NODE_ENV = 'test'
 const { db, initSchema } = await import('../src/db.js')
 const { hashPassword } = await import('../src/auth.js')
 const { createApp } = await import('../src/app.js')
+const { isAllowedAutomationPeer } = await import('../src/routes/automation.js')
 
 initSchema()
 db.prepare("INSERT INTO categories (key, name, sort) VALUES ('materiales', 'Materiales', 1)").run()
@@ -62,6 +63,14 @@ async function login(email, password) {
 }
 
 test('backend estabilizado', async (t) => {
+  await t.test('solo permite pares de la red interna de automatizacion', () => {
+    const cidrs = ['127.0.0.1/32', '::1/128', '172.28.0.0/16']
+    assert.equal(isAllowedAutomationPeer('127.0.0.1', cidrs), true)
+    assert.equal(isAllowedAutomationPeer('::ffff:172.28.0.3', cidrs), true)
+    assert.equal(isAllowedAutomationPeer('10.0.0.4', cidrs), false)
+    assert.equal(isAllowedAutomationPeer('172.29.0.3', cidrs), false)
+  })
+
   await t.test('aplica migraciones y responde readiness', async () => {
     assert.equal(
       db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n,

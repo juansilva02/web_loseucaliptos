@@ -90,6 +90,11 @@ el workflow de n8n debe consultar este endpoint y usar los productos activos.
 - Los usuarios del panel ingresan con nombre de usuario o email; el email es
   opcional y sirve como contacto de recuperacion.
 
+Las consultas persistidas por WhatsApp son internas: n8n usa la red Docker y
+Nginx devuelve `404` para `/api/automation/consultations` desde Internet. Ver
+[seguridad de la automatizacion](docs/automation-security.md) para la allowlist,
+las verificaciones y el rollback.
+
 ## Desarrollo
 
 ```bash
